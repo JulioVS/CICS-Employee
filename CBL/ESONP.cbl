@@ -7,8 +7,12 @@
        DATA DIVISION.
        WORKING-STORAGE SECTION.
       ******************************************************************
-      *   INCLUDE MY SYMBOLIC MAP COPYBOOK AND IBM'S AID KEYS' ONE.
+      *   INCLUDE COPYBOOKS FOR
+      *      - APPLICATION CONSTANTS
+      *      - MY SYMBOLIC MAP
+      *      - IBM'S AID KEYS
       ******************************************************************
+       COPY ECONST.
        COPY ESONMAP.
        COPY DFHAID.
       ******************************************************************
@@ -24,57 +28,73 @@
        01 DFHCOMMAREA          PIC X(16).
 
        PROCEDURE DIVISION.
+      *-----------------------------------------------------------------
+       MAIN-LOGIC SECTION.
+      *-----------------------------------------------------------------
+
            IF EIBCALEN IS EQUAL TO ZERO
-      *       THIS IS THE START OF THE (PSEUDO) CONVERSATION,
-      *       MEANING THE FIRST INTERACTION OF THE PROCESS,
-      *       HENCE THE EMPTY COMM-AREA.-
-              INITIALIZE WS-SESSION-STATE
-              INITIALIZE ESONMO
-
-      *       FOR THE FIRST INTERACTION, IT SENDS THE EMPY MAP WITH
-      *       JUST THE TRANSACTION ID ON IT (AN ECHO OF A KNOWN VALUE)
-              MOVE EIBTRNID TO TRANIDO
-
-              EXEC CICS SEND
-                   MAP('ESONM')
-                   MAPSET('ESONMAP')
-                   FROM (ESONMO)
-                   ERASE
-                   END-EXEC
-
-      *       THEN, IT RETURNS JUST SAVING THE STILL-EMPTY STATE
-      *       AND ENDING THIS STEP OF THE CONVERSATION.
-              EXEC CICS RETURN
-                   COMMAREA(WS-SESSION-STATE)
-                   TRANSID(EIBTRNID)
-                   END-EXEC
+              PERFORM 1000-FIRST-INTERACTION
            ELSE
-      *       THIS IS THE CONTINUATION OF THE CONVERSATION,
-      *       MEANING THE SECOND INTERACTION OF THE PROCESS,
-      *       HENCE THE COMM-AREA IS NOT EMPTY.
-              EXEC CICS RECEIVE
-                   MAP('ESONM')
-                   MAPSET('ESONMAP')
-                   INTO (ESONMI)
-                   END-EXEC
-
-      *       RESTORE SESSION DATA INTO WORKING STORAGE
-              MOVE DFHCOMMAREA TO WS-SESSION-STATE
-
-      *       THEN, IT SENDS THE MAP BACK WITH A GREETING
-              STRING "Hello " DELIMITED BY SIZE
-                     USERIDI DELIMITED BY SPACE
-                     "!" DELIMITED BY SIZE
-                 INTO MESSO
-              END-STRING
-
-              EXEC CICS SEND
-                   MAP('ESONM')
-                   MAPSET('ESONMAP')
-                   FROM (ESONMO)
-                   ERASE
-                   END-EXEC
-
-              EXEC CICS RETURN
-                   END-EXEC
+              PERFORM 2000-PROCESS-USER-INPUT
            END-IF.
+
+      *-----------------------------------------------------------------
+       SUB-ROUTINE SECTION.
+      *-----------------------------------------------------------------
+
+       1000-FIRST-INTERACTION.
+      *    THIS IS THE START OF THE (PSEUDO) CONVERSATION,
+      *    MEANING THE FIRST INTERACTION OF THE PROCESS,
+      *    HENCE THE EMPTY COMM-AREA.-
+           INITIALIZE WS-SESSION-STATE.
+           INITIALIZE ESONMO.
+
+      *    FOR THE FIRST INTERACTION, IT SENDS THE EMPY MAP WITH
+      *    JUST THE TRANSACTION ID ON IT (AN ECHO OF A KNOWN VALUE)
+           MOVE EIBTRNID TO TRANIDO.
+
+           EXEC CICS SEND
+                MAP(AC-SIGNON-MAP-NAME)
+                MAPSET(AC-SIGNON-MAPSET-NAME)
+                FROM (ESONMO)
+                ERASE
+                END-EXEC.
+
+      *    THEN, IT RETURNS JUST SAVING THE STILL-EMPTY STATE
+      *    AND ENDING THIS STEP OF THE CONVERSATION.
+           EXEC CICS RETURN
+                COMMAREA(WS-SESSION-STATE)
+                TRANSID(EIBTRNID)
+                END-EXEC.
+
+       2000-PROCESS-USER-INPUT.
+      *    THIS IS THE CONTINUATION OF THE CONVERSATION,
+      *    MEANING THE SECOND INTERACTION OF THE PROCESS,
+      *    HENCE THE COMM-AREA IS NOT EMPTY.
+
+      *    RESTORE SESSION DATA INTO WORKING STORAGE
+           MOVE DFHCOMMAREA TO WS-SESSION-STATE.
+
+      *    GET NEW INPUT FROM THE USER
+           EXEC CICS RECEIVE
+                MAP(AC-SIGNON-MAP-NAME)
+                MAPSET(AC-SIGNON-MAPSET-NAME)
+                INTO (ESONMI)
+                END-EXEC.
+
+      *    THEN, SEND THE MAP BACK WITH A GREETING
+           STRING "Hello " DELIMITED BY SIZE
+                  USERIDI DELIMITED BY SPACE
+                  "!" DELIMITED BY SIZE
+              INTO MESSO
+           END-STRING.
+
+           EXEC CICS SEND
+                MAP(AC-SIGNON-MAP-NAME)
+                MAPSET(AC-SIGNON-MAPSET-NAME)
+                FROM (ESONMO)
+                ERASE
+                END-EXEC.
+
+           EXEC CICS RETURN
+                END-EXEC.
