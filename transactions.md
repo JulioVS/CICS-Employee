@@ -1,4 +1,4 @@
-# List of CICS Transactions
+# CICS Transactions List
 
 ## Define
 
