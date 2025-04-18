@@ -1,0 +1,34 @@
+name: IBM Z & Zowe Property Groups
+description: >-
+  https://ibm.github.io/zopeneditor-about/Docs/setting_propertygroup.html
+author: IBM Z Open Editor
+propertyGroups:
+  - name: cobol-copybooks
+    language: cobol
+    libraries:
+      - name: syslib
+        type: local
+        locations:
+          - './COPYLIB'
+      - name: syslib
+        type: mvs
+        locations:
+          - 'DFH620.CICS.SDFHCOB'
+          - 'Z45864.COPYLIB'
+  - name: jcl-proclibs
+    language: jcl
+    libraries:
+      - name: proclib
+        type: mvs
+        locations:
+          - 'DFH620.CICS.SDFHPROC'
+          - 'VENDOR.PROCLIB'
+          - 'SYS1.PROCLIB'
+  - name: hlasm-maclibs
+    language: hlasm
+    libraries:
+      - name: maclib
+        type: mvs
+        locations:
+          - 'DFH620.CICS.SDFHMAC'
+          - 'SYS1.MACLIB'
