@@ -14,6 +14,7 @@
       ******************************************************************
        COPY ECONST.
        COPY ESONMAP.
+       COPY EREGUSR.
        COPY DFHAID.
       ******************************************************************
       *   DEFINE MY SESSION STATE DATA FOR PASSING INTO COMM-AREA.
@@ -21,6 +22,12 @@
        01 WS-SESSION-STATE.
           05 WS-USER-ID        PIC X(8).
           05 WS-USER-PASSWORD  PIC X(8).
+      ******************************************************************
+      *   DEFINE MY WORKING VARIABLES.
+      ******************************************************************
+       01 WS-WORKING-VARS.
+          05 WS-CICS-RESPONSE  PIC S9(8) USAGE IS BINARY.
+          05 WS-CURRENT-DATE   PIC X(14).
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
       ******************************************************************
@@ -47,32 +54,17 @@
       *    MEANING THE FIRST INTERACTION OF THE PROCESS,
       *    HENCE THE EMPTY COMM-AREA.-
            PERFORM 1100-INITIALIZE.
-           PERFORM 1200-SEND-MAP-AND-RETURN.
+           PERFORM 9200-SEND-MAP-AND-RETURN.
        
        1100-INITIALIZE.
       *    INITIALIZE SESSION STATE AND MAP OUPUT FIELDS
            INITIALIZE WS-SESSION-STATE.
+           INITIALIZE WS-WORKING-VARS.
            INITIALIZE ESONMO.
 
       *    FOR THE FIRST INTERACTION, IT SENDS THE EMPY MAP WITH
       *    JUST THE TRANSACTION ID ON IT (AN ECHO OF A KNOWN VALUE)
            MOVE EIBTRNID TO TRANIDO.
-
-       1200-SEND-MAP-AND-RETURN.
-      *    PRESENT INITIAL SIGN-ON SCREEN TO THE USER
-           EXEC CICS SEND
-                MAP(AC-SIGNON-MAP-NAME)
-                MAPSET(AC-SIGNON-MAPSET-NAME)
-                FROM (ESONMO)
-                ERASE
-                END-EXEC.
-
-      *    THEN IT RETURNS SAVING THE INITIAL STATE
-      *    AND ENDING THIS STEP OF THE CONVERSATION
-           EXEC CICS RETURN
-                COMMAREA(WS-SESSION-STATE)
-                TRANSID(EIBTRNID)
-                END-EXEC.
 
        2000-PROCESS-USER-INPUT.
       *    THIS IS THE CONTINUATION OF THE CONVERSATION,
@@ -95,12 +87,12 @@
            WHEN DFHPF12
                 PERFORM 2100-CANCEL-SIGN-ON 
            WHEN DFHENTER
-                PERFORM 2200-SIGN-ON-USER
+                PERFORM 3000-SIGN-ON-USER
            WHEN OTHER
-                CONTINUE 
+                MOVE "Invalid key!" TO MESSO 
            END-EVALUATE.
 
-           PERFORM 1200-SEND-MAP-AND-RETURN.
+           PERFORM 9200-SEND-MAP-AND-RETURN.
 
        2100-CANCEL-SIGN-ON.
       *    CLEAR USER SCREEN AND END CONVERSATION
@@ -111,10 +103,87 @@
            EXEC CICS RETURN
                 END-EXEC.
 
-       2200-SIGN-ON-USER.
-      *    SEND THE MAP BACK WITH A GREETING
-           STRING "Hello " DELIMITED BY SIZE
-                  USERIDI DELIMITED BY SPACE
-                  "!" DELIMITED BY SIZE
-              INTO MESSO
-           END-STRING.
+       3000-SIGN-ON-USER.
+           PERFORM 3100-UPDATE-STATE.
+           PERFORM 3200-CHECK-USER-STATUS.
+           PERFORM 3300-LOOKUP-USER-ID.
+
+       3100-UPDATE-STATE.
+      *    IF NEW DATA WAS RECEIVED, UPDATE STATE
+           IF USERIDI IS NOT EQUAL TO LOW-VALUES AND
+              USERIDI IS NOT EQUAL TO SPACES
+              MOVE USERIDI TO WS-USER-ID
+           END-IF.
+           IF PASSWDI IS NOT EQUAL TO LOW-VALUES AND
+              PASSWDI IS NOT EQUAL TO SPACES
+              MOVE PASSWDI TO WS-USER-PASSWORD
+           END-IF.
+
+       3200-CHECK-USER-STATUS.
+           CONTINUE.
+
+       3250-NOTIFY-ACTIVITY-MONITOR.
+           CONTINUE.
+
+       3300-LOOKUP-USER-ID.
+      *    LOOKUP THE USER ID IN VSAM FILE
+           EXEC CICS READ
+                FILE(AC-REG-USER-FILE-NAME)
+                INTO (REG-USER-RECORD)
+                RIDFLD(WS-USER-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                PERFORM 3400-CHECK-USER-CREDENTIALS
+           WHEN DFHRESP(NOTFND)
+                MOVE "User not found!" TO MESSO
+           WHEN OTHER
+                MOVE "Error reading Users file!" TO MESSO
+           END-EVALUATE.
+
+       3400-CHECK-USER-CREDENTIALS.
+           MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-DATE.
+
+      *    CHECK IF THE USER ID AND PASSWORD MATCH
+           IF WS-USER-PASSWORD IS EQUAL TO RU-USER-PASSWORD
+      *       CHECK IF THE USER ID IS ACTIVE   
+              IF RU-ST-ACTIVE 
+      *          CHECK IF THE USER ID VALIDITY PERIOD HAS STARTED
+                 IF WS-CURRENT-DATE
+                    IS GREATER THAN OR EQUAL TO RU-LAST-EFFECTIVE-DATE
+      *             ALL CONDITIONS MET, SUCCESFUL SIGN ON!              
+                    PERFORM 3250-NOTIFY-ACTIVITY-MONITOR
+                    PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+                 ELSE
+                    MOVE "User is not yet active!" TO MESSO
+                 END-IF 
+              ELSE
+                 MOVE "User is inactive!" TO MESSO
+              END-IF
+           ELSE
+              MOVE "Invalid password!" TO MESSO
+           END-IF.
+
+       9100-TRANSFER-TO-LANDING-PAGE.
+      *    TRANSFER TO THE LANDING PAGE
+      *    - FOR NOW, WE JUST SEND A MESSAGE BACK
+           MOVE "Successful sign on!" TO MESSO.
+           PERFORM 9200-SEND-MAP-AND-RETURN.
+ 
+       9200-SEND-MAP-AND-RETURN.
+      *    PRESENT INITIAL SIGN-ON SCREEN TO THE USER
+           EXEC CICS SEND
+                MAP(AC-SIGNON-MAP-NAME)
+                MAPSET(AC-SIGNON-MAPSET-NAME)
+                FROM (ESONMO)
+                ERASE
+                END-EXEC.
+
+      *    THEN IT RETURNS SAVING THE INITIAL STATE
+      *    AND ENDING THIS STEP OF THE CONVERSATION
+           EXEC CICS RETURN
+                COMMAREA(WS-SESSION-STATE)
+                TRANSID(EIBTRNID)
+                END-EXEC.
