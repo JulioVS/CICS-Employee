@@ -35,7 +35,7 @@
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
 
-           PERFORM 1000-GET-DATA-FROM-CALLER.
+           PERFORM 1000-INITIAL-SETUP.
            PERFORM 2000-PROCESS-REQUEST.
            PERFORM 9000-RETURN-TO-CALLER.
 
@@ -43,7 +43,13 @@
        SUB-ROUTINE SECTION.
       *-----------------------------------------------------------------
 
-       1000-GET-DATA-FROM-CALLER.
+       1000-INITIAL-SETUP.
+           INITIALIZE WS-WORKING-VARS.
+          
+           PERFORM 1100-GET-DATA-FROM-CALLER.
+           PERFORM 1200-GET-SIGN-ON-RULES.
+
+       1100-GET-DATA-FROM-CALLER.
            EXEC CICS GET
                 CONTAINER(AC-ACTMON-CONTAINER-NAME)
                 CHANNEL(AC-ACTMON-CHANNEL-NAME)
@@ -53,6 +59,65 @@
 
            INITIALIZE MON-RESPONSE.
 
+       1200-GET-SIGN-ON-RULES.
+           MOVE AC-SIGNON-RULES-ITEM-NUM TO WS-ITEM-NUMBER.
+           
+           EXEC CICS READQ TS
+                QUEUE(AC-SIGNON-RULES-QUEUE-NAME)
+                ITEM(WS-ITEM-NUMBER)
+                INTO (SIGN-ON-RULES-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(QIDERR)
+                PERFORM 1210-LOAD-RULES-FROM-FILE
+           WHEN OTHER
+                MOVE 'SIGN-ON RULES READQ EXCEPTION' TO MON-MESSAGE 
+                SET MON-PROCESSING-ERROR TO TRUE
+                PERFORM 9000-RETURN-TO-CALLER
+           END-EVALUATE.
+
+       1210-LOAD-RULES-FROM-FILE.
+           EXEC CICS READ
+                FILE(AC-SIGNON-RULES-FILE-NAME)
+                INTO (SIGN-ON-RULES-RECORD)
+                RIDFLD(AC-SIGNON-RULES-RRN)
+                RRN
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+                
+           EVALUATE WS-CICS-RESPONSE 
+           WHEN DFHRESP(NORMAL)
+                PERFORM 1220-WRITE-RULES-TO-QUEUE
+\          WHEN OTHER
+                MOVE 'SIGN-ON RULES FILE EXCEPTION' TO MON-MESSAGE 
+                SET MON-PROCESSING-ERROR TO TRUE
+                PERFORM 9000-RETURN-TO-CALLER
+           END-EVALUATE.
+         
+       1220-WRITE-RULES-TO-QUEUE.
+           MOVE AC-SIGNON-RULES-ITEM-NUM TO WS-ITEM-NUMBER.
+
+           EXEC CICS WRITEQ TS
+                QUEUE(AC-SIGNON-RULES-QUEUE-NAME)
+                ITEM(WS-ITEM-NUMBER)
+                FROM (SIGN-ON-RULES-RECORD)
+                MAIN
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'SIGN-ON RULES WRITEQ EXCEPTION' TO MON-MESSAGE 
+                SET MON-PROCESSING-ERROR TO TRUE
+                PERFORM 9000-RETURN-TO-CALLER
+           END-EVALUATE.                     
+          
        2000-PROCESS-REQUEST.
            CONTINUE.
 
