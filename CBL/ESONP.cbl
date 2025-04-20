@@ -7,10 +7,11 @@
        DATA DIVISION.
        WORKING-STORAGE SECTION.
       ******************************************************************
-      *   INCLUDE COPYBOOKS FOR
-      *      - APPLICATION CONSTANTS
-      *      - MY SYMBOLIC MAP
-      *      - IBM'S AID KEYS
+      *   INCLUDE COPYBOOKS FOR:
+      *      - APPLICATION CONSTANTS.
+      *      - SIGN-ON MAP.
+      *      - REGISTERED USERS.
+      *      - IBM'S AID KEYS.
       ******************************************************************
        COPY ECONST.
        COPY ESONMAP.
