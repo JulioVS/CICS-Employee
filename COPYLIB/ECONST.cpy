@@ -19,9 +19,10 @@
                 USAGE IS BINARY                   VALUE 1.
       *      ACTIVITY MONITOR
           05 AC-ACTMON-PROGRAM-NAME     PIC X(8)  VALUE 'EACTMON'.
+          05 AC-ACTMON-CONTAINER-NAME   PIC X(16) VALUE 'MONContainer'.
           05 AC-ACTMON-CHANNEL-NAME     PIC X(16) VALUE 'DHFTRANSACTION'
            .
-          05 AC-ACTMON-CONTAINER-NAME   PIC X(16) VALUE 'MONContainer'.
+      *      USER ACTIVITY QUEUE
           05 AC-ACTMON-QUEUE-PREFIX     PIC X(8)  VALUE 'EUSERACT'.
           05 AC-ACTMON-ITEM-NUM         PIC S9(4)
                 USAGE IS BINARY                   VALUE 1.

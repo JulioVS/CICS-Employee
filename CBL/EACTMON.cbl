@@ -35,7 +35,7 @@
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
 
-           PERFORM 1000-INITIALIZE.
+           PERFORM 1000-GET-DATA-FROM-CALLER.
            PERFORM 2000-PROCESS-REQUEST.
            PERFORM 9000-RETURN-TO-CALLER.
 
@@ -43,12 +43,26 @@
        SUB-ROUTINE SECTION.
       *-----------------------------------------------------------------
 
-       1000-INITIALIZE.
-           CONTINUE.
+       1000-GET-DATA-FROM-CALLER.
+           EXEC CICS GET
+                CONTAINER(AC-ACTMON-CONTAINER-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                INTO (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                END-EXEC.
+
+           INITIALIZE MON-RESPONSE.
 
        2000-PROCESS-REQUEST.
            CONTINUE.
 
        9000-RETURN-TO-CALLER.
+           EXEC CICS PUT
+                CONTAINER(AC-ACTMON-CONTAINER-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                FROM (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                END-EXEC.
+                
            EXEC CICS RETURN
                 END-EXEC.
