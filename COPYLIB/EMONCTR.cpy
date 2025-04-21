@@ -15,6 +15,7 @@
           05 MON-RESPONSE.
              10 MON-RESPONSE-CODE       PIC X(1).
                 88 MON-PROCESSING-ERROR           VALUE 'E'.
+                88 MON-SUCCESFUL-RUN              VALUE SPACES.
              10 MON-SIGN-ON-STATUS      PIC X(1).
                 88 MON-ST-IN-PROCESS              VALUE 'I'.
                 88 MON-ST-LOCKED-OUT              VALUE 'L'.
