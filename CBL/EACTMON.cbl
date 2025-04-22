@@ -29,6 +29,28 @@
        01 WS-WORKING-VARS.
           03 WS-ITEM-NUMBER            PIC S9(4) USAGE IS BINARY.
           03 WS-CICS-RESPONSE          PIC S9(8) USAGE IS BINARY.
+      *
+          03 WS-CURRENT-TIMESTAMP.
+             05 WS-CT-DATE.
+                07 WS-CT-YEAR          PIC 9(4).
+                07 WS-CT-MONTH         PIC 9(2).
+                07 WS-CT-DAY           PIC 9(2).
+             05 WS-CT-TIME.
+                07 WS-CT-HOUR          PIC 9(2).
+                07 WS-CT-MINUTE        PIC 9(2).
+                07 WS-CT-SECOND        PIC 9(2).
+      *
+          03 WS-LOCKOUT-TIMESTAMP.
+             05 WS-LK-DATE.
+                07 WS-LK-YEAR          PIC 9(4).
+                07 WS-LK-MONTH         PIC 9(2).
+                07 WS-LK-DAY           PIC 9(2).
+             05 WS-LK-TIME.
+                07 WS-LK-HOUR          PIC 9(2).
+                07 WS-LK-MINUTE        PIC 9(2).
+                07 WS-LK-SECOND        PIC 9(2).
+      *
+          03 WS-ELAPSED-MINUTES        PIC S9(4).
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -40,7 +62,7 @@
            PERFORM 9000-RETURN-TO-CALLER.
 
       *-----------------------------------------------------------------
-       SUB-ROUTINE SECTION.
+       START-UP SECTION.
       *-----------------------------------------------------------------
 
        1000-INITIAL-SETUP.
@@ -204,6 +226,10 @@
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
 
+      *-----------------------------------------------------------------
+       USE-CASE SECTION.
+      *-----------------------------------------------------------------
+
        2000-PROCESS-REQUEST.
       *    NOTIFICATION OF USER SIGN-OFF - DELETE QUEUE.
            IF MON-AC-SIGN-OFF THEN 
@@ -264,20 +290,22 @@
            INITIALIZE ACT-ATTEMPT-NUMBER.
            MOVE MON-USER-CATEGORY TO ACT-USER-CATEGORY.
 
-           MOVE FUNCTION CURRENT-DATE(1:14) TO
-              ACT-LAST-ACTIVITY-TIMESTAMP.
-
            PERFORM 2300-UPDATE-USER-ACT-QUEUE.
            PERFORM 9000-RETURN-TO-CALLER.
 
        2300-UPDATE-USER-ACT-QUEUE.
       *    UPDATE USER ACTIVITY QUEUE.
+           MOVE FUNCTION CURRENT-DATE(1:14) TO
+              ACT-LAST-ACTIVITY-TIMESTAMP.
+
            MOVE AC-ACTMON-ITEM-NUM TO WS-ITEM-NUMBER.
 
+      *    WE NEED TO INCLUDE THE 'REWRITE' OPTION TO UPDATE THE QUEUE.
            EXEC CICS WRITEQ TS
                 QNAME(WS-USER-ACTIVITY-QUEUE-NAME)
                 ITEM(WS-ITEM-NUMBER)
                 FROM (USER-ACTIVITY-RECORD)
+                REWRITE
                 MAIN
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
@@ -292,14 +320,49 @@
            END-EVALUATE.
            
        3000-LOCKED-OUT-CASE.
-           CONTINUE.
+      *    CHECK IF LOCKOUT TIME HAS EXPIRED.
+           MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-TIMESTAMP.
+           MOVE ACT-LAST-ACTIVITY-TIMESTAMP TO WS-LOCKOUT-TIMESTAMP.
+
+      *    CALCULATE ELAPSED TIME IN MINUTES SINCE LAST ACTIVITY.
+      *    (COULD BE NEGATIVE IF THE DATE HAS CHANGED)
+           COMPUTE WS-ELAPSED-MINUTES =
+              (WS-CT-HOUR * 60 + WS-CT-MINUTE) -
+              (WS-LK-HOUR * 60 + WS-LK-MINUTE)
+           END-COMPUTE.
            
+      *    IF THE DATE HAS CHANGED ADD A DAY'S WORTH OF MINUTES
+      *    (1440 MINUTES) TO FIX A CASE LIKE LOCKOUT TIME OF 23:59
+      *    AND CURRENT TIME OF 00:01.
+           IF WS-CT-DATE > WS-LK-DATE
+              ADD 1440 TO WS-ELAPSED-MINUTES
+           END-IF.
+
+      *    IF ENOUGH TIME HAS PASSED, UNLOCK THE USER AND UPDATE QUEUE.
+           IF WS-ELAPSED-MINUTES > SR-LOCKOUT-INTERVAL THEN
+              SET ACT-ST-SIGNED-ON TO TRUE
+              SET MON-ST-SIGNED-ON TO TRUE
+              INITIALIZE ACT-ATTEMPT-NUMBER
+
+              MOVE 'SIGN-ON LOCKOUT EXPIRED' TO MON-MESSAGE
+              PERFORM 2300-UPDATE-USER-ACT-QUEUE
+              PERFORM 9200-REDIRECT-TO-SIGNON
+           ELSE
+              SET MON-ST-LOCKED-OUT TO TRUE
+              MOVE 'SIGN-ON LOCKOUT STILL IN EFFECT' TO MON-MESSAGE
+              PERFORM 9000-RETURN-TO-CALLER
+           END-IF.
+
        4000-SIGNED-ON-CASE.
            CONTINUE.
 
        5000-IN-PROCESS-CASE.
            CONTINUE.
            
+      *-----------------------------------------------------------------
+       EXIT-ROUTE SECTION.
+      *-----------------------------------------------------------------
+
        9000-RETURN-TO-CALLER.
       *    UPDATE CONTAINER WITH ACTIVITY MONITORING DATA.
            EXEC CICS PUT
@@ -325,3 +388,22 @@
       *    RETURN TO CICS - END OF PROCESSING.
            EXEC CICS RETURN
                 END-EXEC.
+
+       9200-REDIRECT-TO-SIGNON.
+      *    UPDATE CONTAINER WITH ACTIVITY MONITORING DATA.
+           EXEC CICS PUT
+                CONTAINER(AC-ACTMON-CONTAINER-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                FROM (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                END-EXEC.
+
+      *    INITIATE A NEW SIGN-ON TRANSACTION!
+           EXEC CICS START
+                TRANSID(AC-SIGNON-TRANSACTION-ID)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                TERMID(EIBTRMID IN DFHEIBLK)
+                END-EXEC.
+
+      *    THEN EXIT FROM THIS PROGRAM!
+           PERFORM 9100-RETURN-TO-CICS.
