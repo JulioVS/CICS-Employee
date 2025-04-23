@@ -21,26 +21,31 @@
       *   DEFINE MY SESSION STATE DATA FOR PASSING INTO COMM-AREA.
       ******************************************************************
        01 WS-SESSION-STATE.
-          05 WS-USER-ID        PIC X(8).
-          05 WS-USER-PASSWORD  PIC X(8).
+          05 WS-USER-ID           PIC X(8).
+          05 WS-USER-PASSWORD     PIC X(8).
       ******************************************************************
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE  PIC S9(8) USAGE IS BINARY.
-          05 WS-CURRENT-DATE   PIC X(14).
+          05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
+          05 WS-CURRENT-DATE      PIC X(14).
+      *
+          05 WS-USER-LOOKUP       PIC X(1)  VALUE SPACE.
+             88 WS-USER-FOUND               VALUE 'Y'.
+          05 WS-LOGIN-OUTCOME     PIC X(1)  VALUE SPACE.
+             88 WS-LOGIN-SUCCESS            VALUE 'Y'.
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
       ******************************************************************
        LINKAGE SECTION.
-       01 DFHCOMMAREA          PIC X(16).
+       01 DFHCOMMAREA             PIC X(16).
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
 
-           IF EIBCALEN IS EQUAL TO ZERO
+           IF EIBCALEN IS EQUAL TO ZERO THEN
               PERFORM 1000-FIRST-INTERACTION
            ELSE
               PERFORM 2000-PROCESS-USER-INPUT
@@ -106,27 +111,32 @@
 
        3000-SIGN-ON-USER.
            PERFORM 3100-UPDATE-STATE.
-           PERFORM 3200-CHECK-USER-STATUS.
-           PERFORM 3300-LOOKUP-USER-ID.
+           PERFORM 3200-LOOKUP-USER-ID.
+
+           IF WS-USER-FOUND THEN
+              PERFORM 3300-CHECK-USER-STATUS
+              PERFORM 3400-CHECK-USER-CREDENTIALS
+           ELSE 
+              EXIT
+           END-IF.
+
+           IF WS-LOGIN-SUCCESS THEN
+              PERFORM 3500-NOTIFY-ACTIVITY-MONITOR
+              PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+           END-IF.
 
        3100-UPDATE-STATE.
       *    IF NEW DATA WAS RECEIVED, UPDATE STATE
            IF USERIDI IS NOT EQUAL TO LOW-VALUES AND
-              USERIDI IS NOT EQUAL TO SPACES
+              USERIDI IS NOT EQUAL TO SPACES THEN
               MOVE USERIDI TO WS-USER-ID
            END-IF.
            IF PASSWDI IS NOT EQUAL TO LOW-VALUES AND
-              PASSWDI IS NOT EQUAL TO SPACES
+              PASSWDI IS NOT EQUAL TO SPACES THEN
               MOVE PASSWDI TO WS-USER-PASSWORD
            END-IF.
 
-       3200-CHECK-USER-STATUS.
-           CONTINUE.
-
-       3250-NOTIFY-ACTIVITY-MONITOR.
-           CONTINUE.
-
-       3300-LOOKUP-USER-ID.
+       3200-LOOKUP-USER-ID.
       *    LOOKUP THE USER ID IN VSAM FILE
            EXEC CICS READ
                 FILE(AC-REG-USER-FILE-NAME)
@@ -137,26 +147,30 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                PERFORM 3400-CHECK-USER-CREDENTIALS
+                SET WS-USER-FOUND TO TRUE
+                MOVE "User found!" TO MESSO
            WHEN DFHRESP(NOTFND)
                 MOVE "User not found!" TO MESSO
            WHEN OTHER
                 MOVE "Error reading Users file!" TO MESSO
            END-EVALUATE.
 
+       3300-CHECK-USER-STATUS.
+           CONTINUE.
+
        3400-CHECK-USER-CREDENTIALS.
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-DATE.
 
-      *    CHECK IF THE USER ID AND PASSWORD MATCH
-           IF WS-USER-PASSWORD IS EQUAL TO RU-USER-PASSWORD
-      *       CHECK IF THE USER ID IS ACTIVE   
-              IF RU-ST-ACTIVE 
-      *          CHECK IF THE USER ID VALIDITY PERIOD HAS STARTED
-                 IF WS-CURRENT-DATE
-                    IS GREATER THAN OR EQUAL TO RU-LAST-EFFECTIVE-DATE
-      *             ALL CONDITIONS MET, SUCCESFUL SIGN ON!              
-                    PERFORM 3250-NOTIFY-ACTIVITY-MONITOR
-                    PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+      *    CHECK IF THE USER ID AND PASSWORD MATCH.
+           IF WS-USER-PASSWORD IS EQUAL TO RU-USER-PASSWORD THEN
+      *       CHECK IF THE USER ID IS ACTIVE.  
+              IF RU-ST-ACTIVE THEN
+      *          CHECK IF THE USER ID VALIDITY PERIOD HAS STARTED.
+                 IF WS-CURRENT-DATE >= RU-LAST-EFFECTIVE-DATE THEN
+      *             ALL CONDITIONS MET
+      *             SUCCESFUL SIGN ON!
+                    SET WS-LOGIN-SUCCESS TO TRUE      
+                    MOVE "User is active!" TO MESSO        
                  ELSE
                     MOVE "User is not yet active!" TO MESSO
                  END-IF 
@@ -167,14 +181,17 @@
               MOVE "Invalid password!" TO MESSO
            END-IF.
 
+       3500-NOTIFY-ACTIVITY-MONITOR.
+           CONTINUE.
+
        9100-TRANSFER-TO-LANDING-PAGE.
-      *    TRANSFER TO THE LANDING PAGE
-      *    - FOR NOW, WE JUST SEND A MESSAGE BACK
+      *    TRANSFER TO THE LANDING PAGE.
+      *    - FOR NOW, WE JUST SEND A MESSAGE BACK.
            MOVE "Successful sign on!" TO MESSO.
            PERFORM 9200-SEND-MAP-AND-RETURN.
  
        9200-SEND-MAP-AND-RETURN.
-      *    PRESENT INITIAL SIGN-ON SCREEN TO THE USER
+      *    PRESENT INITIAL SIGN-ON SCREEN TO THE USER.
            EXEC CICS SEND
                 MAP(AC-SIGNON-MAP-NAME)
                 MAPSET(AC-SIGNON-MAPSET-NAME)
@@ -183,7 +200,7 @@
                 END-EXEC.
 
       *    THEN IT RETURNS SAVING THE INITIAL STATE
-      *    AND ENDING THIS STEP OF THE CONVERSATION
+      *    AND ENDING THIS STEP OF THE CONVERSATION.
            EXEC CICS RETURN
                 COMMAREA(WS-SESSION-STATE)
                 TRANSID(EIBTRNID)
