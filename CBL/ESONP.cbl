@@ -158,11 +158,15 @@
            END-EVALUATE.
 
        3300-CHECK-USER-STATUS.
-      *    LOAD ACTIVITY MONITOR CONTAINER REQUEST SECTION
+      *    CALL ACTIVITY MONITOR PROGRAM WITH "SIGN-ON" ACTION.
+           SET MON-AC-SIGN-ON TO TRUE.
+           PERFORM 3310-CALL-ACTIVITY-MONITOR.
+           PERFORM 3320-EVALUATE-RESPONSE.
+
+       3310-CALL-ACTIVITY-MONITOR.
+      *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
            MOVE AC-SIGNON-PROGRAM-NAME TO MON-LINKING-PROGRAM.
            MOVE WS-USER-ID TO MON-USER-ID.
-      *    WE ARE CALLING IT WITH THE "SIGN-ON" ACTION
-           SET MON-AC-SIGN-ON TO TRUE.
 
            EXEC CICS PUT
                 CONTAINER(AC-ACTMON-CONTAINER-NAME)
@@ -177,6 +181,7 @@
                 CONTINUE
            WHEN OTHER
                 MOVE "Error writing Activity Monitor!" TO MESSO
+                EXIT
            END-EVALUATE.
                
            EXEC CICS LINK
@@ -193,6 +198,8 @@
                 MOVE "Error linking to Activity Monitor!" TO MESSO
            END-EVALUATE.
 
+       3320-EVALUATE-RESPONSE.
+      *    GET THE RESPONSE FROM THE ACTIVITY MONITOR PROGRAM
            EXEC CICS GET
                 CONTAINER(AC-ACTMON-CONTAINER-NAME)
                 CHANNEL(AC-ACTMON-CHANNEL-NAME)
@@ -206,6 +213,27 @@
                 CONTINUE
            WHEN OTHER
                 MOVE "Error reading Activity Monitor!" TO MESSO
+                EXIT
+           END-EVALUATE.
+
+      *    REALY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
+           MOVE MON-MESSAGE TO MESSO.
+
+      *    SEE IF IT RESULTED IN SUCCESS, FAIL, NEUTRAL OR ERROR.
+           EVALUATE TRUE 
+           WHEN MON-PROCESSING-ERROR 
+           WHEN MON-ST-LOCKED-OUT
+      *         ON LOCKOUT OR ERROR, SEND BACK TO THE START     
+                PERFORM 9200-SEND-MAP-AND-RETURN
+           WHEN MON-ST-SIGNED-ON
+      *         ON SUCCESSFUL SIGN-ON, SEND TO INITIAL APP SCREEN     
+                PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+           WHEN MON-ST-IN-PROCESS
+           WHEN MON-ST-NOT-SET 
+      *         ON NEUTRAL, CONTINUE TO CHECK USER CREDENTIALS
+                CONTINUE
+           WHEN OTHER
+                MOVE "Unknown response from Activity Monitor!" TO MESSO
            END-EVALUATE.
 
        3400-CHECK-USER-CREDENTIALS.
