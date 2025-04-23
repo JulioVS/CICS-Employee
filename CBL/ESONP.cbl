@@ -53,7 +53,7 @@
            END-IF.
 
       *-----------------------------------------------------------------
-       SUB-ROUTINE SECTION.
+       START-UP SECTION.
       *-----------------------------------------------------------------
 
        1000-FIRST-INTERACTION.
@@ -73,6 +73,10 @@
       *    FOR THE FIRST INTERACTION, IT SENDS THE EMPY MAP WITH
       *    JUST THE TRANSACTION ID ON IT (AN ECHO OF A KNOWN VALUE)
            MOVE EIBTRNID TO TRANIDO.
+
+      *-----------------------------------------------------------------
+       USE-CASE SECTION.
+      *-----------------------------------------------------------------
 
        2000-PROCESS-USER-INPUT.
       *    THIS IS THE CONTINUATION OF THE CONVERSATION,
@@ -168,6 +172,24 @@
            MOVE AC-SIGNON-PROGRAM-NAME TO MON-LINKING-PROGRAM.
            MOVE WS-USER-ID TO MON-USER-ID.
 
+           PERFORM 3315-PUT-CONTAINER.
+
+      *    'LINK' CALLS THE PROGRAM AND *RETURNS* AFTER ITS EXECUTION.
+           EXEC CICS LINK
+                PROGRAM(AC-ACTMON-PROGRAM-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                TRANSID(EIBTRNID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE 
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE "Error linking to Activity Monitor!" TO MESSO
+           END-EVALUATE.
+
+       3315-PUT-CONTAINER.
            EXEC CICS PUT
                 CONTAINER(AC-ACTMON-CONTAINER-NAME)
                 CHANNEL(AC-ACTMON-CHANNEL-NAME)
@@ -184,20 +206,6 @@
                 EXIT
            END-EVALUATE.
                
-           EXEC CICS LINK
-                PROGRAM(AC-ACTMON-PROGRAM-NAME)
-                CHANNEL(AC-ACTMON-CHANNEL-NAME)
-                TRANSID(EIBTRNID)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
-
-           EVALUATE WS-CICS-RESPONSE 
-           WHEN DFHRESP(NORMAL)
-                CONTINUE
-           WHEN OTHER
-                MOVE "Error linking to Activity Monitor!" TO MESSO
-           END-EVALUATE.
-
        3320-EVALUATE-RESPONSE.
       *    GET THE RESPONSE FROM THE ACTIVITY MONITOR PROGRAM
            EXEC CICS GET
@@ -260,14 +268,35 @@
            END-IF.
 
        3500-NOTIFY-ACTIVITY-MONITOR.
-           CONTINUE.
+      *    NOTIFY ACTIVITY MONITOR OF A SUCCESSFUL SIGN-ON!
+      *    (ONE-WAY OPERATION, NO RESPONSE EXPECTED)
+           SET MON-AC-NOTIFY TO TRUE.
+           PERFORM 3310-CALL-ACTIVITY-MONITOR.
+
+      *-----------------------------------------------------------------
+       EXIT-ROUTE SECTION.
+      *-----------------------------------------------------------------
 
        9100-TRANSFER-TO-LANDING-PAGE.
-      *    TRANSFER TO THE LANDING PAGE.
-      *    - FOR NOW, WE JUST SEND A MESSAGE BACK.
-           MOVE "Successful sign on!" TO MESSO.
-           PERFORM 9200-SEND-MAP-AND-RETURN.
- 
+      *    PUT CONTAINER AND TRANSFER CONTROL TO INITIAL PROGRAM
+      *    OF THE EMPLOYEE APP!
+           PERFORM 3315-PUT-CONTAINER.
+
+      *    'XCTL' CALLS THE PROGRAM BUT DOES *NOT* RETURN AFTERWARDS!
+           EXEC CICS XCTL
+                PROGRAM(AC-LANDING-PROGRAM-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE 
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE "Error linking to Landing Page!" TO MESSO
+                PERFORM 9200-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+                    
        9200-SEND-MAP-AND-RETURN.
       *    PRESENT INITIAL SIGN-ON SCREEN TO THE USER.
            EXEC CICS SEND
