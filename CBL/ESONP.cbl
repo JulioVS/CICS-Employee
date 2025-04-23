@@ -16,6 +16,7 @@
        COPY ECONST.
        COPY ESONMAP.
        COPY EREGUSR.
+       COPY EMONCTR.
        COPY DFHAID.
       ******************************************************************
       *   DEFINE MY SESSION STATE DATA FOR PASSING INTO COMM-AREA.
@@ -63,10 +64,11 @@
            PERFORM 9200-SEND-MAP-AND-RETURN.
        
        1100-INITIALIZE.
-      *    INITIALIZE SESSION STATE AND MAP OUPUT FIELDS
+      *    INITIALIZE SESSION STATE, MAP OUPUT, WORK VARS AND CONTAINER
            INITIALIZE WS-SESSION-STATE.
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE ESONMO.
+           INITIALIZE ACTIVITY-MONITOR-CONTAINER.
 
       *    FOR THE FIRST INTERACTION, IT SENDS THE EMPY MAP WITH
       *    JUST THE TRANSACTION ID ON IT (AN ECHO OF A KNOWN VALUE)
@@ -156,7 +158,55 @@
            END-EVALUATE.
 
        3300-CHECK-USER-STATUS.
-           CONTINUE.
+      *    LOAD ACTIVITY MONITOR CONTAINER REQUEST SECTION
+           MOVE AC-SIGNON-PROGRAM-NAME TO MON-LINKING-PROGRAM.
+           MOVE WS-USER-ID TO MON-USER-ID.
+      *    WE ARE CALLING IT WITH THE "SIGN-ON" ACTION
+           SET MON-AC-SIGN-ON TO TRUE.
+
+           EXEC CICS PUT
+                CONTAINER(AC-ACTMON-CONTAINER-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                FROM (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE 
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE "Error writing Activity Monitor!" TO MESSO
+           END-EVALUATE.
+               
+           EXEC CICS LINK
+                PROGRAM(AC-ACTMON-PROGRAM-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                TRANSID(EIBTRNID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE 
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE "Error linking to Activity Monitor!" TO MESSO
+           END-EVALUATE.
+
+           EXEC CICS GET
+                CONTAINER(AC-ACTMON-CONTAINER-NAME)
+                CHANNEL(AC-ACTMON-CHANNEL-NAME)
+                INTO (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+                
+           EVALUATE WS-CICS-RESPONSE  
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE "Error reading Activity Monitor!" TO MESSO
+           END-EVALUATE.
 
        3400-CHECK-USER-CREDENTIALS.
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-DATE.
@@ -166,7 +216,7 @@
       *       CHECK IF THE USER ID IS ACTIVE.  
               IF RU-ST-ACTIVE THEN
       *          CHECK IF THE USER ID VALIDITY PERIOD HAS STARTED.
-                 IF WS-CURRENT-DATE >= RU-LAST-EFFECTIVE-DATE THEN
+                 IF WS-CURRENT-DATE IS >= RU-LAST-EFFECTIVE-DATE THEN
       *             ALL CONDITIONS MET
       *             SUCCESFUL SIGN ON!
                     SET WS-LOGIN-SUCCESS TO TRUE      

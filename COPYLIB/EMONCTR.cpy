@@ -12,6 +12,7 @@
                 88 MON-AC-SIGN-ON                 VALUE 'S'.
                 88 MON-AC-SIGN-OFF                VALUE 'F'.                
                 88 MON-AC-APP-FUNCTION            VALUE 'A'.
+                88 MON-AC-NOT-SET                 VALUE SPACES.
           05 MON-RESPONSE.
              10 MON-RESPONSE-CODE       PIC X(1).
                 88 MON-PROCESSING-ERROR           VALUE 'E'.
