@@ -101,7 +101,7 @@
            WHEN DFHENTER
                 PERFORM 3000-SIGN-ON-USER
            WHEN OTHER
-                MOVE "Invalid key!" TO MESSO 
+                MOVE "Invalid Key!" TO MESSO 
            END-EVALUATE.
 
            PERFORM 9200-SEND-MAP-AND-RETURN.
@@ -154,11 +154,11 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 SET WS-USER-FOUND TO TRUE
-                MOVE "User found!" TO MESSO
+                MOVE "User Found!" TO MESSO
            WHEN DFHRESP(NOTFND)
-                MOVE "User not found!" TO MESSO
+                MOVE "User Not Found!" TO MESSO
            WHEN OTHER
-                MOVE "Error reading Users file!" TO MESSO
+                MOVE "Error Reading Users File!" TO MESSO
            END-EVALUATE.
 
        3300-CHECK-USER-STATUS.
@@ -186,7 +186,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE "Error linking to Activity Monitor!" TO MESSO
+                MOVE "Error Linking To Activity Monitor!" TO MESSO
            END-EVALUATE.
 
        3315-PUT-CONTAINER.
@@ -202,8 +202,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE "Error writing Activity Monitor!" TO MESSO
-                EXIT
+                MOVE "Error Writing Activity Monitor!" TO MESSO
            END-EVALUATE.
                
        3320-EVALUATE-RESPONSE.
@@ -220,11 +219,11 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE "Error reading Activity Monitor!" TO MESSO
+                MOVE "Error Reading Activity Monitor!" TO MESSO
                 EXIT
            END-EVALUATE.
 
-      *    REALY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
+      *    RELAY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
            MOVE MON-MESSAGE TO MESSO.
 
       *    SEE IF IT RESULTED IN SUCCESS, FAIL, NEUTRAL OR ERROR.
@@ -241,7 +240,7 @@
       *         ON NEUTRAL, CONTINUE TO CHECK USER CREDENTIALS
                 CONTINUE
            WHEN OTHER
-                MOVE "Unknown response from Activity Monitor!" TO MESSO
+                MOVE "Unknown Response From Activity Monitor!" TO MESSO
            END-EVALUATE.
 
        3400-CHECK-USER-CREDENTIALS.
@@ -256,15 +255,15 @@
       *             ALL CONDITIONS MET
       *             SUCCESFUL SIGN ON!
                     SET WS-LOGIN-SUCCESS TO TRUE      
-                    MOVE "User is active!" TO MESSO        
+                    MOVE "User Is Active!" TO MESSO        
                  ELSE
-                    MOVE "User is not yet active!" TO MESSO
+                    MOVE "User Is Not Yet Active!" TO MESSO
                  END-IF 
               ELSE
-                 MOVE "User is inactive!" TO MESSO
+                 MOVE "User Is Inactive!" TO MESSO
               END-IF
            ELSE
-              MOVE "Invalid password!" TO MESSO
+              MOVE "Invalid Password!" TO MESSO
            END-IF.
 
        3500-NOTIFY-ACTIVITY-MONITOR.
@@ -293,7 +292,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE "Error linking to Landing Page!" TO MESSO
+                MOVE "Error Linking To Landing Page!" TO MESSO
                 PERFORM 9200-SEND-MAP-AND-RETURN
            END-EVALUATE.
                     

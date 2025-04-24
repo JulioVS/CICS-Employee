@@ -1,7 +1,7 @@
        IDENTIFICATION DIVISION.
        PROGRAM-ID. EACTMON.
       ******************************************************************
-      *   CICS PLURALSIGHT 'EMPLOYE APP'
+      *   CICS PLURALSIGHT 'EMPLOYEE APP'
       *      - 'ACTIVITY MONITOR' PROGRAM
       ******************************************************************
        DATA DIVISION.
@@ -96,11 +96,11 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN DFHRESP(NOTFND)
-                MOVE 'ACTIVITY MON CONTAINER NOT FOUND' TO MON-MESSAGE 
+                MOVE 'Activity Mon Container Not Found!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            WHEN OTHER
-                MOVE 'ACTIVITY MON CONTAINER EXCEPTION' TO MON-MESSAGE 
+                MOVE 'Activity Mon Container Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -127,7 +127,7 @@
            WHEN DFHRESP(QIDERR)
                 PERFORM 1210-LOAD-RULES-FROM-FILE
            WHEN OTHER
-                MOVE 'SIGN-ON RULES READQ EXCEPTION' TO MON-MESSAGE 
+                MOVE 'Sign-On Rules READQ Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -147,7 +147,7 @@
            WHEN DFHRESP(NORMAL)
                 PERFORM 1220-WRITE-RULES-TO-QUEUE
            WHEN OTHER
-                MOVE 'SIGN-ON RULES FILE EXCEPTION' TO MON-MESSAGE 
+                MOVE 'Sign-On Rules File Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -168,7 +168,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'SIGN-ON RULES WRITEQ EXCEPTION' TO MON-MESSAGE 
+                MOVE 'Sign-On Rules WRITEQ Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.                     
@@ -195,7 +195,7 @@
            WHEN DFHRESP(QIDERR)
                 PERFORM 1310-NO-USER-ACTIVITY-QUEUE
            WHEN OTHER
-                MOVE 'USER ACTIVITY READQ EXCEPTION' TO MON-MESSAGE 
+                MOVE 'User Activity READQ Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.   
@@ -209,11 +209,11 @@
       *       AS A FIRST INTERACTION, JUST SET STATUS TO IN-PROCESS,
       *       UPDATE CONTAINER AND RETURN TO CALLER.
               SET MON-ST-IN-PROCESS TO TRUE
-              MOVE 'SIGN-ON IN PROCESS' TO MON-MESSAGE
+              MOVE 'Sign-On In Process' TO MON-MESSAGE
               PERFORM 9000-RETURN-TO-CALLER
            ELSE
       *       INVALID SCENARIO - REPORT AND LEAVE.
-              MOVE 'USER ACTIVITY NO-QUEUE EXCEPTION' TO MON-MESSAGE 
+              MOVE 'No User Activity Queue Exception!' TO MON-MESSAGE 
               SET MON-PROCESSING-ERROR TO TRUE
               PERFORM 9000-RETURN-TO-CALLER
            END-IF.
@@ -245,7 +245,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'USER ACTIVITY WRITEQ EXCEPTION I' TO MON-MESSAGE 
+                MOVE 'User Activity WRITEQ Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -270,7 +270,7 @@
                 CONTINUE 
            WHEN MON-AC-NOT-SET 
       *         NO SPECIFIED ACTION, NOTHING TO DO.
-                MOVE 'NO ACTION REQUESTED' TO MON-MESSAGE
+                MOVE 'No Action Was Requested!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -286,11 +286,11 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN DFHRESP(QIDERR)
-                MOVE 'USER ACTIVITY QUEUE MISSING' TO MON-MESSAGE 
+                MOVE 'User Activity Queue Missing!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            WHEN OTHER
-                MOVE 'USER ACTIVITY DELETEQ EXCEPTION' TO MON-MESSAGE 
+                MOVE 'User Activity DELETEQ Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -328,7 +328,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'USER ACTIVITY WRITEQ EXCEPTION II' TO MON-MESSAGE 
+                MOVE 'User Activity WRITEQ Exception!' TO MON-MESSAGE 
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -347,7 +347,7 @@
                    PERFORM 5000-IN-PROCESS-CASE
                 END-IF
            WHEN OTHER
-                MOVE 'INVALID USER SIGN-ON STATUS' TO MON-MESSAGE
+                MOVE 'Invalid User Sign-On Status!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -377,12 +377,12 @@
               SET MON-ST-SIGNED-ON TO TRUE
               INITIALIZE ACT-ATTEMPT-NUMBER
 
-              MOVE 'SIGN-ON LOCKOUT EXPIRED' TO MON-MESSAGE
+              MOVE 'Sign-On Lockout Expired' TO MON-MESSAGE
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE
               SET MON-ST-LOCKED-OUT TO TRUE
-              MOVE 'SIGN-ON LOCKOUT STILL IN EFFECT' TO MON-MESSAGE
+              MOVE 'Sign-On Lockout Still In Effect!' TO MON-MESSAGE
               PERFORM 9000-RETURN-TO-CALLER
            END-IF.
 
@@ -411,13 +411,13 @@
            IF WS-ELAPSED-MINUTES > SR-INACTIVITY-INTERVAL THEN
               SET ACT-ST-IN-PROCESS TO TRUE
               SET MON-ST-IN-PROCESS TO TRUE
-              MOVE 'SIGN-ON HAS TIMED OUT' TO MON-MESSAGE
+              MOVE 'Sign-On Has Timed Out!' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE 
               SET MON-ST-SIGNED-ON TO TRUE
-              MOVE 'SIGN-ON STILL ACTIVE' TO MON-MESSAGE
+              MOVE 'Sign-On Still Active' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9000-RETURN-TO-CALLER
@@ -450,7 +450,7 @@
            IF WS-ELAPSED-MINUTES > SR-INACTIVITY-INTERVAL THEN
       *       IF SO, REDIRECT TO SIGN-ON (BACK TO THE START)
               INITIALIZE ACT-ATTEMPT-NUMBER
-              MOVE 'SIGN-ON ATTEMPT HAS TIMED OUT' TO MON-MESSAGE
+              MOVE 'Sign-On Attempt Has Timed Out!' TO MON-MESSAGE
               
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
@@ -461,11 +461,11 @@
                  SET ACT-ST-LOCKED-OUT TO TRUE
                  SET MON-ST-LOCKED-OUT TO TRUE
                  INITIALIZE ACT-ATTEMPT-NUMBER
-                 MOVE 'USER IS NOW LOCKED OUT' TO MON-MESSAGE
+                 MOVE 'User Is Now Locked Out!' TO MON-MESSAGE
               ELSE
       *          IF NOT, JUST INCREMENT ATTEMPT NUMBER.
                  ADD 1 TO ACT-ATTEMPT-NUMBER
-                 MOVE 'SIGN-ON STILL ACTIVE' TO MON-MESSAGE
+                 MOVE 'Sign-On Still Active' TO MON-MESSAGE
               END-IF
 
       *       UPDATE QUEUE AND RETURN TO CALLER.
