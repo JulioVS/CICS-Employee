@@ -27,41 +27,46 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          03 WS-ITEM-NUMBER            PIC S9(4) USAGE IS BINARY.
-          03 WS-CICS-RESPONSE          PIC S9(8) USAGE IS BINARY.
+          05 WS-ITEM-NUMBER            PIC S9(4) USAGE IS BINARY.
+          05 WS-CICS-RESPONSE          PIC S9(8) USAGE IS BINARY.
+          05 WS-MESSAGE                PIC X(80).
       *
-          03 WS-CURRENT-TIMESTAMP.
-             05 WS-CT-DATE.
-                07 WS-CT-YEAR          PIC 9(4).
-                07 WS-CT-MONTH         PIC 9(2).
-                07 WS-CT-DAY           PIC 9(2).
-             05 WS-CT-TIME.
-                07 WS-CT-HOUR          PIC 9(2).
-                07 WS-CT-MINUTE        PIC 9(2).
-                07 WS-CT-SECOND        PIC 9(2).
+          05 WS-CURRENT-TIMESTAMP.
+             07 WS-CT-DATE.
+                10 WS-CT-YEAR          PIC 9(4).
+                10 WS-CT-MONTH         PIC 9(2).
+                10 WS-CT-DAY           PIC 9(2).
+             07 WS-CT-TIME.
+                10 WS-CT-HOUR          PIC 9(2).
+                10 WS-CT-MINUTE        PIC 9(2).
+                10 WS-CT-SECOND        PIC 9(2).
       *
-          03 WS-LOCKOUT-TIMESTAMP.
-             05 WS-LK-DATE.
-                07 WS-LK-YEAR          PIC 9(4).
-                07 WS-LK-MONTH         PIC 9(2).
-                07 WS-LK-DAY           PIC 9(2).
-             05 WS-LK-TIME.
-                07 WS-LK-HOUR          PIC 9(2).
-                07 WS-LK-MINUTE        PIC 9(2).
-                07 WS-LK-SECOND        PIC 9(2).
+          05 WS-LOCKOUT-TIMESTAMP.
+             07 WS-LK-DATE.
+                10 WS-LK-YEAR          PIC 9(4).
+                10 WS-LK-MONTH         PIC 9(2).
+                10 WS-LK-DAY           PIC 9(2).
+             07 WS-LK-TIME.
+                10 WS-LK-HOUR          PIC 9(2).
+                10 WS-LK-MINUTE        PIC 9(2).
+                10 WS-LK-SECOND        PIC 9(2).
       *
-          03 WS-ACTIVITY-TIMESTAMP.
-             05 WS-AC-DATE.
-                07 WS-AC-YEAR          PIC 9(4).
-                07 WS-AC-MONTH         PIC 9(2).
-                07 WS-AC-DAY           PIC 9(2).
-             05 WS-AC-TIME.
-                07 WS-AC-HOUR          PIC 9(2).
-                07 WS-AC-MINUTE        PIC 9(2).
-                07 WS-AC-SECOND        PIC 9(2).
+          05 WS-ACTIVITY-TIMESTAMP.
+             07 WS-AC-DATE.
+                10 WS-AC-YEAR          PIC 9(4).
+                10 WS-AC-MONTH         PIC 9(2).
+                10 WS-AC-DAY           PIC 9(2).
+             07 WS-AC-TIME.
+                10 WS-AC-HOUR          PIC 9(2).
+                10 WS-AC-MINUTE        PIC 9(2).
+                10 WS-AC-SECOND        PIC 9(2).
       *
-          03 WS-ELAPSED-MINUTES        PIC S9(4).
-
+          05 WS-ELAPSED-MINUTES        PIC S9(4).
+      *
+          05 WS-DEBUG-MODE             PIC X(1)  VALUE 'Y'.
+             88 I-AM-DEBUGGING                   VALUE 'Y'.
+             88 NOT-DEBUGGING                    VALUE 'N'.
+                
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
        MAIN-LOGIC SECTION.
@@ -77,7 +82,7 @@
 
        1000-INITIAL-SETUP.
            INITIALIZE WS-WORKING-VARS.
-          
+
            PERFORM 1100-GET-DATA-FROM-CALLER.
            PERFORM 1200-GET-SIGN-ON-RULES.
            PERFORM 1300-GET-USER-ACTIVITY-QUEUE.
@@ -92,15 +97,15 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN DFHRESP(NOTFND)
-                MOVE 'Activity Mon Container Not Found!' TO MON-MESSAGE 
+                MOVE 'Activity Mon Container Not Found!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            WHEN OTHER
-                MOVE 'Activity Mon Container Exception!' TO MON-MESSAGE 
+                MOVE 'Activity Mon Container Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -111,7 +116,7 @@
       *    GET SIGN-ON RULES FROM TEMPORARY QUEUE, IF AVAILABLE.
       *    IF NOT, GET THEM FROM THE VSAM FILE.
            MOVE AC-SIGNON-RULES-ITEM-NUM TO WS-ITEM-NUMBER.
-           
+
       *    FOR 16-BYTE QUEUE NAMES, USE THE 'QNAME()' INNER OPTION AND
       *    NOT 'QUEUE()' WHICH ONLY TAKES 8-BYTES!
            EXEC CICS READQ TS
@@ -127,7 +132,7 @@
            WHEN DFHRESP(QIDERR)
                 PERFORM 1210-LOAD-RULES-FROM-FILE
            WHEN OTHER
-                MOVE 'Sign-On Rules READQ Exception!' TO MON-MESSAGE 
+                MOVE 'Sign-On Rules READQ Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -142,16 +147,16 @@
                 RRN
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-                
-           EVALUATE WS-CICS-RESPONSE 
+
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 PERFORM 1220-WRITE-RULES-TO-QUEUE
            WHEN OTHER
-                MOVE 'Sign-On Rules File Exception!' TO MON-MESSAGE 
+                MOVE 'Sign-On Rules File Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
-         
+
        1220-WRITE-RULES-TO-QUEUE.
       *    SET UP SIGN-ON RULES QUEUE TO PROVIDE IN-MEMORY ACCESS.
            MOVE AC-SIGNON-RULES-ITEM-NUM TO WS-ITEM-NUMBER.
@@ -168,11 +173,11 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'Sign-On Rules WRITEQ Exception!' TO MON-MESSAGE 
+                MOVE 'Sign-On Rules WRITEQ Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
-           END-EVALUATE.                     
-          
+           END-EVALUATE.
+
        1300-GET-USER-ACTIVITY-QUEUE.
       *    ACTIVITY QUEUE NAME HAS A FIXED PREFIX AND A VARIABLE
       *    'USER ID' SUFFIX.
@@ -195,11 +200,11 @@
            WHEN DFHRESP(QIDERR)
                 PERFORM 1310-NO-USER-ACTIVITY-QUEUE
            WHEN OTHER
-                MOVE 'User Activity READQ Exception!' TO MON-MESSAGE 
+                MOVE 'User Activity READQ Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
-           END-EVALUATE.   
-           
+           END-EVALUATE.
+
        1310-NO-USER-ACTIVITY-QUEUE.
            IF MON-LINKING-PROGRAM IS EQUAL TO AC-SIGNON-PROGRAM-NAME
       *       VALID SCENARIO - FIRST INTERACTION SINCE APP STARTUP
@@ -213,7 +218,7 @@
               PERFORM 9000-RETURN-TO-CALLER
            ELSE
       *       INVALID SCENARIO - REPORT AND LEAVE.
-              MOVE 'No User Activity Queue Exception!' TO MON-MESSAGE 
+              MOVE 'No User Activity Queue Exception!' TO MON-MESSAGE
               SET MON-PROCESSING-ERROR TO TRUE
               PERFORM 9000-RETURN-TO-CALLER
            END-IF.
@@ -227,12 +232,12 @@
            SET ACT-ST-IN-PROCESS TO TRUE.
            MOVE 1 TO ACT-ATTEMPT-NUMBER.
            MOVE FUNCTION CURRENT-DATE(1:14) TO
-              ACT-LAST-ACTIVITY-TIMESTAMP. 
+              ACT-LAST-ACTIVITY-TIMESTAMP.
 
            MOVE AC-ACTMON-ITEM-NUM TO WS-ITEM-NUMBER.
-           
-      *    NO ACTUAL 'CREATE QUEUE' COMMAND - CICS CREATES IT 
-      *    AUTOMATICALLY ON FIRST WRITE!   
+
+      *    NO ACTUAL 'CREATE QUEUE' COMMAND - CICS CREATES IT
+      *    AUTOMATICALLY ON FIRST WRITE!
            EXEC CICS WRITEQ TS
                 QNAME(WS-USER-ACTIVITY-QUEUE-NAME)
                 ITEM(WS-ITEM-NUMBER)
@@ -241,11 +246,11 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'User Activity WRITEQ Exception!' TO MON-MESSAGE 
+                MOVE 'User Activity WRITEQ Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
@@ -259,7 +264,7 @@
            WHEN MON-AC-SIGN-OFF
       *         NOTIFICATION OF USER SIGN-OFF - DELETE QUEUE.
                 PERFORM 2100-SIGN-USER-OFF
-           WHEN MON-AC-NOTIFY 
+           WHEN MON-AC-NOTIFY
       *         NOTIFICATION OF SUCCESSFUL SIGN-ON - UPDATE STATUS.
                 PERFORM 2200-SET-SIGNED-ON-STATUS
            WHEN MON-AC-SIGN-ON
@@ -267,8 +272,8 @@
                 PERFORM 2300-SIGN-ON-USER
            WHEN MON-AC-APP-FUNCTION
       *         NOT YET IMPLEMENTED - STALL.
-                CONTINUE 
-           WHEN MON-AC-NOT-SET 
+                CONTINUE
+           WHEN MON-AC-NOT-SET
       *         NO SPECIFIED ACTION, NOTHING TO DO.
                 MOVE 'No Action Was Requested!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
@@ -286,17 +291,17 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN DFHRESP(QIDERR)
-                MOVE 'User Activity Queue Missing!' TO MON-MESSAGE 
+                MOVE 'User Activity Queue Missing!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            WHEN OTHER
-                MOVE 'User Activity DELETEQ Exception!' TO MON-MESSAGE 
+                MOVE 'User Activity DELETEQ Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
 
            PERFORM 9100-RETURN-TO-CICS.
-          
+
        2200-SET-SIGNED-ON-STATUS.
       *    UPDATE USER ACTIVITY QUEUE WITH SIGN-ON STATUS.
            SET ACT-ST-SIGNED-ON TO TRUE.
@@ -324,15 +329,15 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'User Activity WRITEQ Exception!' TO MON-MESSAGE 
+                MOVE 'User Activity WRITEQ Exception!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
-           
+
        2300-SIGN-ON-USER.
            EVALUATE TRUE
            WHEN ACT-ST-LOCKED-OUT
@@ -351,7 +356,7 @@
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
-           
+
        3000-LOCKED-OUT-CASE.
       *    CHECK IF LOCKOUT TIME HAS EXPIRED.
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-TIMESTAMP.
@@ -363,7 +368,7 @@
               (WS-CT-HOUR * 60 + WS-CT-MINUTE) -
               (WS-LK-HOUR * 60 + WS-LK-MINUTE)
            END-COMPUTE.
-           
+
       *    IF THE DATE HAS CHANGED ADD A DAY'S WORTH OF MINUTES
       *    (1440 MINUTES) TO FIX A CASE LIKE LOCKOUT TIME OF 23:59
       *    AND CURRENT TIME OF 00:01.
@@ -389,7 +394,7 @@
        4000-SIGNED-ON-CASE.
       *    CHECK IF THE USER SESSION HAS TIMED OUT.
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-TIMESTAMP.
-           MOVE ACT-LAST-ACTIVITY-TIMESTAMP TO WS-ACTIVITY-TIMESTAMP.     
+           MOVE ACT-LAST-ACTIVITY-TIMESTAMP TO WS-ACTIVITY-TIMESTAMP.
 
       *    CALCULATE ELAPSED TIME IN MINUTES SINCE LAST ACTIVITY.
       *    (COULD BE NEGATIVE IF THE DATE HAS CHANGED)
@@ -406,7 +411,7 @@
            END-IF.
 
            INITIALIZE ACT-ATTEMPT-NUMBER.
-  
+
       *    IF TIMEOUT HAS OCCURRED, REVOKE SIGN-ON AND UPDATE QUEUE.
            IF WS-ELAPSED-MINUTES > SR-INACTIVITY-INTERVAL THEN
               SET ACT-ST-IN-PROCESS TO TRUE
@@ -415,7 +420,7 @@
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
-           ELSE 
+           ELSE
               SET MON-ST-SIGNED-ON TO TRUE
               MOVE 'Sign-On Still Active' TO MON-MESSAGE
 
@@ -430,7 +435,7 @@
 
       *    CHECK IF THE USER SESSION HAS TIMED OUT.
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-TIMESTAMP.
-           MOVE ACT-LAST-ACTIVITY-TIMESTAMP TO WS-ACTIVITY-TIMESTAMP.     
+           MOVE ACT-LAST-ACTIVITY-TIMESTAMP TO WS-ACTIVITY-TIMESTAMP.
 
       *    CALCULATE ELAPSED TIME IN MINUTES SINCE LAST ACTIVITY.
       *    (COULD BE NEGATIVE IF THE DATE HAS CHANGED)
@@ -446,12 +451,12 @@
               ADD 1440 TO WS-ELAPSED-MINUTES
            END-IF.
 
-      *    CHECK IF TIMEOUT HAS OCCURRED.     
+      *    CHECK IF TIMEOUT HAS OCCURRED.
            IF WS-ELAPSED-MINUTES > SR-INACTIVITY-INTERVAL THEN
       *       IF SO, REDIRECT TO SIGN-ON (BACK TO THE START)
               INITIALIZE ACT-ATTEMPT-NUMBER
               MOVE 'Sign-On Attempt Has Timed Out!' TO MON-MESSAGE
-              
+
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE
@@ -472,12 +477,16 @@
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9000-RETURN-TO-CALLER
            END-IF.
-           
+
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
 
        9000-RETURN-TO-CALLER.
+      *    >>> DEBUGGING ONLY <<<
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    UPDATE CONTAINER WITH ACTIVITY MONITORING DATA.
            EXEC CICS PUT
                 CONTAINER(AC-ACTMON-CONTAINER-NAME)
@@ -504,6 +513,10 @@
                 END-EXEC.
 
        9200-REDIRECT-TO-SIGNON.
+      *    >>> DEBUGGING ONLY <<<
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    UPDATE CONTAINER WITH ACTIVITY MONITORING DATA.
            EXEC CICS PUT
                 CONTAINER(AC-ACTMON-CONTAINER-NAME)
@@ -521,3 +534,16 @@
 
       *    THEN EXIT FROM THIS PROGRAM!
            PERFORM 9100-RETURN-TO-CICS.
+
+       9300-DEBUG-AID.
+      *    >>> DEBUGGING ONLY <<<
+           STRING '<'
+                  USER-ACTIVITY-RECORD
+                  '>'
+                  '<'
+                  MON-MESSAGE
+                  '>' DELIMITED BY SIZE
+              INTO WS-MESSAGE 
+           END-STRING.
+           MOVE WS-MESSAGE TO MON-MESSAGE.
+      *    >>> -------------- <<<

@@ -1,7 +1,7 @@
        IDENTIFICATION DIVISION.
        PROGRAM-ID. ESONP.
       ******************************************************************
-      *   CICS PLURALSIGHT 'EMPLOYE APP'
+      *   CICS PLURALSIGHT 'EMPLOYEE APP'
       *      - 'SIGN ON' PROGRAM
       ******************************************************************
        DATA DIVISION.
@@ -35,6 +35,10 @@
              88 WS-USER-FOUND               VALUE 'Y'.
           05 WS-LOGIN-OUTCOME     PIC X(1)  VALUE SPACE.
              88 WS-LOGIN-SUCCESS            VALUE 'Y'.
+      *
+          05 WS-DEBUG-MODE        PIC X(1)  VALUE 'Y'.
+             88 I-AM-DEBUGGING              VALUE 'Y'.
+             88 NOT-DEBUGGING               VALUE 'N'.
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
       ******************************************************************
@@ -62,7 +66,7 @@
       *    HENCE THE EMPTY COMM-AREA.-
            PERFORM 1100-INITIALIZE.
            PERFORM 9200-SEND-MAP-AND-RETURN.
-       
+
        1100-INITIALIZE.
       *    INITIALIZE SESSION STATE, MAP OUPUT, WORK VARS AND CONTAINER
            INITIALIZE WS-SESSION-STATE.
@@ -97,11 +101,11 @@
            EVALUATE EIBAID
            WHEN DFHPF3
            WHEN DFHPF12
-                PERFORM 2100-CANCEL-SIGN-ON 
+                PERFORM 2100-CANCEL-SIGN-ON
            WHEN DFHENTER
                 PERFORM 3000-SIGN-ON-USER
            WHEN OTHER
-                MOVE "Invalid Key!" TO MESSO 
+                MOVE "Invalid Key!" TO MESSO
            END-EVALUATE.
 
            PERFORM 9200-SEND-MAP-AND-RETURN.
@@ -109,7 +113,7 @@
        2100-CANCEL-SIGN-ON.
       *    CLEAR USER SCREEN AND END CONVERSATION
            EXEC CICS SEND CONTROL
-                ERASE 
+                ERASE
                 END-EXEC.
 
            EXEC CICS RETURN
@@ -122,7 +126,7 @@
            IF WS-USER-FOUND THEN
               PERFORM 3300-CHECK-USER-STATUS
               PERFORM 3400-CHECK-USER-CREDENTIALS
-           ELSE 
+           ELSE
               EXIT
            END-IF.
 
@@ -182,7 +186,7 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
@@ -198,13 +202,13 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
                 MOVE "Error Writing Activity Monitor!" TO MESSO
            END-EVALUATE.
-               
+
        3320-EVALUATE-RESPONSE.
       *    GET THE RESPONSE FROM THE ACTIVITY MONITOR PROGRAM
            EXEC CICS GET
@@ -214,8 +218,8 @@
                 FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-                
-           EVALUATE WS-CICS-RESPONSE  
+
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
@@ -226,17 +230,21 @@
       *    RELAY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
            MOVE MON-MESSAGE TO MESSO.
 
+      *    >>> DEBUGGING ONLY <<<
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    SEE IF IT RESULTED IN SUCCESS, FAIL, NEUTRAL OR ERROR.
-           EVALUATE TRUE 
-           WHEN MON-PROCESSING-ERROR 
+           EVALUATE TRUE
+           WHEN MON-PROCESSING-ERROR
            WHEN MON-ST-LOCKED-OUT
-      *         ON LOCKOUT OR ERROR, SEND BACK TO THE START     
+      *         ON LOCKOUT OR ERROR, SEND BACK TO THE START
                 PERFORM 9200-SEND-MAP-AND-RETURN
            WHEN MON-ST-SIGNED-ON
-      *         ON SUCCESSFUL SIGN-ON, SEND TO INITIAL APP SCREEN     
+      *         ON SUCCESSFUL SIGN-ON, SEND TO INITIAL APP SCREEN
                 PERFORM 9100-TRANSFER-TO-LANDING-PAGE
            WHEN MON-ST-IN-PROCESS
-           WHEN MON-ST-NOT-SET 
+           WHEN MON-ST-NOT-SET
       *         ON NEUTRAL, CONTINUE TO CHECK USER CREDENTIALS
                 CONTINUE
            WHEN OTHER
@@ -248,17 +256,17 @@
 
       *    CHECK IF THE USER ID AND PASSWORD MATCH.
            IF WS-USER-PASSWORD IS EQUAL TO RU-USER-PASSWORD THEN
-      *       CHECK IF THE USER ID IS ACTIVE.  
+      *       CHECK IF THE USER ID IS ACTIVE.
               IF RU-ST-ACTIVE THEN
       *          CHECK IF THE USER ID VALIDITY PERIOD HAS STARTED.
                  IF WS-CURRENT-DATE IS >= RU-LAST-EFFECTIVE-DATE THEN
       *             ALL CONDITIONS MET
       *             SUCCESFUL SIGN ON!
-                    SET WS-LOGIN-SUCCESS TO TRUE      
-                    MOVE "User Is Active!" TO MESSO        
+                    SET WS-LOGIN-SUCCESS TO TRUE
+                    MOVE "User Is Active!" TO MESSO
                  ELSE
                     MOVE "User Is Not Yet Active!" TO MESSO
-                 END-IF 
+                 END-IF
               ELSE
                  MOVE "User Is Inactive!" TO MESSO
               END-IF
@@ -288,14 +296,14 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
                 MOVE "Error Linking To Landing Page!" TO MESSO
                 PERFORM 9200-SEND-MAP-AND-RETURN
            END-EVALUATE.
-                    
+
        9200-SEND-MAP-AND-RETURN.
       *    PRESENT INITIAL SIGN-ON SCREEN TO THE USER.
            EXEC CICS SEND
@@ -311,3 +319,17 @@
                 COMMAREA(WS-SESSION-STATE)
                 TRANSID(EIBTRNID)
                 END-EXEC.
+
+       9300-DEBUG-AID.
+      *    >>> DEBUGGING ONLY <<<
+           IF I-AM-DEBUGGING THEN
+              EXEC CICS SEND TEXT
+                   FROM (ACTIVITY-MONITOR-CONTAINER)
+                   LENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                   END-EXEC
+              EXEC CICS RECEIVE
+                   LENGTH(LENGTH OF EIBAID)
+                   END-EXEC
+              MOVE MON-MESSAGE(32:48) TO MESSO
+           END-IF.
+      *    >>> -------------- <<<
