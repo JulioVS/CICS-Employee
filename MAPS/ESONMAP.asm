@@ -1,3 +1,7 @@
+* ---------------------------------------------------------------------
+*  CICS PLURALSIGHT 'EMPLOYEE APP'.
+*    - SIGN-ON MAPSET.
+* ---------------------------------------------------------------------
 ESONMAP  DFHMSD MODE=INOUT,                                            X
                CTRL=(FREEKB,FRSET),                                    X
                CURSLOC=YES,                                            X
@@ -7,6 +11,9 @@ ESONMAP  DFHMSD MODE=INOUT,                                            X
                LANG=COBOL,                                             X
                TIOAPFX=YES,                                            X
                TYPE=&SYSPARM
+* ---------------------------------------------------------------------
+*  SIGN-ON MAP.
+* ---------------------------------------------------------------------
 ESONM    DFHMDI SIZE=(24,80),                                          X
                LINE=1,                                                 X
                COLUMN=1
@@ -47,5 +54,8 @@ MESS     DFHMDF POS=(7,1),                                             X
                LENGTH=8,                                               X
                ATTRB=(ASKIP,NORM),                                     X
                INITIAL='PF3 Exit'
+* ---------------------------------------------------------------------
+*  ENDING.
+* ---------------------------------------------------------------------
          DFHMSD TYPE=FINAL
          END
