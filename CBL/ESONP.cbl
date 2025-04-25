@@ -150,7 +150,7 @@
       *    LOOKUP THE USER ID IN VSAM FILE
            EXEC CICS READ
                 FILE(AC-REG-USER-FILE-NAME)
-                INTO (REG-USER-RECORD)
+                INTO (REGISTERED-USER-RECORD)
                 RIDFLD(WS-USER-ID)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
@@ -325,7 +325,6 @@
            IF I-AM-DEBUGGING THEN
               EXEC CICS SEND TEXT
                    FROM (ACTIVITY-MONITOR-CONTAINER)
-                   LENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
                    END-EXEC
               EXEC CICS RECEIVE
                    LENGTH(LENGTH OF EIBAID)
