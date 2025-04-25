@@ -259,7 +259,7 @@
       *       CHECK IF THE USER ID IS ACTIVE.
               IF RU-ST-ACTIVE THEN
       *          CHECK IF THE USER ID VALIDITY PERIOD HAS STARTED.
-                 IF WS-CURRENT-DATE IS >= RU-LAST-EFFECTIVE-DATE THEN
+                 IF WS-CURRENT-DATE >= RU-LAST-EFFECTIVE-DATE THEN
       *             ALL CONDITIONS MET
       *             SUCCESFUL SIGN ON!
                     SET WS-LOGIN-SUCCESS TO TRUE

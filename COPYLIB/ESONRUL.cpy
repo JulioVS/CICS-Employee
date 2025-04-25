@@ -1,6 +1,6 @@
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP' - SIGN-ON RULES.
-      *      - RECORD LAYOUT FOR 'ESONRUL' VSAM [RRDS] FILE.
+      *      - RECORD LAYOUT FOR 'ESONRUL' VSAM <RRDS> FILE.
       *      - VSAM CLUSTER -> 'Z45864.PSVS.ESONRUL'.
       *      - SEED DATASET -> 'Z45864.DATA.ESONRUL'.
       ******************************************************************
