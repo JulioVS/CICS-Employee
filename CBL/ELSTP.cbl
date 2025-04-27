@@ -36,11 +36,27 @@
        01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
           88 I-AM-DEBUGGING               VALUE 'Y'.
           88 NOT-DEBUGGING                VALUE 'N'.
-
+      *    
+       01 WS-DEBUG-MESSAGE.
+          05 FILLER             PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<ER1='.
+          05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<ER2='.
+          05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+ 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE 'MAIN-LOGIC' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
       *    PSEUDO-CONVERSATIONAL PROGRAM DESIGN.
       *
@@ -79,19 +95,13 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           PERFORM 1100-INITIALIZE.
+           PERFORM 1100-INITIALIZE-VARIABLES.
+           PERFORM 1200-INITIALIZE-CONTAINER.
+           PERFORM 1300-READ-EMPLOYEE-BATCH.
 
-      *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
-           PERFORM 1200-START-BROWSING.
-           PERFORM 1300-READ-NEXT-RECORD
-              VARYING LST-RECORD-INDEX
-              FROM 1 BY 1
-              UNTIL LST-RECORD-INDEX IS GREATER THAN 3.
-           PERFORM 1400-END-BROWSING.
-
-       1100-INITIALIZE.
+       1100-INITIALIZE-VARIABLES.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1100-INITIALIZE' TO WS-MESSAGE.
+           MOVE '1100-INITIALIZE-VARIABLES' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -102,13 +112,33 @@
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE ELSTMO.
 
+       1200-INITIALIZE-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1200-INITIALIZE-CONTAINER' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    SET INITIAL VALUES FOR LIST CONTAINER.
            MOVE APP-LIST-PROGRAM-NAME TO LST-PROGRAM-NAME.
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
 
-       1200-START-BROWSING.
+       1300-READ-EMPLOYEE-BATCH.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1200-START-BROWSING' TO WS-MESSAGE.
+           MOVE '1300-READ-EMPLOYEE-BATCH' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
+           PERFORM 1310-START-BROWSING.
+           PERFORM 1320-READ-NEXT-RECORD
+              VARYING LST-RECORD-INDEX
+              FROM 1 BY 1
+              UNTIL LST-RECORD-INDEX IS GREATER THAN 3.
+           PERFORM 1330-END-BROWSING.
+
+       1310-START-BROWSING.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1310-START-BROWSING' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -132,9 +162,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       1300-READ-NEXT-RECORD.
+       1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1300-READ-NEXT-RECORD' TO WS-MESSAGE.
+           MOVE '1320-READ-NEXT-RECORD' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -159,9 +189,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       1400-END-BROWSING.
+       1330-END-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1400-END-BROWSING' TO WS-MESSAGE.
+           MOVE '1330-END-BROWSING' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -305,6 +335,8 @@
               MOVE WS-NO-FILTERS-SET TO FLTRSO
            END-IF.
 
+           MOVE WS-MESSAGE TO MESSO.
+
       *    POPULATE LINES 1-3 WITH EMPLOYEE RECORDS.
            MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD.
            MOVE EMP-EMPLOYEE-ID TO EMPID01O.
@@ -323,8 +355,6 @@
            MOVE EMP-PRIMARY-NAME TO PRMNM03O.
            MOVE EMP-JOB-TITLE TO JOBTL03O.
            MOVE EMP-DEPARTMENT-ID TO DPTID03O.
-
-           MOVE WS-MESSAGE TO MESSO.
 
        9200-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<
@@ -347,8 +377,14 @@
        9300-DEBUG-AID.
       *    >>> DEBUGGING ONLY <<<
            IF I-AM-DEBUGGING THEN
+              INITIALIZE WS-DEBUG-MESSAGE
+
+              MOVE WS-MESSAGE(1:45) TO WS-DEBUG-TEXT
+              MOVE EIBRESP TO WS-DEBUG-EIBRESP
+              MOVE EIBRESP2 TO WS-DEBUG-EIBRESP2
+
               EXEC CICS SEND TEXT
-                   FROM (WS-MESSAGE)
+                   FROM (WS-DEBUG-MESSAGE)
                    END-EXEC
               EXEC CICS RECEIVE
                    LENGTH(LENGTH OF EIBAID)
