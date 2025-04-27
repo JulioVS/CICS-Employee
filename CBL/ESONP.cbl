@@ -9,8 +9,9 @@
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
-      *      - SIGN-ON MAP.
+      *      - SIGN-ON MAPSET.
       *      - REGISTERED USERS.
+      *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
       ******************************************************************
        COPY ECONST.

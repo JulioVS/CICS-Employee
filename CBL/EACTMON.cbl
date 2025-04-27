@@ -29,7 +29,7 @@
        01 WS-WORKING-VARS.
           05 WS-ITEM-NUMBER            PIC S9(4) USAGE IS BINARY.
           05 WS-CICS-RESPONSE          PIC S9(8) USAGE IS BINARY.
-          05 WS-MESSAGE                PIC X(80).
+          05 WS-MESSAGE                PIC X(79).
       *
           05 WS-CURRENT-TIMESTAMP.
              07 WS-CT-DATE.
