@@ -37,9 +37,9 @@
           05 WS-LOGIN-OUTCOME     PIC X(1)  VALUE SPACE.
              88 WS-LOGIN-SUCCESS            VALUE 'Y'.
       *
-          05 WS-DEBUG-MODE        PIC X(1)  VALUE 'Y'.
-             88 I-AM-DEBUGGING              VALUE 'Y'.
-             88 NOT-DEBUGGING               VALUE 'N'.
+       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'Y'.
+          88 I-AM-DEBUGGING                 VALUE 'Y'.
+          88 NOT-DEBUGGING                  VALUE 'N'.
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
       ******************************************************************

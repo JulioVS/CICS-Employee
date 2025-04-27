@@ -32,7 +32,10 @@
        01 WS-DISPLAY-MESSAGES.
           05 WS-NO-FILTERS-SET  PIC X(6)  VALUE '(None)'.
           05 WS-MESSAGE         PIC X(79) VALUE SPACES.
-
+      *    
+       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
+          88 I-AM-DEBUGGING               VALUE 'Y'.
+          88 NOT-DEBUGGING                VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -71,6 +74,11 @@
       *-----------------------------------------------------------------
       
        1000-FIRST-INTERACTION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1000-FIRST-INTERACTION' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            PERFORM 1100-INITIALIZE.
 
       *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
@@ -81,10 +89,12 @@
               UNTIL LST-RECORD-INDEX IS GREATER THAN 3.
            PERFORM 1400-END-BROWSING.
 
-      *    COPY RECORDS FROM CONTAINER INTO MAP FOR DISPLAY.
-           PERFORM 1500-POPULATE-MAP.
-
        1100-INITIALIZE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1100-INITIALIZE' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    CLEAR ALL RECORDS AND VARIABLES.
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
            INITIALIZE LIST-EMPLOYEE-CONTAINER.
@@ -97,6 +107,11 @@
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
 
        1200-START-BROWSING.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1200-START-BROWSING' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            EXEC CICS STARTBR
                 FILE(APP-EMP-MASTER-FILE-NAME)
                 RIDFLD(EMP-EMPLOYEE-ID)
@@ -106,12 +121,23 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Browsing Employee Master File' TO WS-MESSAGE
+      *         >>> DEBUGGING ONLY <<<
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
            WHEN OTHER
                 MOVE 'Error Starting Browse!' TO WS-MESSAGE
+      *         >>> DEBUGGING ONLY <<<
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        1300-READ-NEXT-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1300-READ-NEXT-RECORD' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            EXEC CICS READNEXT
                 FILE(APP-EMP-MASTER-FILE-NAME)
                 RIDFLD(EMP-EMPLOYEE-ID)
@@ -134,6 +160,11 @@
            END-EVALUATE.
 
        1400-END-BROWSING.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1400-END-BROWSING' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            EXEC CICS ENDBR
                 FILE(APP-EMP-MASTER-FILE-NAME)
                 RESP(WS-CICS-RESPONSE)
@@ -147,43 +178,16 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       1500-POPULATE-MAP.
-           INITIALIZE ELSTMO.
-
-      *    DISPLAY TRANSACTION ID AND PAGE NUMBER.
-           MOVE EIBTRNID TO TRANIDO.
-           MOVE LST-CURRENT-PAGE-NUMBER TO PAGENO.
-
-           IF LST-NO-FILTERS-SET THEN
-              MOVE WS-NO-FILTERS-SET TO FLTRSO
-           END-IF.
-
-      *    POPULATE LINES 1-3 WITH EMPLOYEE RECORDS.
-           MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPID01O.
-           MOVE EMP-PRIMARY-NAME TO PRMNM01O.
-           MOVE EMP-JOB-TITLE TO JOBTL01O.
-           MOVE EMP-DEPARTMENT-ID TO DPTID01O.
-
-           MOVE LST-CURRENT-RECORD(2) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPID02O.
-           MOVE EMP-PRIMARY-NAME TO PRMNM02O.
-           MOVE EMP-JOB-TITLE TO JOBTL02O.
-           MOVE EMP-DEPARTMENT-ID TO DPTID02O.
-
-           MOVE LST-CURRENT-RECORD(3) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPID03O.
-           MOVE EMP-PRIMARY-NAME TO PRMNM03O.
-           MOVE EMP-JOB-TITLE TO JOBTL03O.
-           MOVE EMP-DEPARTMENT-ID TO DPTID03O.
-
-           MOVE WS-MESSAGE TO MESSO.
-
       *-----------------------------------------------------------------
        USE-CASE SECTION.
       *-----------------------------------------------------------------
 
        2000-PROCESS-USER-INPUT.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2000-PROCESS-USER-INPUT' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            EXEC CICS RECEIVE
                 MAP(APP-LIST-MAP-NAME)
                 MAPSET(APP-LIST-MAPSET-NAME)
@@ -200,14 +204,16 @@
            WHEN DFHPF8
                 PERFORM 2400-NEXT-PAGE
            WHEN DFHPF10
-                PERFORM 9100-SIGN-USER-OFF
+                PERFORM 9200-SIGN-USER-OFF
            WHEN DFHPF12
                 PERFORM 2500-CANCEL-PROCESS
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
 
-           PERFORM 1500-POPULATE-MAP.
+      *    >>> DEBUGGING ONLY <<<
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
                
        2100-SHOW-DETAILS.
            MOVE '2100: Cannot Detect Cursor!' TO WS-MESSAGE.
@@ -244,10 +250,17 @@
       *-----------------------------------------------------------------
 
        9000-SEND-MAP-AND-RETURN.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9000-SEND-MAP-AND-RETURN' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    PSEUDO-CONVERSATIONAL RETURN:
       *      - PUT THE CONTAINER BACK TO CICS.
-      *      - SEND THE MAP TO CICS.
+      *      - POPULATE AND SEND MAP TO CICS.
       *      - RETURN TO CICS.
+
+           PERFORM 9100-POPULATE-MAP.
 
            EXEC CICS PUT
                 CONTAINER(APP-LIST-CONTAINER-NAME)
@@ -276,7 +289,49 @@
                 TRANSID(EIBTRNID)
                 END-EXEC.
 
-       9100-SIGN-USER-OFF.
+       9100-POPULATE-MAP.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9100-POPULATE-MAP' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE ELSTMO.
+
+      *    DISPLAY TRANSACTION ID AND PAGE NUMBER.
+           MOVE EIBTRNID TO TRANIDO.
+           MOVE LST-CURRENT-PAGE-NUMBER TO PAGENO.
+
+           IF LST-NO-FILTERS-SET THEN
+              MOVE WS-NO-FILTERS-SET TO FLTRSO
+           END-IF.
+
+      *    POPULATE LINES 1-3 WITH EMPLOYEE RECORDS.
+           MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD.
+           MOVE EMP-EMPLOYEE-ID TO EMPID01O.
+           MOVE EMP-PRIMARY-NAME TO PRMNM01O.
+           MOVE EMP-JOB-TITLE TO JOBTL01O.
+           MOVE EMP-DEPARTMENT-ID TO DPTID01O.
+
+           MOVE LST-CURRENT-RECORD(2) TO EMPLOYEE-MASTER-RECORD.
+           MOVE EMP-EMPLOYEE-ID TO EMPID02O.
+           MOVE EMP-PRIMARY-NAME TO PRMNM02O.
+           MOVE EMP-JOB-TITLE TO JOBTL02O.
+           MOVE EMP-DEPARTMENT-ID TO DPTID02O.
+
+           MOVE LST-CURRENT-RECORD(3) TO EMPLOYEE-MASTER-RECORD.
+           MOVE EMP-EMPLOYEE-ID TO EMPID03O.
+           MOVE EMP-PRIMARY-NAME TO PRMNM03O.
+           MOVE EMP-JOB-TITLE TO JOBTL03O.
+           MOVE EMP-DEPARTMENT-ID TO DPTID03O.
+
+           MOVE WS-MESSAGE TO MESSO.
+
+       9200-SIGN-USER-OFF.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9200-SIGN-USER-OFF' TO WS-MESSAGE.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    SIGN USER OFF FROM CICS:
       *      - CLEAR TERMINAL SCREEN.
       *      - COLD RETURN TO CICS.
@@ -288,3 +343,15 @@
 
            EXEC CICS RETURN
                 END-EXEC.
+
+       9300-DEBUG-AID.
+      *    >>> DEBUGGING ONLY <<<
+           IF I-AM-DEBUGGING THEN
+              EXEC CICS SEND TEXT
+                   FROM (WS-MESSAGE)
+                   END-EXEC
+              EXEC CICS RECEIVE
+                   LENGTH(LENGTH OF EIBAID)
+                   END-EXEC
+           END-IF.
+      *    >>> -------------- <<<

@@ -63,9 +63,9 @@
       *
           05 WS-ELAPSED-MINUTES        PIC S9(4).
       *
-          05 WS-DEBUG-MODE             PIC X(1)  VALUE 'Y'.
-             88 I-AM-DEBUGGING                   VALUE 'Y'.
-             88 NOT-DEBUGGING                    VALUE 'N'.
+       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'Y'.
+          88 I-AM-DEBUGGING                      VALUE 'Y'.
+          88 NOT-DEBUGGING                       VALUE 'N'.
                 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -537,13 +537,15 @@
 
        9300-DEBUG-AID.
       *    >>> DEBUGGING ONLY <<<
-           STRING '<'
-                  USER-ACTIVITY-RECORD
-                  '>'
-                  '<'
-                  MON-MESSAGE
-                  '>' DELIMITED BY SIZE
-              INTO WS-MESSAGE 
-           END-STRING.
-           MOVE WS-MESSAGE TO MON-MESSAGE.
+           IF I-AM-DEBUGGING THEN
+              STRING '<'
+                     USER-ACTIVITY-RECORD
+                     '>'
+                     '<'
+                     MON-MESSAGE
+                     '>' DELIMITED BY SIZE
+                 INTO WS-MESSAGE 
+              END-STRING
+              MOVE WS-MESSAGE TO MON-MESSAGE
+           END-IF.
       *    >>> -------------- <<<
