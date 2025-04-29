@@ -34,9 +34,9 @@ FLTRS    DFHMDF POS=(3,11),LENGTH=69,ATTRB=(ASKIP,NORM)
 *  COLUMN HEADINGS.
 *
          DFHMDF POS=(5,1),LENGTH=39,ATTRB=(ASKIP,BRT),                 X
-               INITIAL=' Emp ID   Primary Name                 '
+               INITIAL='  Emp ID   Primary Name                 '
          DFHMDF POS=(5,41),LENGTH=39,ATTRB=(ASKIP,BRT),                X
-               INITIAL=' Job Title                      Dept ID'
+               INITIAL=' Job Title                     Dept ID'
 *
 *  DETAIL SECTION.
 *

@@ -41,10 +41,10 @@
           05 FILLER             PIC X(5)  VALUE '<MSG:'.
           05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
           05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<ER1='.
+          05 FILLER             PIC X(5)  VALUE '<EB1='.
           05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<ER2='.
+          05 FILLER             PIC X(5)  VALUE '<EB2='.
           05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
  
@@ -55,6 +55,7 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-MESSAGE.
+           INITIALIZE EIBRESP EIBRESP2.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -71,7 +72,15 @@
                 INTO (LIST-EMPLOYEE-CONTAINER)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-           
+
+      *    FIRST TIME WILL GIVE A '122' RET CODE - NOT AN ERROR!!!
+      *
+      *    IT IS SIMPLY A 'MISSING CHANNEL' CONDITION, AS THE CONTAINER
+      *    WILL ACTUALLY BE CREATED ON THE FIRST 'PUT' COMMAND LOCATED
+      *    IN THE '9000-SEND-MAP-AND-RETURN' PARAGRAPH.
+      *
+      *    FIX => NONE NEEDED!
+
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 PERFORM 2000-PROCESS-USER-INPUT
@@ -147,6 +156,20 @@
                 RIDFLD(EMP-EMPLOYEE-ID)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
+
+      *    WILL GIVE A '16' (+20) ERROR RETURN CODE IF NOT DEFINED AS
+      *    'BROWSABLE' IN THE CICS FILE DEFINITION ENTRY!
+      *
+      *    FIX => IN 'CEDA DEFINE FILE(EMPMAST)' PAGE DOWN UNTIL THE
+      *           'OPERATIONS' SECTION AND SET 'BROWSE' TO 'YES'!
+      *           (THEN RE-INSTALL THE FILE IN CICS)
+
+      *    ALSO POSSIBLE IS ABEND '19' (+60) WHICH HAPPENS IF THE FILE 
+      *    WAS CLOSED (I.E. BY ME!) WHEN THE PROGRAM RAN THE 'STARTBR' 
+      *    COMMAND.
+      *
+      *    FIX => RE-INSTALL IT IN CICS AND/OR READ IT WITH 'CECI READ
+      *           FILE(EMPMAST)' ETC.
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
@@ -389,5 +412,7 @@
               EXEC CICS RECEIVE
                    LENGTH(LENGTH OF EIBAID)
                    END-EXEC
+
+              INITIALIZE EIBRESP EIBRESP2
            END-IF.
       *    >>> -------------- <<<
