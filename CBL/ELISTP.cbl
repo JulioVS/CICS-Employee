@@ -137,7 +137,7 @@
 
        1300-READ-EMPLOYEES-BY-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1300-READ-EMPLOYEE-BATCH' TO WS-MESSAGE.
+           MOVE '1300-READ-EMPLOYEES-BY-ID' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
