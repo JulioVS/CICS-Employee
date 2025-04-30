@@ -106,7 +106,7 @@
 
            PERFORM 1100-INITIALIZE-VARIABLES.
            PERFORM 1200-INITIALIZE-CONTAINER.
-           PERFORM 1300-READ-EMPLOYEE-BATCH.
+           PERFORM 1300-READ-EMPLOYEES-BY-ID.
 
       *    >>> DEBUGGING ONLY <<<
            MOVE '1000-FIRST-INTERACTION (END)' TO WS-MESSAGE.
@@ -135,7 +135,7 @@
            MOVE APP-LIST-PROGRAM-NAME TO LST-PROGRAM-NAME.
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
 
-       1300-READ-EMPLOYEE-BATCH.
+       1300-READ-EMPLOYEES-BY-ID.
       *    >>> DEBUGGING ONLY <<<
            MOVE '1300-READ-EMPLOYEE-BATCH' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
@@ -271,13 +271,13 @@
            WHEN DFHPF3
                 PERFORM 2200-GET-FILTERS
            WHEN DFHPF7
-                PERFORM 2300-PREV-PAGE
+                PERFORM 2300-PREV-BY-EMPLOYEE-ID
            WHEN DFHPF8
-                PERFORM 2400-NEXT-PAGE
+                PERFORM 2400-NEXT-BY-EMPLOYEE-ID
            WHEN DFHPF10
                 PERFORM 9200-SIGN-USER-OFF
            WHEN DFHPF12
-                PERFORM 2500-CANCEL-PROCESS
+                PERFORM 2500-CANCEL-ACTION
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
@@ -291,36 +291,36 @@
       *    >>> -------------- <<<
                
        2100-SHOW-DETAILS.
-           MOVE '2100: Cannot Detect Cursor!' TO WS-MESSAGE.
+           MOVE 'Cannot Detect Cursor!' TO WS-MESSAGE.
 
            MOVE SELCT01F TO DFHBMFLG.
            IF DFHCURSR THEN
-              MOVE '2100: Cursor Detected In Line 1' TO WS-MESSAGE
+              MOVE 'Cursor Detected In Line 1' TO WS-MESSAGE
            END-IF.
 
            MOVE SELCT02F TO DFHBMFLG.
            IF DFHCURSR THEN
-              MOVE '2100: Cursor Detected In Line 2' TO WS-MESSAGE
+              MOVE 'Cursor Detected In Line 2' TO WS-MESSAGE
            END-IF.
 
            MOVE SELCT03F TO DFHBMFLG.
            IF DFHCURSR THEN
-              MOVE '2100: Cursor Detected In Line 3' TO WS-MESSAGE
+              MOVE 'Cursor Detected In Line 3' TO WS-MESSAGE
            END-IF.
              
        2200-GET-FILTERS.
-           MOVE '2200: Get Filter (Not Coded Yet)' TO WS-MESSAGE.
+           MOVE '2200-GET-FILTERS' TO WS-MESSAGE.
 
-       2300-PREV-PAGE.
-           MOVE '2300: Previous Page (Not Coded Yet)' TO WS-MESSAGE.
+       2300-PREV-BY-EMPLOYEE-ID.
+           MOVE '2300-PREV-BY-EMPLOYEE-ID' TO WS-MESSAGE.
 
-       2400-NEXT-PAGE.
-           MOVE '2400: Next Page (Not Coded Yet)' TO WS-MESSAGE.
+       2400-NEXT-BY-EMPLOYEE-ID.
+           MOVE '2400-NEXT-BY-EMPLOYEE-ID' TO WS-MESSAGE.
            ADD 1 TO LST-CURRENT-PAGE-NUMBER.
-           PERFORM 1300-READ-EMPLOYEE-BATCH.
+           PERFORM 1300-READ-EMPLOYEES-BY-ID.
 
-       2500-CANCEL-PROCESS.
-           MOVE '2500: Cancel Process (Not Coded Yet)' TO WS-MESSAGE.
+       2500-CANCEL-ACTION.
+           MOVE '2500-CANCEL-ACTION' TO WS-MESSAGE.
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
