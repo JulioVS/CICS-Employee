@@ -28,6 +28,7 @@
       ******************************************************************
        01 WS-WORKING-VARS.
           05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
+          05 WS-READ-COUNTER    PIC 9(2) USAGE IS DISPLAY.
       *
        01 WS-DISPLAY-MESSAGES.
           05 WS-NO-FILTERS-SET  PIC X(6)  VALUE '(None)'.
@@ -93,20 +94,23 @@
 
            PERFORM 9000-SEND-MAP-AND-RETURN.
 
-
       *-----------------------------------------------------------------
        START-UP SECTION.
       *-----------------------------------------------------------------
       
        1000-FIRST-INTERACTION.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION' TO WS-MESSAGE.
+           MOVE '1000-FIRST-INTERACTION (START)' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
            PERFORM 1100-INITIALIZE-VARIABLES.
            PERFORM 1200-INITIALIZE-CONTAINER.
            PERFORM 1300-READ-EMPLOYEE-BATCH.
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1000-FIRST-INTERACTION (END)' TO WS-MESSAGE.
+      *    >>> -------------- <<<
 
        1100-INITIALIZE-VARIABLES.
       *    >>> DEBUGGING ONLY <<<
@@ -136,6 +140,10 @@
            MOVE '1300-READ-EMPLOYEE-BATCH' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+      *    CLEAN EMPLOYEE LIST BUFFER.
+           INITIALIZE LST-CURRENT-RECORD-AREA.
+           INITIALIZE WS-READ-COUNTER.
 
       *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
            PERFORM 1310-START-BROWSING.
@@ -174,20 +182,28 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Browsing Employee Master File' TO WS-MESSAGE
-      *         >>> DEBUGGING ONLY <<<
-                PERFORM 9300-DEBUG-AID
-      *         >>> -------------- <<<
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalist Request (Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE 'Error Starting Browse!' TO WS-MESSAGE
-      *         >>> DEBUGGING ONLY <<<
-                PERFORM 9300-DEBUG-AID
-      *         >>> -------------- <<<
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1320-READ-NEXT-RECORD' TO WS-MESSAGE.
+           INITIALIZE WS-MESSAGE. 
+           ADD 1 TO WS-READ-COUNTER.
+           STRING '1320-READ-NEXT-RECORD'
+                  '('
+                  WS-READ-COUNTER
+                  ')'
+              DELIMITED BY SIZE
+              INTO WS-MESSAGE
+           END-STRING.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -205,8 +221,10 @@
                    LST-CURRENT-RECORD(LST-RECORD-INDEX)
            WHEN DFHRESP(NOTFND)
                 MOVE 'No More Records Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN DFHRESP(ENDFILE)
                 MOVE 'End of Employee Master File' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE 'Error Reading Next Record!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -225,7 +243,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'End of Employee Master File' TO WS-MESSAGE
+                MOVE 'End of Browsing Master File' TO WS-MESSAGE
            WHEN OTHER
                 MOVE 'Error Ending Browse!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -237,7 +255,7 @@
 
        2000-PROCESS-USER-INPUT.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT' TO WS-MESSAGE.
+           MOVE '2000-PROCESS-USER-INPUT (START)' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -267,6 +285,10 @@
       *    >>> DEBUGGING ONLY <<<
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-MESSAGE.
+      *    >>> -------------- <<<
                
        2100-SHOW-DETAILS.
            MOVE '2100: Cannot Detect Cursor!' TO WS-MESSAGE.
@@ -294,6 +316,8 @@
 
        2400-NEXT-PAGE.
            MOVE '2400: Next Page (Not Coded Yet)' TO WS-MESSAGE.
+           ADD 1 TO LST-CURRENT-PAGE-NUMBER.
+           PERFORM 1300-READ-EMPLOYEE-BATCH.
 
        2500-CANCEL-PROCESS.
            MOVE '2500: Cancel Process (Not Coded Yet)' TO WS-MESSAGE.
@@ -304,7 +328,6 @@
 
        9000-SEND-MAP-AND-RETURN.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9000-SEND-MAP-AND-RETURN' TO WS-MESSAGE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -343,11 +366,6 @@
                 END-EXEC.
 
        9100-POPULATE-MAP.
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '9100-POPULATE-MAP' TO WS-MESSAGE.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-
            INITIALIZE ELSTMO.
 
       *    DISPLAY TRANSACTION ID AND PAGE NUMBER.
