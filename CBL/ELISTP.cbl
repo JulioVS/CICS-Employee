@@ -9,7 +9,7 @@
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
-      *      - LIST EMPLOYESS MAPSET.
+      *      - LIST EMPLOYEES MAPSET (MODIFIED VERSION WITH ARRAYS)
       *      - LIST EMPLOYEES CONTAINER.
       *      - EMPLOYEE MASTER RECORD.
       *      - ACTIVITY MONITOR CONTAINER.
@@ -17,7 +17,7 @@
       *      - IBM'S BMS SUPPORT.
       ******************************************************************
        COPY ECONST.
-       COPY ELSTMAP.
+       COPY ELSTMAPM.
        COPY ELSTCTR.
        COPY EMPMAST.
        COPY EMONCTR.
@@ -293,17 +293,17 @@
        2100-SHOW-DETAILS.
            MOVE 'Cannot Detect Cursor!' TO WS-MESSAGE.
 
-           MOVE SELCT01F TO DFHBMFLG.
+           MOVE SELCTF(1) TO DFHBMFLG.
            IF DFHCURSR THEN
               MOVE 'Cursor Detected In Line 1' TO WS-MESSAGE
            END-IF.
 
-           MOVE SELCT02F TO DFHBMFLG.
+           MOVE SELCTF(2) TO DFHBMFLG.
            IF DFHCURSR THEN
               MOVE 'Cursor Detected In Line 2' TO WS-MESSAGE
            END-IF.
 
-           MOVE SELCT03F TO DFHBMFLG.
+           MOVE SELCTF(3) TO DFHBMFLG.
            IF DFHCURSR THEN
               MOVE 'Cursor Detected In Line 3' TO WS-MESSAGE
            END-IF.
@@ -380,22 +380,22 @@
 
       *    POPULATE LINES 1-3 WITH EMPLOYEE RECORDS.
            MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPID01O.
-           MOVE EMP-PRIMARY-NAME TO PRMNM01O.
-           MOVE EMP-JOB-TITLE TO JOBTL01O.
-           MOVE EMP-DEPARTMENT-ID TO DPTID01O.
+           MOVE EMP-EMPLOYEE-ID TO EMPIDO(1).
+           MOVE EMP-PRIMARY-NAME TO PRMNMO(1).
+           MOVE EMP-JOB-TITLE TO JOBTLO(1).
+           MOVE EMP-DEPARTMENT-ID TO DPTIDO(1).
 
            MOVE LST-CURRENT-RECORD(2) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPID02O.
-           MOVE EMP-PRIMARY-NAME TO PRMNM02O.
-           MOVE EMP-JOB-TITLE TO JOBTL02O.
-           MOVE EMP-DEPARTMENT-ID TO DPTID02O.
+           MOVE EMP-EMPLOYEE-ID TO EMPIDO(2).
+           MOVE EMP-PRIMARY-NAME TO PRMNMO(2).
+           MOVE EMP-JOB-TITLE TO JOBTLO(2).
+           MOVE EMP-DEPARTMENT-ID TO DPTIDO(2).
 
            MOVE LST-CURRENT-RECORD(3) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPID03O.
-           MOVE EMP-PRIMARY-NAME TO PRMNM03O.
-           MOVE EMP-JOB-TITLE TO JOBTL03O.
-           MOVE EMP-DEPARTMENT-ID TO DPTID03O.
+           MOVE EMP-EMPLOYEE-ID TO EMPIDO(3).
+           MOVE EMP-PRIMARY-NAME TO PRMNMO(3).
+           MOVE EMP-JOB-TITLE TO JOBTLO(3).
+           MOVE EMP-DEPARTMENT-ID TO DPTIDO(3).
 
        9200-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<
