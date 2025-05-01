@@ -2,7 +2,7 @@
       *   CICS PLURALSIGHT 'EMPLOYEE APP'.
       *      - MODIFIED VERSION OF THE 'LIST EMPLOYEE' MAP.
       *      - WE INSERT CUSTOM 16-ITEM ARRAYS TO REPLACE THE
-      *        HARD-CODED REPEATED ITEMS IN THE ORIGINAL SYMBOLIC 
+      *        HARD-CODED REPEATED ITEMS IN THE ORIGINAL SYMBOLIC
       *        MAP.
       ******************************************************************
       *-----------------------------------------------------------------
@@ -79,6 +79,21 @@
              03 MESSA      PICTURE X.
           02 FILLER        PICTURE X(1).
           02 MESSI         PIC X(79).
+      *
+      *   NEW PF7/PF8 SECTION (NEEDED TO HIDE/UNHIDE)
+      *
+          02 HLPPF7L COMP  PIC  S9(4).
+          02 HLPPF7F       PICTURE X.
+          02 FILLER REDEFINES HLPPF7F.
+             03 HLPPF7A    PICTURE X.
+          02 FILLER        PICTURE X(1).
+          02 HLPPF7I       PIC X(9).
+          02 HLPPF8L COMP  PIC  S9(4).
+          02 HLPPF8F       PICTURE X.
+          02 FILLER REDEFINES HLPPF8F.
+             03 HLPPF8A    PICTURE X.
+          02 FILLER        PICTURE X(1).
+          02 HLPPF8I       PIC X(9).
       *-----------------------------------------------------------------
       *   OUTPUT MAP SECTION.-
       *-----------------------------------------------------------------
@@ -121,3 +136,12 @@
           02 FILLER        PICTURE X(3).
           02 MESSC         PICTURE X.
           02 MESSO         PIC X(79).
+      *
+      *   NEW PF7/PF8 SECTION (NEEDED TO HIDE/UNHIDE)
+      *
+          02 FILLER        PICTURE X(3).
+          02 HLPPF7C       PICTURE X.
+          02 HLPPF7O       PIC X(9).
+          02 FILLER        PICTURE X(3).
+          02 HLPPF8C       PICTURE X.
+          02 HLPPF8O       PIC X(9).

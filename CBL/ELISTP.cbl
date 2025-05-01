@@ -33,6 +33,8 @@
        01 WS-DISPLAY-MESSAGES.
           05 WS-NO-FILTERS-SET  PIC X(6)  VALUE '(None)'.
           05 WS-MESSAGE         PIC X(79) VALUE SPACES.
+          05 WS-PF7-LABEL       PIC X(9)  VALUE 'PF7 Prev '.
+          05 WS-PF8-LABEL       PIC X(9)  VALUE 'PF8 Next '.
       *    
        01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
           88 I-AM-DEBUGGING               VALUE 'Y'.
@@ -49,7 +51,8 @@
           05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
       *
-       01 WS-LINES-PER-PAGE     PIC 9(2)  VALUE 3.
+       01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
+                                          VALUE +3.
  
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -327,6 +330,7 @@
               PERFORM 1300-READ-EMPLOYEES-BY-ID
            ELSE
               MOVE 'No Previous Records To Display' TO WS-MESSAGE
+              MOVE DFHPROTN TO HLPPF7A
            END-IF.
 
        2400-NEXT-BY-EMPLOYEE-ID.
@@ -344,6 +348,7 @@
               PERFORM 1300-READ-EMPLOYEES-BY-ID
            ELSE
               MOVE 'No More records To Display' TO WS-MESSAGE
+              MOVE DFHPROTN TO HLPPF8A
            END-IF.
 
        2500-CANCEL-ACTION.
@@ -403,26 +408,32 @@
               MOVE WS-NO-FILTERS-SET TO FLTRSO
            END-IF.
 
+      *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
 
-      *    POPULATE LINES 1-3 WITH EMPLOYEE RECORDS.
-           MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPIDO(1).
-           MOVE EMP-PRIMARY-NAME TO PRMNMO(1).
-           MOVE EMP-JOB-TITLE TO JOBTLO(1).
-           MOVE EMP-DEPARTMENT-ID TO DPTIDO(1).
+      *    POPULATE THESE LABELS BECAUSE PAGINATION OPTIONS WILL 
+      *    HIDE/UNHIDE DYNAMICALLY WHILE BROWSING.
+           MOVE WS-PF7-LABEL TO HLPPF7O.
+           MOVE WS-PF8-LABEL TO HLPPF8O.
 
-           MOVE LST-CURRENT-RECORD(2) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPIDO(2).
-           MOVE EMP-PRIMARY-NAME TO PRMNMO(2).
-           MOVE EMP-JOB-TITLE TO JOBTLO(2).
-           MOVE EMP-DEPARTMENT-ID TO DPTIDO(2).
+      *    POPULATE ALL DISPLAY LINES WITH EMPLOYEE RECORDS.
+           PERFORM VARYING LST-RECORD-INDEX
+              FROM 1 BY 1
+              UNTIL LST-RECORD-INDEX IS GREATER THAN WS-LINES-PER-PAGE
+      *            LOAD EACH RECORD INTO THE DISPLAY BUFFER.        
+                   MOVE LST-CURRENT-RECORD(LST-RECORD-INDEX)
+                      TO EMPLOYEE-MASTER-RECORD
 
-           MOVE LST-CURRENT-RECORD(3) TO EMPLOYEE-MASTER-RECORD.
-           MOVE EMP-EMPLOYEE-ID TO EMPIDO(3).
-           MOVE EMP-PRIMARY-NAME TO PRMNMO(3).
-           MOVE EMP-JOB-TITLE TO JOBTLO(3).
-           MOVE EMP-DEPARTMENT-ID TO DPTIDO(3).
+      *            SET THE MAP ARRAY INDEX TO THE CURRENT LIST 
+      *            CONTAINER RECORD INDEX VALUE!
+                   SET LINEO-INDEX TO LST-RECORD-INDEX 
+
+      *            AND HERE, USE THE MAP INDEX! (IMPORTANT)
+                   MOVE EMP-EMPLOYEE-ID TO EMPIDO(LINEO-INDEX)
+                   MOVE EMP-PRIMARY-NAME TO PRMNMO(LINEO-INDEX)
+                   MOVE EMP-JOB-TITLE TO JOBTLO(LINEO-INDEX)
+                   MOVE EMP-DEPARTMENT-ID TO DPTIDO(LINEO-INDEX)
+           END-PERFORM.
 
        9200-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<

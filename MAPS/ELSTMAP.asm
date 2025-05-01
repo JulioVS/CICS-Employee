@@ -143,9 +143,14 @@ MESS     DFHMDF POS=(23,1),LENGTH=79,ATTRB=(ASKIP,NORM)
 *
 *  AID KEY SECTION.
 *
-         DFHMDF POS=(24,1),LENGTH=79,ATTRB=(ASKIP,NORM),               X
-               INITIAL='ENTER Details  PF3 Filters  PF7 Prev  PF8 Next X
-               PF10 Sign Off  PF12 Cancel'
+         DFHMDF POS=(24,1),LENGTH=27,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER Details  PF3 Filters '
+HLPPF7   DFHMDF POS=(24,29),LENGTH=9,ATTRB=(ASKIP,NORM),               X
+               INITIAL='PF7 Prev '
+HLPPF8   DFHMDF POS=(24,39),LENGTH=9,ATTRB=(ASKIP,NORM),               X
+               INITIAL='PF8 Next '
+         DFHMDF POS=(24,49),LENGTH=26,ATTRB=(ASKIP,NORM),              X
+               INITIAL='PF10 Sign Off  PF12 Cancel'
 * ---------------------------------------------------------------------
 *  ENDING.
 * ---------------------------------------------------------------------
