@@ -2,7 +2,8 @@
       *   CICS PLURALSIGHT 'EMPLOYEE APP'.
       *      - MODIFIED VERSION OF THE 'LIST EMPLOYEE' MAP.
       *      - WE INSERT CUSTOM 16-ITEM ARRAYS TO REPLACE THE
-      *        THE HARD-CODED REPEATED ITEMS IN THE ORIGINAL MAP.
+      *        HARD-CODED REPEATED ITEMS IN THE ORIGINAL SYMBOLIC 
+      *        MAP.
       ******************************************************************
       *-----------------------------------------------------------------
       *   INPUT MAP SECTION.-

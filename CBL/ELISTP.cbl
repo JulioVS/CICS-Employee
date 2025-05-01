@@ -48,6 +48,8 @@
           05 FILLER             PIC X(5)  VALUE '<EB2='.
           05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
+      *
+       01 WS-LINES-PER-PAGE     PIC 9(2)  VALUE 3.
  
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -147,10 +149,14 @@
 
       *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
            PERFORM 1310-START-BROWSING.
+
            PERFORM 1320-READ-NEXT-RECORD
               VARYING LST-RECORD-INDEX
               FROM 1 BY 1
-              UNTIL LST-RECORD-INDEX IS GREATER THAN 3.
+              UNTIL LST-RECORD-INDEX
+              IS GREATER THAN WS-LINES-PER-PAGE
+              OR LST-END-OF-FILE.
+
            PERFORM 1330-END-BROWSING.
 
        1310-START-BROWSING.
@@ -221,10 +227,10 @@
                    LST-CURRENT-RECORD(LST-RECORD-INDEX)
            WHEN DFHRESP(NOTFND)
                 MOVE 'No More Records Found!' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
+                SET LST-END-OF-FILE TO TRUE
            WHEN DFHRESP(ENDFILE)
                 MOVE 'End of Employee Master File' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
+                SET LST-END-OF-FILE TO TRUE
            WHEN OTHER
                 MOVE 'Error Reading Next Record!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -314,10 +320,31 @@
        2300-PREV-BY-EMPLOYEE-ID.
            MOVE '2300-PREV-BY-EMPLOYEE-ID' TO WS-MESSAGE.
 
+           IF LST-CURRENT-PAGE-NUMBER IS GREATER THAN 1 THEN
+              INITIALIZE LST-FILE-FLAG 
+              SUBTRACT 1 FROM LST-CURRENT-PAGE-NUMBER
+              SUBTRACT 5 FROM EMP-EMPLOYEE-ID
+              PERFORM 1300-READ-EMPLOYEES-BY-ID
+           ELSE
+              MOVE 'No Previous Records To Display' TO WS-MESSAGE
+           END-IF.
+
        2400-NEXT-BY-EMPLOYEE-ID.
            MOVE '2400-NEXT-BY-EMPLOYEE-ID' TO WS-MESSAGE.
-           ADD 1 TO LST-CURRENT-PAGE-NUMBER.
-           PERFORM 1300-READ-EMPLOYEES-BY-ID.
+
+      *    WE ADVANCE BOTH THE PAGE NUMBER AND THE EMPLOYEE ID.
+      *    THE LATTER IS TO AVOID THE LAST DISPLAYED EMPLOYEE TO BE
+      *    CAUGHT AGAIN BY THE NEXT 'STARTBR' COMMAND (WHICH 
+      *    CHECKS FOR AN 'EQUAL OR GREATER THAN' VALUE THAN THE
+      *    PASSED ID).
+
+           IF NOT LST-END-OF-FILE THEN
+              ADD 1 TO LST-CURRENT-PAGE-NUMBER
+              ADD 1 TO EMP-EMPLOYEE-ID
+              PERFORM 1300-READ-EMPLOYEES-BY-ID
+           ELSE
+              MOVE 'No More records To Display' TO WS-MESSAGE
+           END-IF.
 
        2500-CANCEL-ACTION.
            MOVE '2500-CANCEL-ACTION' TO WS-MESSAGE.
