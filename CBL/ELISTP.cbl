@@ -28,7 +28,10 @@
       ******************************************************************
        01 WS-WORKING-VARS.
           05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
-          05 WS-READ-COUNTER    PIC 9(2) USAGE IS DISPLAY.
+          05 WS-READ-COUNTER    PIC S9(2) USAGE IS BINARY.
+          05 WS-READ-DISPLAY    PIC  9(2) USAGE IS DISPLAY.
+          05 WS-LINE-COUNTER    PIC S9(2) USAGE IS BINARY.
+          05 WS-LINE-DISPLAY    PIC  9(2) USAGE IS DISPLAY.
       *
        01 WS-DISPLAY-MESSAGES.
           05 WS-NO-FILTERS-SET  PIC X(6)  VALUE '(None)'.
@@ -52,7 +55,7 @@
           05 FILLER             PIC X(1)  VALUE '>'.
       *
        01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
-                                          VALUE +5.
+                                          VALUE +16.
  
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -148,18 +151,9 @@
 
       *    CLEAN EMPLOYEE LIST BUFFER.
            INITIALIZE LST-CURRENT-RECORD-AREA.
-           INITIALIZE WS-READ-COUNTER.
 
       *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
            PERFORM 1310-START-BROWSING.
-
-      *    IF THE 'STARTBR' FINDS NO RECORDS TO BROWSE AND THEREFORE
-      *    WE DON'T ISSUE ANY 'READNEXT' COMMANDS, THEN WE WILL GET A 
-      *    'NOTFND' ERROR ON THE 'ENDBR' COMMAND!
-      *    TO AVOID THIS SCENARIO, WE JUST EXIT THE PARAGRAPH.
-           IF LST-END-OF-FILE THEN
-              EXIT
-           END-IF.
 
            PERFORM 1320-READ-NEXT-RECORD
               VARYING LST-RECORD-INDEX
@@ -168,7 +162,9 @@
               IS GREATER THAN WS-LINES-PER-PAGE
               OR LST-END-OF-FILE.
 
-           PERFORM 1330-END-BROWSING.
+           IF NOT LST-END-OF-FILE THEN
+              PERFORM 1330-END-BROWSING
+           END-IF.
 
        1310-START-BROWSING.
       *    >>> DEBUGGING ONLY <<<
@@ -216,10 +212,11 @@
        1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
            INITIALIZE WS-MESSAGE. 
-           ADD 1 TO WS-READ-COUNTER.
+           SET WS-READ-COUNTER TO LST-RECORD-INDEX.
+           MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
            STRING '1320-READ-NEXT-RECORD'
                   '('
-                  WS-READ-COUNTER
+                  WS-READ-DISPLAY
                   ')'
               DELIMITED BY SIZE
               INTO WS-MESSAGE
@@ -313,20 +310,23 @@
        2100-SHOW-DETAILS.
            MOVE 'Cannot Detect Cursor!' TO WS-MESSAGE.
 
-           MOVE SELCTF(1) TO DFHBMFLG.
-           IF DFHCURSR THEN
-              MOVE 'Cursor Detected In Line 1' TO WS-MESSAGE
-           END-IF.
+           PERFORM VARYING LINEO-INDEX
+              FROM 1 BY 1
+              UNTIL LINEO-INDEX
+              IS GREATER THAN WS-LINES-PER-PAGE
+      *            CHECK EACH LINE TO SEE IF CURSOR IS POSITIONED THERE.
+                   MOVE SELCTF(LINEO-INDEX) TO DFHBMFLG
 
-           MOVE SELCTF(2) TO DFHBMFLG.
-           IF DFHCURSR THEN
-              MOVE 'Cursor Detected In Line 2' TO WS-MESSAGE
-           END-IF.
-
-           MOVE SELCTF(3) TO DFHBMFLG.
-           IF DFHCURSR THEN
-              MOVE 'Cursor Detected In Line 3' TO WS-MESSAGE
-           END-IF.
+                   IF DFHCURSR THEN
+                      SET WS-LINE-COUNTER TO LINEO-INDEX
+                      MOVE WS-LINE-COUNTER TO WS-LINE-DISPLAY
+                      STRING 'Cursor Detected In Line '
+                             WS-LINE-DISPLAY
+                         DELIMITED BY SIZE
+                         INTO WS-MESSAGE
+                      END-STRING
+                   END-IF
+           END-PERFORM.
              
        2200-GET-FILTERS.
            MOVE '2200-GET-FILTERS' TO WS-MESSAGE.
@@ -422,10 +422,13 @@
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
 
-      *    POPULATE THESE LABELS BECAUSE PAGINATION OPTIONS WILL 
-      *    HIDE/UNHIDE DYNAMICALLY WHILE BROWSING.
-           MOVE WS-PF7-LABEL TO HLPPF7O.
-           MOVE WS-PF8-LABEL TO HLPPF8O.
+      *    POPULATE THE NAVIGATION FUNCTION KEY LABELS.
+           IF LST-CURRENT-PAGE-NUMBER IS GREATER THAN 1 THEN
+              MOVE WS-PF7-LABEL TO HLPPF7O
+           END-IF.
+           IF NOT LST-END-OF-FILE THEN
+              MOVE WS-PF8-LABEL TO HLPPF8O
+           END-IF.
 
       *    POPULATE ALL DISPLAY LINES WITH EMPLOYEE RECORDS.
            PERFORM VARYING LST-RECORD-INDEX
