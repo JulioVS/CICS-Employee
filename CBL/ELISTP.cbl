@@ -52,7 +52,7 @@
           05 FILLER             PIC X(1)  VALUE '>'.
       *
        01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
-                                          VALUE +3.
+                                          VALUE +5.
  
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -153,6 +153,14 @@
       *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
            PERFORM 1310-START-BROWSING.
 
+      *    IF THE 'STARTBR' FINDS NO RECORDS TO BROWSE AND THEREFORE
+      *    WE DON'T ISSUE ANY 'READNEXT' COMMANDS, THEN WE WILL GET A 
+      *    'NOTFND' ERROR ON THE 'ENDBR' COMMAND!
+      *    TO AVOID THIS SCENARIO, WE JUST EXIT THE PARAGRAPH.
+           IF LST-END-OF-FILE THEN
+              EXIT
+           END-IF.
+
            PERFORM 1320-READ-NEXT-RECORD
               VARYING LST-RECORD-INDEX
               FROM 1 BY 1
@@ -191,6 +199,9 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Browsing Employee Master File' TO WS-MESSAGE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Records Found!' TO WS-MESSAGE
+                SET LST-END-OF-FILE TO TRUE
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalist Request (Browse)!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
