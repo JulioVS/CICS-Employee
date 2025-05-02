@@ -42,7 +42,9 @@
        01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
           88 I-AM-DEBUGGING               VALUE 'Y'.
           88 NOT-DEBUGGING                VALUE 'N'.
-      *    
+      *
+       01 WS-DEBUG-ID           PIC X(45) VALUE SPACES.
+      *   
        01 WS-DEBUG-MESSAGE.
           05 FILLER             PIC X(5)  VALUE '<MSG:'.
           05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
@@ -54,6 +56,7 @@
           05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
       *
+       01 WS-MAXIMUM-EMP-ID     PIC 9(8)  VALUE 99999999.
        01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
                                           VALUE +16.
  
@@ -63,7 +66,7 @@
       *-----------------------------------------------------------------
 
       *    >>> DEBUGGING ONLY <<<
-           MOVE 'MAIN-LOGIC' TO WS-MESSAGE.
+           MOVE 'MAIN-LOGIC' TO WS-DEBUG-ID.
            INITIALIZE EIBRESP EIBRESP2.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
@@ -108,7 +111,7 @@
       
        1000-FIRST-INTERACTION.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (START)' TO WS-MESSAGE.
+           MOVE '1000-FIRST-INTERACTION (START)' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -117,12 +120,12 @@
            PERFORM 1300-READ-EMPLOYEES-BY-ID.
 
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (END)' TO WS-MESSAGE.
+           MOVE '1000-FIRST-INTERACTION (END)' TO WS-DEBUG-ID.
       *    >>> -------------- <<<
 
        1100-INITIALIZE-VARIABLES.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1100-INITIALIZE-VARIABLES' TO WS-MESSAGE.
+           MOVE '1100-INITIALIZE-VARIABLES' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -135,7 +138,7 @@
 
        1200-INITIALIZE-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1200-INITIALIZE-CONTAINER' TO WS-MESSAGE.
+           MOVE '1200-INITIALIZE-CONTAINER' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -145,7 +148,7 @@
 
        1300-READ-EMPLOYEES-BY-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1300-READ-EMPLOYEES-BY-ID' TO WS-MESSAGE.
+           MOVE '1300-READ-EMPLOYEES-BY-ID' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -156,10 +159,8 @@
            PERFORM 1310-START-BROWSING.
 
            PERFORM 1320-READ-NEXT-RECORD
-              VARYING LST-RECORD-INDEX
-              FROM 1 BY 1
-              UNTIL LST-RECORD-INDEX
-              IS GREATER THAN WS-LINES-PER-PAGE
+              VARYING LST-RECORD-INDEX FROM 1 BY 1
+              UNTIL LST-RECORD-INDEX IS GREATER THAN WS-LINES-PER-PAGE
               OR LST-END-OF-FILE.
 
            IF NOT LST-END-OF-FILE THEN
@@ -168,7 +169,7 @@
 
        1310-START-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1310-START-BROWSING' TO WS-MESSAGE.
+           MOVE '1310-START-BROWSING' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -211,7 +212,7 @@
 
        1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           INITIALIZE WS-MESSAGE. 
+           INITIALIZE WS-DEBUG-ID. 
            SET WS-READ-COUNTER TO LST-RECORD-INDEX.
            MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
            STRING '1320-READ-NEXT-RECORD'
@@ -219,7 +220,7 @@
                   WS-READ-DISPLAY
                   ')'
               DELIMITED BY SIZE
-              INTO WS-MESSAGE
+              INTO WS-DEBUG-ID
            END-STRING.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
@@ -249,7 +250,7 @@
 
        1330-END-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1330-END-BROWSING' TO WS-MESSAGE.
+           MOVE '1330-END-BROWSING' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -266,13 +267,69 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
+       1400-READ-BACKWARDS-BY-ID.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1400-READ-BACKWARDS-BY-ID' TO WS-DEBUG-ID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE LST-CURRENT-RECORD-AREA.
+           PERFORM 1310-START-BROWSING.
+
+           PERFORM 1410-READ-PREV-RECORD
+              VARYING LST-RECORD-INDEX FROM WS-LINES-PER-PAGE BY -1
+              UNTIL LST-RECORD-INDEX IS LESS THAN 1
+              OR LST-START-OF-FILE.
+
+           IF NOT LST-START-OF-FILE THEN
+              PERFORM 1330-END-BROWSING
+           END-IF.
+
+       1410-READ-PREV-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           INITIALIZE WS-DEBUG-ID. 
+           SET WS-READ-COUNTER TO LST-RECORD-INDEX.
+           MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
+           STRING '1410-READ-PREV-RECORD'
+                  '('
+                  WS-READ-DISPLAY
+                  ')'
+              DELIMITED BY SIZE
+              INTO WS-DEBUG-ID
+           END-STRING.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS READPREV
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                INTO (EMPLOYEE-MASTER-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE 
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Reading Employee Master File' TO WS-MESSAGE
+                MOVE EMPLOYEE-MASTER-RECORD TO
+                   LST-CURRENT-RECORD(LST-RECORD-INDEX)
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Previous Records Found!' TO WS-MESSAGE
+                SET LST-START-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'Start of Employee Master File' TO WS-MESSAGE
+                SET LST-START-OF-FILE TO TRUE
+           WHEN OTHER
+                MOVE 'Error Reading Previous Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
       *-----------------------------------------------------------------
        USE-CASE SECTION.
       *-----------------------------------------------------------------
 
        2000-PROCESS-USER-INPUT.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (START)' TO WS-MESSAGE.
+           MOVE '2000-PROCESS-USER-INPUT (START)' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -300,14 +357,15 @@
            END-EVALUATE.
 
       *    >>> DEBUGGING ONLY <<<
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-MESSAGE.
+           MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-DEBUG-ID.
       *    >>> -------------- <<<
                
        2100-SHOW-DETAILS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2100-SHOW-DETAILS' TO WS-DEBUG-ID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            MOVE 'Cannot Detect Cursor!' TO WS-MESSAGE.
 
            PERFORM VARYING LINEO-INDEX
@@ -329,23 +387,57 @@
            END-PERFORM.
              
        2200-GET-FILTERS.
-           MOVE '2200-GET-FILTERS' TO WS-MESSAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2200-GET-FILTERS' TO WS-DEBUG-ID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
        2300-PREV-BY-EMPLOYEE-ID.
-           MOVE '2300-PREV-BY-EMPLOYEE-ID' TO WS-MESSAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2300-PREV-BY-EMPLOYEE-ID' TO WS-DEBUG-ID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
            IF LST-CURRENT-PAGE-NUMBER IS GREATER THAN 1 THEN
-              INITIALIZE LST-FILE-FLAG 
+      *       LOCATE THE FIRST EMPLOYEE ID IN THE CURRENTLY DISPLAYED
+      *       PAGE) AND SUBTRACT 1 FROM IT TO GET THE STARTING POINT 
+      *       FOR OUR UPCOMING 'BACKWARDS BROWSING'.    
+              IF LST-CURRENT-RECORD(1) IS NOT EQUAL TO SPACES THEN
+      *          >>> DEBUGGING ONLY <<<
+                 MOVE '2300-PREV: NORMAL CASE' TO WS-DEBUG-ID
+                 PERFORM 9300-DEBUG-AID
+      *          >>> -------------- <<<
+                 MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD
+                 SUBTRACT 1 FROM EMP-EMPLOYEE-ID
+              ELSE
+      *          >>> DEBUGGING ONLY <<<
+                 MOVE '2300-PREV: EDGE CASE!' TO WS-DEBUG-ID
+                 PERFORM 9300-DEBUG-AID
+      *          >>> -------------- <<<
+      *          UNLESS WE ARE ON AN 'EMPTY DETAIL PAGE' EDGE CASE!
+      *          IN ORDER TO GO BACKWARDS, WE JUST SET THE EMPLOYEE ID 
+      *          TO A FICTIONAL 'MAXIMUM VALUE'.             
+                 MOVE WS-MAXIMUM-EMP-ID TO EMP-EMPLOYEE-ID
+              END-IF
+
+      *       RESET THE 'SOF'/'EOF' FILE FLAG.
+              INITIALIZE LST-FILE-FLAG
+
+      *       SUBTRACT 1 FROM THE CURRENT PAGE NUMBER. 
               SUBTRACT 1 FROM LST-CURRENT-PAGE-NUMBER
-              SUBTRACT 5 FROM EMP-EMPLOYEE-ID
-              PERFORM 1300-READ-EMPLOYEES-BY-ID
+
+      *       AND NOW READ THE EMPLOYEE MASTER FILE BACKWARDS!!!
+              PERFORM 1400-READ-BACKWARDS-BY-ID
            ELSE
               MOVE 'No Previous Records To Display' TO WS-MESSAGE
               MOVE DFHPROTN TO HLPPF7A
            END-IF.
 
        2400-NEXT-BY-EMPLOYEE-ID.
-           MOVE '2400-NEXT-BY-EMPLOYEE-ID' TO WS-MESSAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2400-NEXT-BY-EMPLOYEE-ID' TO WS-DEBUG-ID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
       *    WE ADVANCE BOTH THE PAGE NUMBER AND THE EMPLOYEE ID.
       *    THE LATTER IS TO AVOID THE LAST DISPLAYED EMPLOYEE TO BE
@@ -363,7 +455,10 @@
            END-IF.
 
        2500-CANCEL-ACTION.
-           MOVE '2500-CANCEL-ACTION' TO WS-MESSAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2500-CANCEL-ACTION' TO WS-DEBUG-ID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
@@ -451,7 +546,7 @@
 
        9200-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9200-SIGN-USER-OFF' TO WS-MESSAGE.
+           MOVE '9200-SIGN-USER-OFF' TO WS-DEBUG-ID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -472,7 +567,7 @@
            IF I-AM-DEBUGGING THEN
               INITIALIZE WS-DEBUG-MESSAGE
 
-              MOVE WS-MESSAGE(1:45) TO WS-DEBUG-TEXT
+              MOVE WS-DEBUG-ID TO WS-DEBUG-TEXT
               MOVE EIBRESP TO WS-DEBUG-EIBRESP
               MOVE EIBRESP2 TO WS-DEBUG-EIBRESP2
 
