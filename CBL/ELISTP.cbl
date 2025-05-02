@@ -65,6 +65,32 @@
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
 
+      *    >>> TESTING ONLY <<<
+           INITIALIZE EIBRESP EIBRESP2.
+           MOVE 'TESTING NEW FILTER MAP!' TO WS-DEBUG-AID.
+
+           INITIALIZE EFILMO.
+           MOVE EIBTRNID TO TRANFLO.
+           MOVE 'TESTING NEW FILTER MAP!' TO MESSFLO.
+
+           EXEC CICS SEND
+                MAP('EFILM')
+                MAPSET('ELSTMAP')
+                FROM (EFILMO)
+                ERASE
+                FREEKB 
+                END-EXEC.
+
+           EXEC CICS RECEIVE
+                MAP('EFILM')
+                MAPSET('ELSTMAP')
+                INTO (EFILMI)
+                END-EXEC.
+
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            INITIALIZE EIBRESP EIBRESP2.
