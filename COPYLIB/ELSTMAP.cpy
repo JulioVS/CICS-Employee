@@ -776,3 +776,81 @@
            02  FILLER PICTURE X(3).
            02  HLPPF8C    PICTURE X.
            02  HLPPF8O  PIC X(9).
+       01  EFILMI.
+           02  FILLER PIC X(12).
+           02  TRANFLL    COMP  PIC  S9(4).
+           02  TRANFLF    PICTURE X.
+           02  FILLER REDEFINES TRANFLF.
+             03 TRANFLA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  TRANFLI  PIC X(4).
+           02  KEYSELL    COMP  PIC  S9(4).
+           02  KEYSELF    PICTURE X.
+           02  FILLER REDEFINES KEYSELF.
+             03 KEYSELA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  KEYSELI  PIC X(1).
+           02  MATCHL    COMP  PIC  S9(4).
+           02  MATCHF    PICTURE X.
+           02  FILLER REDEFINES MATCHF.
+             03 MATCHA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  MATCHI  PIC X(30).
+           02  DPTINCLD OCCURS 4 TIMES.
+             03  DPTINCLL    COMP  PIC  S9(4).
+             03  DPTINCLF    PICTURE X.
+             03  FILLER   PICTURE X(1).
+             03  DPTINCLI  PIC X(8).
+           02  DPTEXCLD OCCURS 4 TIMES.
+             03  DPTEXCLL    COMP  PIC  S9(4).
+             03  DPTEXCLF    PICTURE X.
+             03  FILLER   PICTURE X(1).
+             03  DPTEXCLI  PIC X(8).
+           02  EDATEAL    COMP  PIC  S9(4).
+           02  EDATEAF    PICTURE X.
+           02  FILLER REDEFINES EDATEAF.
+             03 EDATEAA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  EDATEAI  PIC X(8).
+           02  EDATEBL    COMP  PIC  S9(4).
+           02  EDATEBF    PICTURE X.
+           02  FILLER REDEFINES EDATEBF.
+             03 EDATEBA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  EDATEBI  PIC X(8).
+           02  MESSFLL    COMP  PIC  S9(4).
+           02  MESSFLF    PICTURE X.
+           02  FILLER REDEFINES MESSFLF.
+             03 MESSFLA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  MESSFLI  PIC X(79).
+       01  EFILMO REDEFINES EFILMI.
+           02  FILLER PIC X(12).
+           02  FILLER PICTURE X(3).
+           02  TRANFLC    PICTURE X.
+           02  TRANFLO  PIC X(4).
+           02  FILLER PICTURE X(3).
+           02  KEYSELC    PICTURE X.
+           02  KEYSELO  PIC X(1).
+           02  FILLER PICTURE X(3).
+           02  MATCHC    PICTURE X.
+           02  MATCHO  PIC X(30).
+           02  DFHMS1 OCCURS 4 TIMES.
+             03  FILLER PICTURE X(2).
+             03  DPTINCLA    PICTURE X.
+             03  DPTINCLC    PICTURE X.
+             03  DPTINCLO  PIC X(8).
+           02  DFHMS2 OCCURS 4 TIMES.
+             03  FILLER PICTURE X(2).
+             03  DPTEXCLA    PICTURE X.
+             03  DPTEXCLC    PICTURE X.
+             03  DPTEXCLO  PIC X(8).
+           02  FILLER PICTURE X(3).
+           02  EDATEAC    PICTURE X.
+           02  EDATEAO  PIC X(8).
+           02  FILLER PICTURE X(3).
+           02  EDATEBC    PICTURE X.
+           02  EDATEBO  PIC X(8).
+           02  FILLER PICTURE X(3).
+           02  MESSFLC    PICTURE X.
+           02  MESSFLO  PIC X(79).

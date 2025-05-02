@@ -1,6 +1,12 @@
 * ---------------------------------------------------------------------
 *  CICS PLURALSIGHT 'EMPLOYEE APP'.
-*    - LIST EMPLOYESS MAPSET.
+*    - LIST EMPLOYEES MAPSET 'ELSTMAP'.
+*    - CONTAINS TWO MAPS:
+*        1. 'ELSTM' -> EMPLOYEE LIST MAP.
+*        2. 'EFILM' -> FILTERS MAP.
+* ---------------------------------------------------------------------
+* ---------------------------------------------------------------------
+*  GLOBAL SETTINGS.
 * ---------------------------------------------------------------------
 ELSTMAP  DFHMSD MODE=INOUT,                                            X
                CTRL=(FREEKB,FRSET),                                    X
@@ -12,7 +18,7 @@ ELSTMAP  DFHMSD MODE=INOUT,                                            X
                TIOAPFX=YES,                                            X
                TYPE=&SYSPARM
 * ---------------------------------------------------------------------
-*  LIST EMPLOYESS MAP.
+*  1. LIST EMPLOYEES MAP.
 * ---------------------------------------------------------------------
 *
 *  HEADING SECTION.
@@ -152,7 +158,64 @@ HLPPF8   DFHMDF POS=(24,39),LENGTH=9,ATTRB=(ASKIP,NORM),               X
          DFHMDF POS=(24,49),LENGTH=26,ATTRB=(ASKIP,NORM),              X
                INITIAL='PF10 Sign Off  PF12 Cancel'
 * ---------------------------------------------------------------------
-*  ENDING.
+*  2. FILTERS MAP.
+* ---------------------------------------------------------------------
+*
+*  HEADING SECTION.
+*
+EFILM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+TRANFL   DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),COLOR=TURQUOISE
+         DFHMDF POS=(1,31),LENGTH=18,ATTRB=(ASKIP,BRT),                X
+               INITIAL='Enter/Edit Filters',COLOR=TURQUOISE
+*
+*  SELECT/ORDER SECTION.
+*
+         DFHMDF POS=(3,1),LENGTH=15,ATTRB=(ASKIP,BRT),COLOR=TURQUOISE, X
+               INITIAL='Select/Order By'
+KEYSEL   DFHMDF POS=(3,17),LENGTH=1,ATTRB=(UNPROT,BRT,IC),             X
+               INITIAL='1',HILIGHT=UNDERLINE,COLOR=YELLOW
+         DFHMDF POS=(3,19),LENGTH=25,ATTRB=(ASKIP,NORM),               X
+               INITIAL='1 Employee ID    Matching'
+MATCH    DFHMDF POS=(3,45),LENGTH=30,ATTRB=(UNPROT,BRT),COLOR=YELLOW,  X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,76),LENGTH=0
+         DFHMDF POS=(4,19),LENGTH=15,ATTRB=(ASKIP,NORM),               X
+               INITIAL='2 Employee Name'
+*
+*  FILTERS SECTION.
+*
+         DFHMDF POS=(6,1),LENGTH=7,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='Filters'
+         DFHMDF POS=(8,8),LENGTH=25,ATTRB=(ASKIP,NORM),                X
+               INITIAL='Department ID     Include'
+DPTINCL  DFHMDF POS=(8,34),LENGTH=8,ATTRB=(UNPROT,BRT),OCCURS=4,       X
+               HILIGHT=UNDERLINE,COLOR=YELLOW
+         DFHMDF POS=(8,70),LENGTH=0
+         DFHMDF POS=(9,26),LENGTH=7,ATTRB=(ASKIP,NORM),                X
+               INITIAL='Exclude'
+DPTEXCL  DFHMDF POS=(9,34),LENGTH=8,ATTRB=(UNPROT,BRT),OCCURS=4,       X
+               HILIGHT=UNDERLINE,COLOR=YELLOW
+         DFHMDF POS=(9,70),LENGTH=0
+         DFHMDF POS=(10,8),LENGTH=34,ATTRB=(ASKIP,NORM),               X
+               INITIAL='Employment Date (YYYYMMDD)   After'
+EDATEA   DFHMDF POS=(10,43),LENGTH=8,ATTRB=(UNPROT,BRT),               X
+               HILIGHT=UNDERLINE,COLOR=YELLOW
+         DFHMDF POS=(10,52),LENGTH=8,ATTRB=(ASKIP,NORM),               X
+               INITIAL='  Before'
+EDATEB   DFHMDF POS=(10,61),LENGTH=8,ATTRB=(UNPROT,BRT),               X
+               HILIGHT=UNDERLINE,COLOR=YELLOW
+         DFHMDF POS=(10,70),LENGTH=0
+*
+*  MESSAGE SECTION.
+*
+MESSFL   DFHMDF POS=(23,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+*
+*  AID KEY SECTION.
+*
+         DFHMDF POS=(24,1),LENGTH=43,ATTRB=(ASKIP,NORM),               X
+               INITIAL='PF3 Exit  PF10 Sign Off  PF12 Clear Filters'
+* ---------------------------------------------------------------------
+*  ENDING SECTION.
 * ---------------------------------------------------------------------
          DFHMSD TYPE=FINAL
          END
