@@ -200,7 +200,7 @@
                 MOVE 'No Records Found!' TO WS-MESSAGE
                 SET LST-END-OF-FILE TO TRUE
            WHEN DFHRESP(INVREQ)
-                MOVE 'Invalist Request (Browse)!' TO WS-MESSAGE
+                MOVE 'Invalid Request (Browse)!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN DFHRESP(NOTOPEN)
                 MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
@@ -516,6 +516,17 @@
 
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
+           MOVE DFHTURQ TO MESSC.
+
+      *    CHANGE COLOR OF MESSAGE LINE BASED ON TYPE/CONTENT.
+           EVALUATE TRUE
+           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
+                MOVE DFHRED TO MESSC
+           WHEN WS-MESSAGE(1:3) IS EQUAL TO 'No '
+                MOVE DFHYELLO TO MESSC
+           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
+                MOVE DFHPINK TO MESSC
+           END-EVALUATE
 
       *    POPULATE THE NAVIGATION FUNCTION KEY LABELS.
            IF LST-CURRENT-PAGE-NUMBER IS GREATER THAN 1 THEN
