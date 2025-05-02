@@ -43,7 +43,7 @@
           88 I-AM-DEBUGGING               VALUE 'Y'.
           88 NOT-DEBUGGING                VALUE 'N'.
       *
-       01 WS-DEBUG-ID           PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
       *   
        01 WS-DEBUG-MESSAGE.
           05 FILLER             PIC X(5)  VALUE '<MSG:'.
@@ -66,7 +66,7 @@
       *-----------------------------------------------------------------
 
       *    >>> DEBUGGING ONLY <<<
-           MOVE 'MAIN-LOGIC' TO WS-DEBUG-ID.
+           MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            INITIALIZE EIBRESP EIBRESP2.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
@@ -111,7 +111,7 @@
       
        1000-FIRST-INTERACTION.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (START)' TO WS-DEBUG-ID.
+           MOVE '1000-FIRST-INTERACTION (START)' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -120,12 +120,12 @@
            PERFORM 1300-READ-EMPLOYEES-BY-ID.
 
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (END)' TO WS-DEBUG-ID.
+           MOVE '1000-FIRST-INTERACTION (END)' TO WS-DEBUG-AID.
       *    >>> -------------- <<<
 
        1100-INITIALIZE-VARIABLES.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1100-INITIALIZE-VARIABLES' TO WS-DEBUG-ID.
+           MOVE '1100-INITIALIZE-VARIABLES' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -138,7 +138,7 @@
 
        1200-INITIALIZE-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1200-INITIALIZE-CONTAINER' TO WS-DEBUG-ID.
+           MOVE '1200-INITIALIZE-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -148,7 +148,7 @@
 
        1300-READ-EMPLOYEES-BY-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1300-READ-EMPLOYEES-BY-ID' TO WS-DEBUG-ID.
+           MOVE '1300-READ-EMPLOYEES-BY-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -169,7 +169,7 @@
 
        1310-START-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1310-START-BROWSING' TO WS-DEBUG-ID.
+           MOVE '1310-START-BROWSING' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -212,7 +212,7 @@
 
        1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           INITIALIZE WS-DEBUG-ID. 
+           INITIALIZE WS-DEBUG-AID. 
            SET WS-READ-COUNTER TO LST-RECORD-INDEX.
            MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
            STRING '1320-READ-NEXT-RECORD'
@@ -220,7 +220,7 @@
                   WS-READ-DISPLAY
                   ')'
               DELIMITED BY SIZE
-              INTO WS-DEBUG-ID
+              INTO WS-DEBUG-AID
            END-STRING.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
@@ -250,7 +250,7 @@
 
        1330-END-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1330-END-BROWSING' TO WS-DEBUG-ID.
+           MOVE '1330-END-BROWSING' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -269,7 +269,7 @@
 
        1400-READ-BACKWARDS-BY-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1400-READ-BACKWARDS-BY-ID' TO WS-DEBUG-ID.
+           MOVE '1400-READ-BACKWARDS-BY-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -287,7 +287,7 @@
 
        1410-READ-PREV-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           INITIALIZE WS-DEBUG-ID. 
+           INITIALIZE WS-DEBUG-AID. 
            SET WS-READ-COUNTER TO LST-RECORD-INDEX.
            MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
            STRING '1410-READ-PREV-RECORD'
@@ -295,7 +295,7 @@
                   WS-READ-DISPLAY
                   ')'
               DELIMITED BY SIZE
-              INTO WS-DEBUG-ID
+              INTO WS-DEBUG-AID
            END-STRING.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
@@ -329,7 +329,7 @@
 
        2000-PROCESS-USER-INPUT.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (START)' TO WS-DEBUG-ID.
+           MOVE '2000-PROCESS-USER-INPUT (START)' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -357,12 +357,12 @@
            END-EVALUATE.
 
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-DEBUG-ID.
+           MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-DEBUG-AID.
       *    >>> -------------- <<<
                
        2100-SHOW-DETAILS.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2100-SHOW-DETAILS' TO WS-DEBUG-ID.
+           MOVE '2100-SHOW-DETAILS' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -388,13 +388,13 @@
              
        2200-GET-FILTERS.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2200-GET-FILTERS' TO WS-DEBUG-ID.
+           MOVE '2200-GET-FILTERS' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
        2300-PREV-BY-EMPLOYEE-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2300-PREV-BY-EMPLOYEE-ID' TO WS-DEBUG-ID.
+           MOVE '2300-PREV-BY-EMPLOYEE-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -404,14 +404,14 @@
       *       FOR OUR UPCOMING 'BACKWARDS BROWSING'.    
               IF LST-CURRENT-RECORD(1) IS NOT EQUAL TO SPACES THEN
       *          >>> DEBUGGING ONLY <<<
-                 MOVE '2300-PREV: NORMAL CASE' TO WS-DEBUG-ID
+                 MOVE '2300-PREV: NORMAL CASE' TO WS-DEBUG-AID
                  PERFORM 9300-DEBUG-AID
       *          >>> -------------- <<<
                  MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD
                  SUBTRACT 1 FROM EMP-EMPLOYEE-ID
               ELSE
       *          >>> DEBUGGING ONLY <<<
-                 MOVE '2300-PREV: EDGE CASE!' TO WS-DEBUG-ID
+                 MOVE '2300-PREV: EDGE CASE!' TO WS-DEBUG-AID
                  PERFORM 9300-DEBUG-AID
       *          >>> -------------- <<<
       *          UNLESS WE ARE ON AN 'EMPTY DETAIL PAGE' EDGE CASE!
@@ -435,7 +435,7 @@
 
        2400-NEXT-BY-EMPLOYEE-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2400-NEXT-BY-EMPLOYEE-ID' TO WS-DEBUG-ID.
+           MOVE '2400-NEXT-BY-EMPLOYEE-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -456,7 +456,7 @@
 
        2500-CANCEL-ACTION.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2500-CANCEL-ACTION' TO WS-DEBUG-ID.
+           MOVE '2500-CANCEL-ACTION' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -546,7 +546,7 @@
 
        9200-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9200-SIGN-USER-OFF' TO WS-DEBUG-ID.
+           MOVE '9200-SIGN-USER-OFF' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -567,7 +567,7 @@
            IF I-AM-DEBUGGING THEN
               INITIALIZE WS-DEBUG-MESSAGE
 
-              MOVE WS-DEBUG-ID TO WS-DEBUG-TEXT
+              MOVE WS-DEBUG-AID TO WS-DEBUG-TEXT
               MOVE EIBRESP TO WS-DEBUG-EIBRESP
               MOVE EIBRESP2 TO WS-DEBUG-EIBRESP2
 
