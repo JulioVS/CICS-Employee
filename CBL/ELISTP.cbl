@@ -61,7 +61,8 @@
       *
        01 WS-MAXIMUM-EMP-ID     PIC 9(8)  VALUE 99999999.
        01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
-                                          VALUE +16.
+                                          VALUE +3.
+      *                                   VALUE +16.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -527,6 +528,8 @@
                 FREEKB
                 END-EXEC.
 
+      *    <<<<<     PROGRAM EXECUTION HALTS HERE    >>>>>
+
       *    AND WAIT FOR THE USER TO ENTER FILTER CRITERIA.
       *    (EXECUTION HALTS HERE UNTIL THE USER HITS AN APPROPIATE
       *    AID KEY LIKE 'ENTER' OR 'PF3' OR 'PF12' ETC.)
@@ -537,10 +540,72 @@
                 END-EXEC.
 
       *    WITH FILTER CRITERIA ENTERED AND RECEIVED INTO THE MAP'S
-      *    INPUT SECTION, WE PROCEED WITH THE FLOW AND INTO THE FILE
-      *    ACCESS LOGIC.
-           CONTINUE.
+      *    INPUT SECTION, WE PASS THE DATA TO THE CONTAINER AND THEN
+      *    PROCEED INTO THE FILE ACCESS LOGIC.
+           PERFORM 3100-SAVE-FILTERS-IN-CONTAINER.
 
+       3100-SAVE-FILTERS-IN-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3100-SAVE-FILTERS-CRITERIA' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE LST-FILTERS TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+           
+           IF KEYSELI IS NOT EQUAL TO LOW-VALUE THEN
+              MOVE KEYSELI TO LST-SELECT-KEY-TYPE
+              SET LST-FILTERS-SET TO TRUE
+           END-IF.
+ 
+           IF MATCHI IS NOT EQUAL TO LOW-VALUE THEN
+              MOVE MATCHI TO LST-SELECT-KEY-VALUE
+              SET LST-FILTERS-SET TO TRUE
+           END-IF.
+
+           PERFORM VARYING LST-IN-DEPT-INDEX
+              FROM 1 BY 1
+              UNTIL LST-IN-DEPT-INDEX IS GREATER THAN 4
+                   IF DPTINCLI(LST-IN-DEPT-INDEX) IS NOT EQUAL TO
+                      LOW-VALUE
+                      MOVE DPTINCLI(LST-IN-DEPT-INDEX)
+                         TO LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
+                      SET LST-FILTERS-SET TO TRUE
+                   END-IF
+           END-PERFORM.
+
+           PERFORM VARYING LST-EX-DEPT-INDEX
+              FROM 1 BY 1
+              UNTIL LST-EX-DEPT-INDEX IS GREATER THAN 4
+                   IF DPTEXCLI(LST-EX-DEPT-INDEX) IS NOT EQUAL TO
+                      LOW-VALUE
+                      MOVE DPTEXCLI(LST-EX-DEPT-INDEX)
+                         TO LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX)
+                      SET LST-FILTERS-SET TO TRUE
+                   END-IF
+           END-PERFORM.
+
+           IF EDATEAI IS NOT EQUAL TO LOW-VALUE THEN
+              MOVE EDATEAI TO LST-EMPL-DATE-AFTER
+              SET LST-FILTERS-SET TO TRUE
+           END-IF.
+
+           IF EDATEBI IS NOT EQUAL TO LOW-VALUE THEN
+              MOVE EDATEBI TO LST-EMPL-DATE-BEFORE
+              SET LST-FILTERS-SET TO TRUE
+           END-IF.
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE LST-FILTERS(01:45) TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+           MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+           MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+           
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
