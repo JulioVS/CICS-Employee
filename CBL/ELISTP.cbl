@@ -38,13 +38,16 @@
           05 WS-MESSAGE         PIC X(79) VALUE SPACES.
           05 WS-PF7-LABEL       PIC X(9)  VALUE 'PF7 Prev '.
           05 WS-PF8-LABEL       PIC X(9)  VALUE 'PF8 Next '.
-      *    
+          05 WS-FILTERS-MSG     PIC X(79)
+             VALUE 'Set filter criteria and press ENTER or leave blank f
+      -            'or full listing.'.
+      *
        01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
           88 I-AM-DEBUGGING               VALUE 'Y'.
           88 NOT-DEBUGGING                VALUE 'N'.
       *
        01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
-      *   
+      *
        01 WS-DEBUG-MESSAGE.
           05 FILLER             PIC X(5)  VALUE '<MSG:'.
           05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
@@ -59,37 +62,11 @@
        01 WS-MAXIMUM-EMP-ID     PIC 9(8)  VALUE 99999999.
        01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
                                           VALUE +16.
- 
+
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
-
-      *    >>> TESTING ONLY <<<
-           INITIALIZE EIBRESP EIBRESP2.
-           MOVE 'TESTING NEW FILTER MAP!' TO WS-DEBUG-AID.
-
-           INITIALIZE EFILMO.
-           MOVE EIBTRNID TO TRANFLO.
-           MOVE 'TESTING NEW FILTER MAP!' TO MESSFLO.
-
-           EXEC CICS SEND
-                MAP('EFILM')
-                MAPSET('ELSTMAP')
-                FROM (EFILMO)
-                ERASE
-                FREEKB 
-                END-EXEC.
-
-           EXEC CICS RECEIVE
-                MAP('EFILM')
-                MAPSET('ELSTMAP')
-                INTO (EFILMI)
-                END-EXEC.
-
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
@@ -126,7 +103,7 @@
            WHEN DFHRESP(CONTAINERERR)
                 PERFORM 1000-FIRST-INTERACTION
            WHEN OTHER
-                MOVE 'Error Retrieving Container!' TO WS-MESSAGE 
+                MOVE 'Error Retrieving Container!' TO WS-MESSAGE
            END-EVALUATE.
 
            PERFORM 9000-SEND-MAP-AND-RETURN.
@@ -134,7 +111,7 @@
       *-----------------------------------------------------------------
        START-UP SECTION.
       *-----------------------------------------------------------------
-      
+
        1000-FIRST-INTERACTION.
       *    >>> DEBUGGING ONLY <<<
            MOVE '1000-FIRST-INTERACTION (START)' TO WS-DEBUG-AID.
@@ -142,7 +119,8 @@
       *    >>> -------------- <<<
 
            PERFORM 1100-INITIALIZE-VARIABLES.
-           PERFORM 1200-INITIALIZE-CONTAINER.
+           PERFORM 1150-INITIALIZE-CONTAINER.
+           PERFORM 1200-GET-INITIAL-FILTERS.
            PERFORM 1300-READ-EMPLOYEES-BY-ID.
 
       *    >>> DEBUGGING ONLY <<<
@@ -162,15 +140,31 @@
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE ELSTMO.
 
-       1200-INITIALIZE-CONTAINER.
+       1150-INITIALIZE-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1200-INITIALIZE-CONTAINER' TO WS-DEBUG-AID.
+           MOVE '1150-INITIALIZE-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    SET INITIAL VALUES FOR LIST CONTAINER.
            MOVE APP-LIST-PROGRAM-NAME TO LST-PROGRAM-NAME.
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
+
+       1200-GET-INITIAL-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1200-GET-INITIAL-FILTERS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    BY DESIGN, WE START BY SHOWING THE FILTERS SCREEN BEFORE
+      *    RENDERING THE FIRST LISTING PAGE.
+
+      *    THIS WILL BE A 'FULLY CONVERSATIONAL' MAP DISPLAY.
+
+      *    AFTER THE USER SETS THE INITIAL FILTER VALUES (OR LEAVES
+      *    THEM BLANK) LOGIC WILL PICK UP FROM HERE AND INTO THE NEXT
+      *    PARAGRAPH ('1300-READ-EMPLOYEES-BY-ID').
+           PERFORM 3000-DISPLAY-FILTERS-SCREEN.
 
        1300-READ-EMPLOYEES-BY-ID.
       *    >>> DEBUGGING ONLY <<<
@@ -212,8 +206,8 @@
       *           'OPERATIONS' SECTION AND SET 'BROWSE' TO 'YES'!
       *           (THEN RE-INSTALL THE FILE IN CICS)
 
-      *    ALSO POSSIBLE IS ABEND '19' (+60) WHICH HAPPENS IF THE FILE 
-      *    WAS CLOSED (I.E. BY ME!) WHEN THE PROGRAM RAN THE 'STARTBR' 
+      *    ALSO POSSIBLE IS ABEND '19' (+60) WHICH HAPPENS IF THE FILE
+      *    WAS CLOSED (I.E. BY ME!) WHEN THE PROGRAM RAN THE 'STARTBR'
       *    COMMAND.
       *
       *    FIX => RE-INSTALL IT IN CICS AND/OR READ IT WITH 'CECI READ
@@ -238,7 +232,7 @@
 
        1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           INITIALIZE WS-DEBUG-AID. 
+           INITIALIZE WS-DEBUG-AID.
            SET WS-READ-COUNTER TO LST-RECORD-INDEX.
            MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
            STRING '1320-READ-NEXT-RECORD'
@@ -258,7 +252,7 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 MOVE EMPLOYEE-MASTER-RECORD TO
@@ -313,7 +307,7 @@
 
        1410-READ-PREV-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           INITIALIZE WS-DEBUG-AID. 
+           INITIALIZE WS-DEBUG-AID.
            SET WS-READ-COUNTER TO LST-RECORD-INDEX.
            MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
            STRING '1410-READ-PREV-RECORD'
@@ -333,7 +327,7 @@
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
-           EVALUATE WS-CICS-RESPONSE 
+           EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 MOVE EMPLOYEE-MASTER-RECORD TO
@@ -350,7 +344,7 @@
            END-EVALUATE.
 
       *-----------------------------------------------------------------
-       USE-CASE SECTION.
+       LISTING SECTION.
       *-----------------------------------------------------------------
 
        2000-PROCESS-USER-INPUT.
@@ -365,7 +359,7 @@
                 INTO (ELSTMI)
                 END-EXEC.
 
-           EVALUATE EIBAID 
+           EVALUATE EIBAID
            WHEN DFHENTER
                 PERFORM 2100-SHOW-DETAILS
            WHEN DFHPF3
@@ -385,7 +379,7 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-DEBUG-AID.
       *    >>> -------------- <<<
-               
+
        2100-SHOW-DETAILS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '2100-SHOW-DETAILS' TO WS-DEBUG-AID.
@@ -411,12 +405,14 @@
                       END-STRING
                    END-IF
            END-PERFORM.
-             
+
        2200-GET-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '2200-GET-FILTERS' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           CONTINUE.
 
        2300-PREV-BY-EMPLOYEE-ID.
       *    >>> DEBUGGING ONLY <<<
@@ -426,8 +422,8 @@
 
            IF LST-CURRENT-PAGE-NUMBER IS GREATER THAN 1 THEN
       *       LOCATE THE FIRST EMPLOYEE ID IN THE CURRENTLY DISPLAYED
-      *       PAGE) AND SUBTRACT 1 FROM IT TO GET THE STARTING POINT 
-      *       FOR OUR UPCOMING 'BACKWARDS BROWSING'.    
+      *       PAGE) AND SUBTRACT 1 FROM IT TO GET THE STARTING POINT
+      *       FOR OUR UPCOMING 'BACKWARDS BROWSING'.
               IF LST-CURRENT-RECORD(1) IS NOT EQUAL TO SPACES THEN
       *          >>> DEBUGGING ONLY <<<
                  MOVE '2300-PREV: NORMAL CASE' TO WS-DEBUG-AID
@@ -441,15 +437,15 @@
                  PERFORM 9300-DEBUG-AID
       *          >>> -------------- <<<
       *          UNLESS WE ARE ON AN 'EMPTY DETAIL PAGE' EDGE CASE!
-      *          IN ORDER TO GO BACKWARDS, WE JUST SET THE EMPLOYEE ID 
-      *          TO A FICTIONAL 'MAXIMUM VALUE'.             
+      *          IN ORDER TO GO BACKWARDS, WE JUST SET THE EMPLOYEE ID
+      *          TO A FICTIONAL 'MAXIMUM VALUE'.
                  MOVE WS-MAXIMUM-EMP-ID TO EMP-EMPLOYEE-ID
               END-IF
 
       *       RESET THE 'SOF'/'EOF' FILE FLAG.
               INITIALIZE LST-FILE-FLAG
 
-      *       SUBTRACT 1 FROM THE CURRENT PAGE NUMBER. 
+      *       SUBTRACT 1 FROM THE CURRENT PAGE NUMBER.
               SUBTRACT 1 FROM LST-CURRENT-PAGE-NUMBER
 
       *       AND NOW READ THE EMPLOYEE MASTER FILE BACKWARDS!!!
@@ -467,7 +463,7 @@
 
       *    WE ADVANCE BOTH THE PAGE NUMBER AND THE EMPLOYEE ID.
       *    THE LATTER IS TO AVOID THE LAST DISPLAYED EMPLOYEE TO BE
-      *    CAUGHT AGAIN BY THE NEXT 'STARTBR' COMMAND (WHICH 
+      *    CAUGHT AGAIN BY THE NEXT 'STARTBR' COMMAND (WHICH
       *    CHECKS FOR AN 'EQUAL OR GREATER THAN' VALUE THAN THE
       *    PASSED ID).
 
@@ -485,6 +481,65 @@
            MOVE '2500-CANCEL-ACTION' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           CONTINUE.
+
+      *-----------------------------------------------------------------
+       FILTERS SECTION.
+      *-----------------------------------------------------------------
+
+       3000-DISPLAY-FILTERS-SCREEN.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3000-DISPLAY-FILTERS-SCREEN' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    THIS IS A 'FULLY CONVERSATIONAL' INVOCATION TO THE FILTERS
+      *    MAP SCREEN. THE MAP IS DISPLAYED AND THE USER CAN ENTER
+      *    FILTER CRITERIA. THE MAP IS THEN SENT BACK TO THIS PROGRAM.
+      *
+      *    UNLIKE THE PLURALSIGHT EXAMPLE, I CHOSE TO *NOT* CODE A
+      *    PSEUDO-CONVERSATIONAL 'FILTERS' LOGIC BECAUSE:
+      *
+      *       - IT MAKES NO SENSE AT ALL - YOU EITHER SET OR NOT SET
+      *         THE FILTER FIELDS AND THEN QUICKLY MOVE INTO THE
+      *         LISTING PAGE SO NO NEED FOR A 'FILTERS BACK-AND-FORTH
+      *         CONVERSATION'.
+      *       - IT IS *EXTREMELY* CONFUSING TO HANDLE *TWO* PSEUDO
+      *         CONVERSATIONS IN THE *SAME* PROGRAM (A POOR DESIGN
+      *         CHOICE IN MY OPINION).
+      *       - IF THERE WAS REALLY A NEED FOR A PSEUDO-CONVERSATIONAL
+      *         FILTERS MAP, THEN I WOULD HAVE DONE IT IN A SEPARATE
+      *         PROGRAM AND CALLED IT FROM HERE VIA 'LINK' & CONTAINER.
+
+           INITIALIZE EFILMO.
+
+           MOVE EIBTRNID TO TRANFLO.
+           MOVE WS-FILTERS-MSG TO MESSFLO.
+           MOVE DFHTURQ TO MESSFLC.
+
+      *    WE RENDER THE INITIAL FILTER MAP.
+           EXEC CICS SEND
+                MAP(APP-FILTERS-MAP-NAME)
+                MAPSET(APP-LIST-MAPSET-NAME)
+                FROM (EFILMO)
+                ERASE
+                FREEKB
+                END-EXEC.
+
+      *    AND WAIT FOR THE USER TO ENTER FILTER CRITERIA.
+      *    (EXECUTION HALTS HERE UNTIL THE USER HITS AN APPROPIATE
+      *    AID KEY LIKE 'ENTER' OR 'PF3' OR 'PF12' ETC.)
+           EXEC CICS RECEIVE
+                MAP(APP-FILTERS-MAP-NAME)
+                MAPSET(APP-LIST-MAPSET-NAME)
+                INTO (EFILMI)
+                END-EXEC.
+
+      *    WITH FILTER CRITERIA ENTERED AND RECEIVED INTO THE MAP'S
+      *    INPUT SECTION, WE PROCEED WITH THE FLOW AND INTO THE FILE
+      *    ACCESS LOGIC.
+           CONTINUE.
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
@@ -515,13 +570,13 @@
            WHEN OTHER
                 MOVE 'Error Putting Container!' TO WS-MESSAGE
            END-EVALUATE.
-           
+
            EXEC CICS SEND
                 MAP(APP-LIST-MAP-NAME)
                 MAPSET(APP-LIST-MAPSET-NAME)
                 FROM (ELSTMO)
                 ERASE
-                FREEKB 
+                FREEKB
                 END-EXEC.
 
            EXEC CICS RETURN
@@ -566,13 +621,13 @@
            PERFORM VARYING LST-RECORD-INDEX
               FROM 1 BY 1
               UNTIL LST-RECORD-INDEX IS GREATER THAN WS-LINES-PER-PAGE
-      *            LOAD EACH RECORD INTO THE DISPLAY BUFFER.        
+      *            LOAD EACH RECORD INTO THE DISPLAY BUFFER.
                    MOVE LST-CURRENT-RECORD(LST-RECORD-INDEX)
                       TO EMPLOYEE-MASTER-RECORD
 
-      *            SET THE MAP ARRAY INDEX TO THE CURRENT LIST 
+      *            SET THE MAP ARRAY INDEX TO THE CURRENT LIST
       *            CONTAINER RECORD INDEX VALUE!
-                   SET LINEO-INDEX TO LST-RECORD-INDEX 
+                   SET LINEO-INDEX TO LST-RECORD-INDEX
 
       *            AND HERE, USE THE MAP INDEX! (IMPORTANT)
                    MOVE EMP-EMPLOYEE-ID TO EMPIDO(LINEO-INDEX)
@@ -593,7 +648,7 @@
 
            EXEC CICS SEND CONTROL
                 ERASE
-                FREEKB 
+                FREEKB
                 END-EXEC.
 
            EXEC CICS RETURN

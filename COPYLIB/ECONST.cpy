@@ -40,3 +40,5 @@
            .
       *     EMPLOYEE MASTER FILE
           05 APP-EMP-MASTER-FILE-NAME   PIC X(8)  VALUE 'EMPMAST'.
+      *     FILTERS 
+          05 APP-FILTERS-MAP-NAME       PIC X(7)  VALUE 'EFILM'.       

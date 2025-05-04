@@ -212,8 +212,9 @@ MESSFL   DFHMDF POS=(23,1),LENGTH=79,ATTRB=(ASKIP,BRT)
 *
 *  AID KEY SECTION.
 *
-         DFHMDF POS=(24,1),LENGTH=43,ATTRB=(ASKIP,NORM),               X
-               INITIAL='PF3 Exit  PF10 Sign Off  PF12 Clear Filters'
+         DFHMDF POS=(24,1),LENGTH=63,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER Display List  PF3 Exit  PF10 Sign Off  PFX
+               12 Clear Filters'
 * ---------------------------------------------------------------------
 *  ENDING SECTION.
 * ---------------------------------------------------------------------
