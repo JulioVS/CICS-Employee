@@ -28,10 +28,10 @@
       ******************************************************************
        01 WS-WORKING-VARS.
           05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
-          05 WS-READ-COUNTER    PIC S9(2) USAGE IS BINARY.
-          05 WS-READ-DISPLAY    PIC  9(2) USAGE IS DISPLAY.
+          05 WS-READ-COUNTER    PIC 9(2).
           05 WS-LINE-COUNTER    PIC S9(2) USAGE IS BINARY.
-          05 WS-LINE-DISPLAY    PIC  9(2) USAGE IS DISPLAY.
+          05 WS-LINE-DISPLAY    PIC 9(2).
+          05 WS-INSP-COUNTER    PIC S9(2) USAGE IS BINARY.
       *
        01 WS-DISPLAY-MESSAGES.
           05 WS-NO-FILTERS-SET  PIC X(6)  VALUE '(None)'.
@@ -59,9 +59,13 @@
           05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
       *
+       01 WS-FILTERS-CHECK      PIC X(1)  VALUE SPACE.
+          88 WS-FILTERS-PASSED            VALUE 'Y'.
+          88 WS-FILTERS-FAILED            VALUE SPACE.
+      *
        01 WS-MAXIMUM-EMP-ID     PIC 9(8)  VALUE 99999999.
        01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
-                                          VALUE +3.
+                                          VALUE +5.
       *                                   VALUE +16.
 
        PROCEDURE DIVISION.
@@ -175,12 +179,13 @@
 
       *    CLEAN EMPLOYEE LIST BUFFER.
            INITIALIZE LST-CURRENT-RECORD-AREA.
+           INITIALIZE WS-READ-COUNTER.
 
       *    READ EMPLOYEE MASTER FILE RECORDS INTO CONTAINER.
            PERFORM 1310-START-BROWSING.
 
+           SET LST-RECORD-INDEX TO 1
            PERFORM 1320-READ-NEXT-RECORD
-              VARYING LST-RECORD-INDEX FROM 1 BY 1
               UNTIL LST-RECORD-INDEX IS GREATER THAN WS-LINES-PER-PAGE
               OR LST-END-OF-FILE.
 
@@ -234,11 +239,10 @@
        1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
            INITIALIZE WS-DEBUG-AID.
-           SET WS-READ-COUNTER TO LST-RECORD-INDEX.
-           MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
+           ADD 1 TO WS-READ-COUNTER.
            STRING '1320-READ-NEXT-RECORD'
                   '('
-                  WS-READ-DISPLAY
+                  WS-READ-COUNTER
                   ')'
               DELIMITED BY SIZE
               INTO WS-DEBUG-AID
@@ -256,8 +260,16 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-                MOVE EMPLOYEE-MASTER-RECORD TO
-                   LST-CURRENT-RECORD(LST-RECORD-INDEX)
+      *         AFTER READING, WE APPLY FILTER LOGIC.      
+                PERFORM 3200-APPLY-FILTERS
+
+      *         WE ONLY POPULATE A RECORD IN THE CONTAINER ARRAY IF THE
+      *         EMPLOYEE JUST READ FROM THE FILE PASSES THE FILTERS.
+                IF WS-FILTERS-PASSED THEN
+                   MOVE EMPLOYEE-MASTER-RECORD TO
+                      LST-CURRENT-RECORD(LST-RECORD-INDEX)
+                   SET LST-RECORD-INDEX UP BY 1
+                END-IF
            WHEN DFHRESP(NOTFND)
                 MOVE 'No More Records Found!' TO WS-MESSAGE
                 SET LST-END-OF-FILE TO TRUE
@@ -295,6 +307,8 @@
       *    >>> -------------- <<<
 
            INITIALIZE LST-CURRENT-RECORD-AREA.
+           INITIALIZE WS-READ-COUNTER.
+           
            PERFORM 1310-START-BROWSING.
 
            PERFORM 1410-READ-PREV-RECORD
@@ -309,11 +323,10 @@
        1410-READ-PREV-RECORD.
       *    >>> DEBUGGING ONLY <<<
            INITIALIZE WS-DEBUG-AID.
-           SET WS-READ-COUNTER TO LST-RECORD-INDEX.
-           MOVE WS-READ-COUNTER TO WS-READ-DISPLAY.
+           ADD 1 TO WS-READ-COUNTER.
            STRING '1410-READ-PREV-RECORD'
                   '('
-                  WS-READ-DISPLAY
+                  WS-READ-COUNTER
                   ')'
               DELIMITED BY SIZE
               INTO WS-DEBUG-AID
@@ -562,6 +575,12 @@
  
            IF MATCHI IS NOT EQUAL TO LOW-VALUE THEN
               MOVE MATCHI TO LST-SELECT-KEY-VALUE
+      *       IF A FILTER VALUE FOR EMPLOYEE ID/NAME WAS ENTERED
+      *       BUT NOT THE OPTION ITSELF, WE ASSUME '1' FOR 'EMP-ID'
+      *       FILTERING. 
+              IF KEYSELI IS EQUAL TO LOW-VALUE THEN
+                 MOVE '1' TO LST-SELECT-KEY-TYPE
+              END-IF
               SET LST-FILTERS-SET TO TRUE
            END-IF.
 
@@ -600,12 +619,89 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE LST-FILTERS(01:45) TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
-           MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-           MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
+      *    MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
+      *    MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
            
+       3200-APPLY-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1325-CHECK-FILTERS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    FILTER LOGIC.
+      *
+      *       - UNLIKE THE PLURALSIGHT EXAMPLE, HERE THE FILTERS ARE
+      *         'WILDCARDED' BY DEFAULT, MEANING THE FILTER STRINGS
+      *         ENTERED BY THE USER WILL BE LOOKED FOR BY THE 
+      *         'INSPECT' COMMAND ON ANY POSITION OF THE ID OR NAME 
+      *         FIELDS.
+      *
+      *       - THIS MEANS A FILTER OF '15' ON ID WILL GET EMPLOYEES
+      *         '15', '115', '159', '315', '515300', '1571' AND SO ON.
+      *
+      *       - SAME WITH NAMES, A FILTER OF 'mar' WILL GET EMPLOYEES
+      *         NAMED 'MARIA', 'LAMARR', 'MARSHALL' AND SO ON. 
+      *
+      *       - I MADE THE NAME CHECKING CASE-INSENSITIVE, MEANING 
+      *         'MAR' AND 'mar' WILL YIELD THE SAME RESULTS.
+      *
+      *       - NO USE OF ACTUAL WILDCARDS LIKE '*' IS NEEDED, AS 
+      *         THE 'INSPECT' COMMAND WILL DO THE JOB FOR US!
+      *
+      *       - I COULD HAVE IMPLEMENTED AN ACTUAL WILDCARD USAGE 
+      *         AND/OR AN 'EXACT MATCH' OPTION, BUT I WOULD RATHER 
+      *         FOCUS ON SPECIFIC 'CICS' STUFF AND JUST LEAVE THE 
+      *         'MOST USEFUL' FILTER SCENARIO IMPLEMENTED.
+
+           INITIALIZE WS-FILTERS-CHECK WS-INSP-COUNTER.
+
+      *    IF NO FILTERS WERE SET, THEN WE JUST DISPLAY THE RECORD.
+           IF LST-NO-FILTERS-SET THEN
+      *       >>> DEBUGGING ONLY <<<
+              MOVE '1325-> NO FILTERS SET' TO WS-DEBUG-AID
+              PERFORM 9300-DEBUG-AID
+      *       >>> -------------- <<<
+              SET WS-FILTERS-PASSED TO TRUE
+              EXIT 
+           END-IF. 
+
+      *    IF FILTERS WERE SET, THEN WE CHECK THEM.
+
+      *    SELECT OPTION '1' -> 'EMPLOYEE ID'FILTER.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+      *       >>> DEBUGGING ONLY <<<
+              MOVE '1325-> EMP-ID FILTER' TO WS-DEBUG-AID
+              PERFORM 9300-DEBUG-AID
+      *       >>> -------------- <<<
+
+              INSPECT EMP-KEY
+                 TALLYING WS-INSP-COUNTER
+                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
+  
+              IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+                 SET WS-FILTERS-PASSED TO TRUE
+              END-IF
+           END-IF.
+
+      *    SELECT OPTION '2' -> 'EMPLOYEE NAME' FILTER.
+           IF LST-SEL-BY-EMPLOYEE-NAME THEN
+      *       >>> DEBUGGING ONLY <<<
+              MOVE '1325-> EMP-NAME FILTER' TO WS-DEBUG-AID
+              PERFORM 9300-DEBUG-AID
+      *       >>> -------------- <<<
+
+              INSPECT FUNCTION UPPER-CASE(EMP-PRIMARY-NAME)
+                 TALLYING WS-INSP-COUNTER
+                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
+  
+              IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+                 SET WS-FILTERS-PASSED TO TRUE
+              END-IF
+           END-IF.
+
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
