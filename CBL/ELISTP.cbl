@@ -34,13 +34,12 @@
           05 WS-INSP-COUNTER    PIC S9(2) USAGE IS BINARY.
       *
        01 WS-DISPLAY-MESSAGES.
-          05 WS-NO-FILTERS-SET  PIC X(6)  VALUE '(None)'.
           05 WS-MESSAGE         PIC X(79) VALUE SPACES.
           05 WS-PF7-LABEL       PIC X(9)  VALUE 'PF7 Prev '.
           05 WS-PF8-LABEL       PIC X(9)  VALUE 'PF8 Next '.
           05 WS-FILTERS-MSG     PIC X(79)
-             VALUE 'Set filter criteria and press ENTER or leave blank f
-      -            'or full listing.'.
+             VALUE 'Set Filter Criteria And Press ENTER Or Leave Blank F
+      -            'or Full Llisting.'.
       *
        01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
           88 I-AM-DEBUGGING               VALUE 'Y'.
@@ -193,6 +192,15 @@
               PERFORM 1330-END-BROWSING
            END-IF.
 
+      *    IF NO RECORDS WERE FOUND ON THIS CYCLE, WE DISPLAY A MESSAGE.
+           IF LST-CURRENT-RECORD-AREA IS EQUAL TO SPACES THEN
+              IF LST-CURRENT-PAGE-NUMBER IS EQUAL TO 1 THEN
+                 MOVE 'No Records Found!' TO WS-MESSAGE
+              ELSE
+                 MOVE 'No More Records Found!' TO WS-MESSAGE
+              END-IF
+           END-IF.
+
        1310-START-BROWSING.
       *    >>> DEBUGGING ONLY <<<
            MOVE '1310-START-BROWSING' TO WS-DEBUG-AID.
@@ -260,11 +268,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-      *         AFTER READING, WE APPLY FILTER LOGIC.      
                 PERFORM 3200-APPLY-FILTERS
 
-      *         WE ONLY POPULATE A RECORD IN THE CONTAINER ARRAY IF THE
-      *         EMPLOYEE JUST READ FROM THE FILE PASSES THE FILTERS.
                 IF WS-FILTERS-PASSED THEN
                    MOVE EMPLOYEE-MASTER-RECORD TO
                       LST-CURRENT-RECORD(LST-RECORD-INDEX)
@@ -311,12 +316,12 @@
            
            PERFORM 1310-START-BROWSING.
 
+           SET LST-RECORD-INDEX TO WS-LINES-PER-PAGE.
            PERFORM 1410-READ-PREV-RECORD
-              VARYING LST-RECORD-INDEX FROM WS-LINES-PER-PAGE BY -1
               UNTIL LST-RECORD-INDEX IS LESS THAN 1
-              OR LST-START-OF-FILE.
+              OR LST-TOP-OF-FILE.
 
-           IF NOT LST-START-OF-FILE THEN
+           IF NOT LST-TOP-OF-FILE THEN
               PERFORM 1330-END-BROWSING
            END-IF.
 
@@ -344,14 +349,19 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-                MOVE EMPLOYEE-MASTER-RECORD TO
-                   LST-CURRENT-RECORD(LST-RECORD-INDEX)
+                PERFORM 3200-APPLY-FILTERS
+
+                IF WS-FILTERS-PASSED THEN
+                   MOVE EMPLOYEE-MASTER-RECORD TO
+                      LST-CURRENT-RECORD(LST-RECORD-INDEX)
+                   SET LST-RECORD-INDEX DOWN BY 1
+                END-IF
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Previous Records Found!' TO WS-MESSAGE
-                SET LST-START-OF-FILE TO TRUE
+                SET LST-TOP-OF-FILE TO TRUE
            WHEN DFHRESP(ENDFILE)
                 MOVE 'Start of Employee Master File' TO WS-MESSAGE
-                SET LST-START-OF-FILE TO TRUE
+                SET LST-TOP-OF-FILE TO TRUE
            WHEN OTHER
                 MOVE 'Error Reading Previous Record!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -465,7 +475,7 @@
       *       AND NOW READ THE EMPLOYEE MASTER FILE BACKWARDS!!!
               PERFORM 1400-READ-BACKWARDS-BY-ID
            ELSE
-              MOVE 'No Previous Records To Display' TO WS-MESSAGE
+              MOVE 'No Previous Records To Display!' TO WS-MESSAGE
               MOVE DFHPROTN TO HLPPF7A
            END-IF.
 
@@ -486,7 +496,7 @@
               ADD 1 TO EMP-EMPLOYEE-ID
               PERFORM 1300-READ-EMPLOYEES-BY-ID
            ELSE
-              MOVE 'No More records To Display' TO WS-MESSAGE
+              MOVE 'No More Records To Display!' TO WS-MESSAGE
               MOVE DFHPROTN TO HLPPF8A
            END-IF.
 
@@ -512,7 +522,7 @@
       *    MAP SCREEN. THE MAP IS DISPLAYED AND THE USER CAN ENTER
       *    FILTER CRITERIA. THE MAP IS THEN SENT BACK TO THIS PROGRAM.
       *
-      *    UNLIKE THE PLURALSIGHT EXAMPLE, I CHOSE TO *NOT* CODE A
+      *    UNLIKE THE PLURALSIGHT EXAMPLE, I CHOSE TO *NOT* DO A
       *    PSEUDO-CONVERSATIONAL 'FILTERS' LOGIC BECAUSE:
       *
       *       - IT MAKES NO SENSE AT ALL - YOU EITHER SET OR NOT SET
@@ -555,9 +565,9 @@
       *    WITH FILTER CRITERIA ENTERED AND RECEIVED INTO THE MAP'S
       *    INPUT SECTION, WE PASS THE DATA TO THE CONTAINER AND THEN
       *    PROCEED INTO THE FILE ACCESS LOGIC.
-           PERFORM 3100-SAVE-FILTERS-IN-CONTAINER.
+           PERFORM 3100-SAVE-FILTERS-CRITERIA.
 
-       3100-SAVE-FILTERS-IN-CONTAINER.
+       3100-SAVE-FILTERS-CRITERIA.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3100-SAVE-FILTERS-CRITERIA' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
@@ -619,16 +629,12 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE LST-FILTERS(01:45) TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
-      *    MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
-      *    MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
            
        3200-APPLY-FILTERS.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1325-CHECK-FILTERS' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
+           MOVE '3200-APPLY-FILTERS' TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    FILTER LOGIC.
@@ -654,29 +660,20 @@
       *       - I COULD HAVE IMPLEMENTED AN ACTUAL WILDCARD USAGE 
       *         AND/OR AN 'EXACT MATCH' OPTION, BUT I WOULD RATHER 
       *         FOCUS ON SPECIFIC 'CICS' STUFF AND JUST LEAVE THE 
-      *         'MOST USEFUL' FILTER SCENARIO IMPLEMENTED.
+      *         'MOST USEFUL' FILTER SCENARIO BY DEFAULT.
 
            INITIALIZE WS-FILTERS-CHECK WS-INSP-COUNTER.
 
       *    IF NO FILTERS WERE SET, THEN WE JUST DISPLAY THE RECORD.
            IF LST-NO-FILTERS-SET THEN
-      *       >>> DEBUGGING ONLY <<<
-              MOVE '1325-> NO FILTERS SET' TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
               SET WS-FILTERS-PASSED TO TRUE
               EXIT 
            END-IF. 
 
       *    IF FILTERS WERE SET, THEN WE CHECK THEM.
 
-      *    SELECT OPTION '1' -> 'EMPLOYEE ID'FILTER.
+      *    SELECT OPTION '1' -> 'EMPLOYEE ID' FILTER.
            IF LST-SEL-BY-EMPLOYEE-ID THEN
-      *       >>> DEBUGGING ONLY <<<
-              MOVE '1325-> EMP-ID FILTER' TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
-
               INSPECT EMP-KEY
                  TALLYING WS-INSP-COUNTER
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
@@ -688,11 +685,6 @@
 
       *    SELECT OPTION '2' -> 'EMPLOYEE NAME' FILTER.
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
-      *       >>> DEBUGGING ONLY <<<
-              MOVE '1325-> EMP-NAME FILTER' TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
-
               INSPECT FUNCTION UPPER-CASE(EMP-PRIMARY-NAME)
                  TALLYING WS-INSP-COUNTER
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
@@ -752,8 +744,23 @@
            MOVE EIBTRNID TO TRANIDO.
            MOVE LST-CURRENT-PAGE-NUMBER TO PAGENO.
 
-           IF LST-NO-FILTERS-SET THEN
-              MOVE WS-NO-FILTERS-SET TO FLTRSO
+           IF LST-FILTERS-SET THEN
+              IF LST-SEL-BY-EMPLOYEE-ID THEN
+                 STRING 'Employee ID Contains "'
+                        FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+                        '"'
+                    DELIMITED BY SIZE INTO FLTRSO
+                 END-STRING
+              END-IF
+              IF LST-SEL-BY-EMPLOYEE-NAME THEN
+                 STRING 'Employee Name Contains "'
+                        FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+                        '"'
+                    DELIMITED BY SIZE INTO FLTRSO
+                 END-STRING
+              END-IF
+           ELSE 
+              MOVE '(None)' TO FLTRSO
            END-IF.
 
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!

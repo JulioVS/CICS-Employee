@@ -9,7 +9,7 @@
           05 LST-CURRENT-PAGE-NUMBER    PIC 9(6).
       *
           05 LST-FILE-FLAG              PIC X(1)   VALUE SPACE.
-             88 LST-START-OF-FILE                  VALUE 'S'.
+             88 LST-TOP-OF-FILE                    VALUE 'T'.
              88 LST-END-OF-FILE                    VALUE 'E'.
              88 LST-NOT-SET                        VALUE SPACE.
       *
