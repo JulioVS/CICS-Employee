@@ -32,6 +32,7 @@
           05 WS-LINE-COUNTER           PIC S9(2) USAGE IS BINARY.
           05 WS-LINE-DISPLAY           PIC 9(2).
           05 WS-INSP-COUNTER           PIC S9(2) USAGE IS BINARY.
+          05 WS-INDEX                  PIC S9(2) USAGE IS BINARY.
       *
        01 WS-DISPLAY-MESSAGES.
           05 WS-MESSAGE                PIC X(79) VALUE SPACES.
@@ -204,7 +205,11 @@
       *    IF NO RECORDS WERE FOUND ON THIS CYCLE, WE DISPLAY A MESSAGE.
            IF LST-CURRENT-RECORD-AREA IS EQUAL TO SPACES THEN
               IF LST-CURRENT-PAGE-NUMBER IS EQUAL TO 1 THEN
-                 MOVE 'No Records Found!' TO WS-MESSAGE
+                 IF LST-FILTERS-SET THEN
+                    MOVE 'No Matching Records Found!' TO WS-MESSAGE
+                 ELSE
+                    MOVE 'No Records Found!' TO WS-MESSAGE
+                 END-IF
               ELSE
                  MOVE 'No More Records Found!' TO WS-MESSAGE
               END-IF
@@ -571,6 +576,8 @@
                 INTO (EFILMI)
                 END-EXEC.
 
+      *    <<<<<    PROGRAM EXECUTION RESUMES HERE   >>>>>
+
       *    WITH FILTER CRITERIA ENTERED AND RECEIVED INTO THE MAP'S
       *    INPUT SECTION, WE PASS THE DATA TO THE CONTAINER AND THEN
       *    PROCEED INTO THE FILE ACCESS LOGIC.
@@ -598,24 +605,22 @@
               SET LST-FILTERS-SET TO TRUE
            END-IF.
 
-           PERFORM VARYING LST-IN-DEPT-INDEX
+           PERFORM VARYING WS-INDEX
               FROM 1 BY 1
-              UNTIL LST-IN-DEPT-INDEX IS GREATER THAN 4
-                   IF DPTINCLI(LST-IN-DEPT-INDEX) IS NOT EQUAL TO
-                      LOW-VALUE
-                      MOVE DPTINCLI(LST-IN-DEPT-INDEX)
-                         TO LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
+              UNTIL WS-INDEX IS GREATER THAN 4
+                   IF DPTINCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUE 
+                      MOVE DPTINCLI(WS-INDEX)
+                         TO LST-INCL-DEPT-ID(WS-INDEX)
                       SET LST-FILTERS-SET TO TRUE
                    END-IF
            END-PERFORM.
 
-           PERFORM VARYING LST-EX-DEPT-INDEX
+           PERFORM VARYING WS-INDEX
               FROM 1 BY 1
-              UNTIL LST-EX-DEPT-INDEX IS GREATER THAN 4
-                   IF DPTEXCLI(LST-EX-DEPT-INDEX) IS NOT EQUAL TO
-                      LOW-VALUE
-                      MOVE DPTEXCLI(LST-EX-DEPT-INDEX)
-                         TO LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX)
+              UNTIL WS-INDEX IS GREATER THAN 4
+                   IF DPTEXCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUE 
+                      MOVE DPTEXCLI(WS-INDEX)
+                         TO LST-EXCL-DEPT-ID(WS-INDEX)
                       SET LST-FILTERS-SET TO TRUE
                    END-IF
            END-PERFORM.
@@ -632,6 +637,10 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE LST-FILTERS(01:45) TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+           MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+           MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
            
@@ -748,6 +757,7 @@
               PERFORM VARYING LST-IN-DEPT-INDEX
                  FROM 1 BY 1
                  UNTIL LST-IN-DEPT-INDEX IS GREATER THAN 4
+                 OR WS-DEPT-FILTER-PASSED
                       IF LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
                          IS NOT EQUAL TO SPACES THEN
                          IF EMP-DEPARTMENT-ID IS EQUAL TO
@@ -761,14 +771,15 @@
      
       *    SECOND, THE 'NEGATIVE' DEPARTMENT EXCLUSION FILTERS.
            IF LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
-      *       NO 'EXCLUDE' FILTERS, SO *ALL* DEPARTMENTS REMAIN FINE.
-      *       WE MANTAIN THE STATUS QUO.
+      *       NO 'EXCLUDE' FILTERS, SO *NO* DEPARTMENTS ARE OFF.
+      *       WE MANTAIN THE STATUS QUO (ID EST 'INCLUDE' OUTCOME)
               CONTINUE
            ELSE
       *       WE NEED TO AVOID ALL 'BLACK-LISTED' DEPARTMENTS TO PASS.
               PERFORM VARYING LST-EX-DEPT-INDEX
                  FROM 1 BY 1
                  UNTIL LST-EX-DEPT-INDEX IS GREATER THAN 4
+                 OR WS-DEPT-FILTER-FAILED
                       IF LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX)
                          IS NOT EQUAL TO SPACES THEN
                          IF EMP-DEPARTMENT-ID IS EQUAL TO
@@ -900,6 +911,7 @@
                      '"'
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
+              EXIT 
            END-IF.
 
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
@@ -908,26 +920,23 @@
                      '"'
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
+              EXIT 
            END-IF.
 
            IF LST-INCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN 
               STRING 'Include Departments: '
-                     FUNCTION TRIM(LST-INCL-DEPT-ID(1))
-                     FUNCTION TRIM(LST-INCL-DEPT-ID(2))
-                     FUNCTION TRIM(LST-INCL-DEPT-ID(3))
-                     FUNCTION TRIM(LST-INCL-DEPT-ID(4))
+                     FUNCTION TRIM(LST-INCLUDE-DEPT-FILTERS)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
+              EXIT 
            END-IF.
 
            IF LST-EXCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN 
               STRING 'Exclude Departments: '
-                     FUNCTION TRIM(LST-EXCL-DEPT-ID(1))
-                     FUNCTION TRIM(LST-EXCL-DEPT-ID(2))
-                     FUNCTION TRIM(LST-EXCL-DEPT-ID(3))
-                     FUNCTION TRIM(LST-EXCL-DEPT-ID(4))
+                     FUNCTION TRIM(LST-EXCLUDE-DEPT-FILTERS)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
+              EXIT 
            END-IF.
 
            IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES THEN
@@ -935,6 +944,7 @@
                      FUNCTION TRIM(LST-EMPL-DATE-AFTER)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
+              EXIT 
            END-IF.
 
            IF LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
