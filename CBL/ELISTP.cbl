@@ -27,45 +27,54 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
-          05 WS-READ-COUNTER    PIC 9(2).
-          05 WS-LINE-COUNTER    PIC S9(2) USAGE IS BINARY.
-          05 WS-LINE-DISPLAY    PIC 9(2).
-          05 WS-INSP-COUNTER    PIC S9(2) USAGE IS BINARY.
+          05 WS-CICS-RESPONSE          PIC S9(8) USAGE IS BINARY.
+          05 WS-READ-COUNTER           PIC 9(2).
+          05 WS-LINE-COUNTER           PIC S9(2) USAGE IS BINARY.
+          05 WS-LINE-DISPLAY           PIC 9(2).
+          05 WS-INSP-COUNTER           PIC S9(2) USAGE IS BINARY.
       *
        01 WS-DISPLAY-MESSAGES.
-          05 WS-MESSAGE         PIC X(79) VALUE SPACES.
-          05 WS-PF7-LABEL       PIC X(9)  VALUE 'PF7 Prev '.
-          05 WS-PF8-LABEL       PIC X(9)  VALUE 'PF8 Next '.
-          05 WS-FILTERS-MSG     PIC X(79)
+          05 WS-MESSAGE                PIC X(79) VALUE SPACES.
+          05 WS-PF7-LABEL              PIC X(9)  VALUE 'PF7 Prev '.
+          05 WS-PF8-LABEL              PIC X(9)  VALUE 'PF8 Next '.
+          05 WS-FILTERS-MSG         PIC X(79)
              VALUE 'Set Filter Criteria And Press ENTER Or Leave Blank F
       -            'or Full Llisting.'.
       *
-       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
-          88 I-AM-DEBUGGING               VALUE 'Y'.
-          88 NOT-DEBUGGING                VALUE 'N'.
+       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'Y'.
+          88 I-AM-DEBUGGING                      VALUE 'Y'.
+          88 NOT-DEBUGGING                       VALUE 'N'.
       *
-       01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID                 PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER             PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
-          05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
-          05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
-          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT             PIC X(45) VALUE SPACES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP          PIC 9(8)  VALUE ZEROES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
       *
-       01 WS-FILTERS-CHECK      PIC X(1)  VALUE SPACE.
-          88 WS-FILTERS-PASSED            VALUE 'Y'.
-          88 WS-FILTERS-FAILED            VALUE SPACE.
+       01 WS-FILTER-FLAGS.
+          03 WS-FILTERS-CHECK          PIC X(1)  VALUE SPACES.
+             88 WS-FILTERS-PASSED                VALUE 'Y'.
       *
-       01 WS-MAXIMUM-EMP-ID     PIC 9(8)  VALUE 99999999.
-       01 WS-LINES-PER-PAGE     PIC S9(4) USAGE IS BINARY
-                                          VALUE +5.
-      *                                   VALUE +16.
+          03 WS-KEY-FILTER-CHECK       PIC X(1)  VALUE SPACES.
+             88 WS-KEY-FILTER-PASSED             VALUE 'Y'.
+      *
+          03 WS-DEPT-FILTER-CHECK      PIC X(1)  VALUE SPACES.
+             88 WS-DEPT-FILTER-PASSED            VALUE 'Y'.
+             88 WS-DEPT-FILTER-FAILED            VALUE 'N'.
+      *
+          03 WS-DATE-FILTER-CHECK      PIC X(1)  VALUE SPACES.
+             88 WS-DATE-FILTER-PASSED            VALUE 'Y'.
+      *
+       01 WS-MAXIMUM-EMP-ID            PIC 9(8)  VALUE 99999999.
+       01 WS-LINES-PER-PAGE            PIC S9(4) USAGE IS BINARY
+                                                 VALUE +5.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -573,11 +582,6 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    >>> DEBUGGING ONLY <<<
-           MOVE LST-FILTERS TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-           
            IF KEYSELI IS NOT EQUAL TO LOW-VALUE THEN
               MOVE KEYSELI TO LST-SELECT-KEY-TYPE
               SET LST-FILTERS-SET TO TRUE
@@ -662,15 +666,39 @@
       *         FOCUS ON SPECIFIC 'CICS' STUFF AND JUST LEAVE THE 
       *         'MOST USEFUL' FILTER SCENARIO BY DEFAULT.
 
-           INITIALIZE WS-FILTERS-CHECK WS-INSP-COUNTER.
+           INITIALIZE WS-FILTER-FLAGS WS-INSP-COUNTER.
 
-      *    IF NO FILTERS WERE SET, THEN WE JUST DISPLAY THE RECORD.
+      *    IF NO FILTERS WERE SET, THEN WE JUST 'OK' THE RECORD.
            IF LST-NO-FILTERS-SET THEN
               SET WS-FILTERS-PASSED TO TRUE
               EXIT 
            END-IF. 
 
-      *    IF FILTERS WERE SET, THEN WE CHECK THEM.
+      *    IF FILTERS WERE SET, THEN WE CHECK THEM ALL.
+           PERFORM 3300-APPLY-KEY-FILTERS.
+           PERFORM 3400-APPLY-DEPT-FILTERS.
+           PERFORM 3500-APPLY-DATE-FILTERS.
+
+      *    IF *ALL* FILTERS WERE MET, THEN WE SET THE 'PASSED' FLAG.
+           IF WS-KEY-FILTER-PASSED AND
+              WS-DEPT-FILTER-PASSED AND
+              WS-DATE-FILTER-PASSED THEN
+              SET WS-FILTERS-PASSED TO TRUE
+           END-IF.
+
+       3300-APPLY-KEY-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3300-APPLY-KEY-FILTERS' TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF NO KEY FILTERS WERE SET, WE JUST 'OK' IT AND RETURN.
+           IF LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
+              SET WS-KEY-FILTER-PASSED TO TRUE
+              EXIT
+           END-IF.
+
+      *    OTHERWISE, WE CHECK THE KEY FILTERS.      
 
       *    SELECT OPTION '1' -> 'EMPLOYEE ID' FILTER.
            IF LST-SEL-BY-EMPLOYEE-ID THEN
@@ -679,7 +707,7 @@
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
   
               IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
-                 SET WS-FILTERS-PASSED TO TRUE
+                 SET WS-KEY-FILTER-PASSED TO TRUE
               END-IF
            END-IF.
 
@@ -690,8 +718,78 @@
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
   
               IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
-                 SET WS-FILTERS-PASSED TO TRUE
+                 SET WS-KEY-FILTER-PASSED TO TRUE
               END-IF
+           END-IF.
+      
+       3400-APPLY-DEPT-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3400-APPLY-DEPT-FILTERS' TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF NO DEPARTMENT FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
+           IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES AND
+              LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
+              SET WS-DEPT-FILTER-PASSED TO TRUE
+              EXIT
+           END-IF.
+
+      *    OTHERWISE, WE CHECK THE DEPARTMENT FILTERS.
+      *       - WE ONLY CHECK FOR EQUALITY HERE.
+      *       - NO WILDCARDING OR INSPECTING FOR NOW!
+
+      *    FIRST, THE 'POSITIVE' DEPARTMENT INCLUSION FILTERS.
+           IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
+      *       NO 'INCLUDE' FILTERS, SO *ALL* DEPARTMENTS ARE FINE.
+              SET WS-DEPT-FILTER-PASSED TO TRUE
+           ELSE
+      *       WE NEED TO MATCH A 'WHITE-LISTED' DEPARTMENT TO PASS.
+              PERFORM VARYING LST-IN-DEPT-INDEX
+                 FROM 1 BY 1
+                 UNTIL LST-IN-DEPT-INDEX IS GREATER THAN 4
+                      IF LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
+                         IS NOT EQUAL TO SPACES THEN
+                         IF EMP-DEPARTMENT-ID IS EQUAL TO
+                            LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX) THEN
+      *                     IT MATCHES! SO WE SET THE 'PASSED' FLAG
+                            SET WS-DEPT-FILTER-PASSED TO TRUE
+                         END-IF
+                      END-IF
+              END-PERFORM
+           END-IF.
+     
+      *    SECOND, THE 'NEGATIVE' DEPARTMENT EXCLUSION FILTERS.
+           IF LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
+      *       NO 'EXCLUDE' FILTERS, SO *ALL* DEPARTMENTS REMAIN FINE.
+      *       WE MANTAIN THE STATUS QUO.
+              CONTINUE
+           ELSE
+      *       WE NEED TO AVOID ALL 'BLACK-LISTED' DEPARTMENTS TO PASS.
+              PERFORM VARYING LST-EX-DEPT-INDEX
+                 FROM 1 BY 1
+                 UNTIL LST-EX-DEPT-INDEX IS GREATER THAN 4
+                      IF LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX)
+                         IS NOT EQUAL TO SPACES THEN
+                         IF EMP-DEPARTMENT-ID IS EQUAL TO
+                            LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX) THEN
+      *                     BLACKLISTED! SO WE SET THE 'FAILED' FLAG
+                            SET WS-DEPT-FILTER-FAILED TO TRUE
+                         END-IF
+                      END-IF
+              END-PERFORM
+           END-IF.
+
+       3500-APPLY-DATE-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3500-APPLY-DATE-FILTERS' TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF NO DATE FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
+           IF LST-EMPLOYMENT-DATE-FILTERS IS EQUAL TO SPACES THEN
+              SET WS-DATE-FILTER-PASSED TO TRUE
+              EXIT 
            END-IF.
 
       *-----------------------------------------------------------------
@@ -744,24 +842,8 @@
            MOVE EIBTRNID TO TRANIDO.
            MOVE LST-CURRENT-PAGE-NUMBER TO PAGENO.
 
-           IF LST-FILTERS-SET THEN
-              IF LST-SEL-BY-EMPLOYEE-ID THEN
-                 STRING 'Employee ID Contains "'
-                        FUNCTION TRIM(LST-SELECT-KEY-VALUE)
-                        '"'
-                    DELIMITED BY SIZE INTO FLTRSO
-                 END-STRING
-              END-IF
-              IF LST-SEL-BY-EMPLOYEE-NAME THEN
-                 STRING 'Employee Name Contains "'
-                        FUNCTION TRIM(LST-SELECT-KEY-VALUE)
-                        '"'
-                    DELIMITED BY SIZE INTO FLTRSO
-                 END-STRING
-              END-IF
-           ELSE 
-              MOVE '(None)' TO FLTRSO
-           END-IF.
+      *    DISPLAY FILTERS LINE.
+           PERFORM 9110-SET-FILTERS-LINE.
 
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
@@ -803,6 +885,64 @@
                    MOVE EMP-JOB-TITLE TO JOBTLO(LINEO-INDEX)
                    MOVE EMP-DEPARTMENT-ID TO DPTIDO(LINEO-INDEX)
            END-PERFORM.
+
+       9110-SET-FILTERS-LINE.
+      *    IF NO FILTERS WERE SET, WE JUST DISPLAY A DEFAULT MESSAGE.
+           IF LST-NO-FILTERS-SET THEN 
+              MOVE '(No Filters Set)' TO FLTRSO
+              EXIT 
+           END-IF.
+                
+      *    OTHERWISE, WE DISPLAY FEEBACK ABOUT FILTERS SET BY THE USER.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              STRING 'Employee ID Contains "'
+                     FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+                     '"'
+                 DELIMITED BY SIZE INTO FLTRSO
+              END-STRING
+           END-IF.
+
+           IF LST-SEL-BY-EMPLOYEE-NAME THEN
+              STRING 'Employee Name Contains "'
+                     FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+                     '"'
+                 DELIMITED BY SIZE INTO FLTRSO
+              END-STRING
+           END-IF.
+
+           IF LST-INCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN 
+              STRING 'Include Departments: '
+                     FUNCTION TRIM(LST-INCL-DEPT-ID(1))
+                     FUNCTION TRIM(LST-INCL-DEPT-ID(2))
+                     FUNCTION TRIM(LST-INCL-DEPT-ID(3))
+                     FUNCTION TRIM(LST-INCL-DEPT-ID(4))
+                 DELIMITED BY SIZE INTO FLTRSO
+              END-STRING
+           END-IF.
+
+           IF LST-EXCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN 
+              STRING 'Exclude Departments: '
+                     FUNCTION TRIM(LST-EXCL-DEPT-ID(1))
+                     FUNCTION TRIM(LST-EXCL-DEPT-ID(2))
+                     FUNCTION TRIM(LST-EXCL-DEPT-ID(3))
+                     FUNCTION TRIM(LST-EXCL-DEPT-ID(4))
+                 DELIMITED BY SIZE INTO FLTRSO
+              END-STRING
+           END-IF.
+
+           IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES THEN
+              STRING 'Employment Date After: '
+                     FUNCTION TRIM(LST-EMPL-DATE-AFTER)
+                 DELIMITED BY SIZE INTO FLTRSO
+              END-STRING
+           END-IF.
+
+           IF LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
+              STRING 'Employement Date Before: '
+                     FUNCTION TRIM(LST-EMPL-DATE-BEFORE)
+                 DELIMITED BY SIZE INTO FLTRSO
+              END-STRING
+           END-IF.
 
        9200-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<
