@@ -38,9 +38,12 @@
           05 WS-MESSAGE                PIC X(79) VALUE SPACES.
           05 WS-PF7-LABEL              PIC X(9)  VALUE 'PF7 Prev '.
           05 WS-PF8-LABEL              PIC X(9)  VALUE 'PF8 Next '.
-          05 WS-FILTERS-MSG         PIC X(79)
+          05 WS-FILTERS-MSG-SF         PIC X(79)
              VALUE 'Set Filter Criteria And Press ENTER Or Leave Blank F
-      -            'or Full Llisting.'.
+      -            'or Full Listing.'.
+          05 WS-FILTERS-MSG-EF         PIC X(79)
+                                                 VALUE
+                'Edit Filter Criteria And Press ENTER To Continue.'.
       *
        01 WS-DEBUG-MODE                PIC X(1)  VALUE 'Y'.
           88 I-AM-DEBUGGING                      VALUE 'Y'.
@@ -450,7 +453,8 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           CONTINUE.
+           PERFORM 3000-DISPLAY-FILTERS-SCREEN.
+           PERFORM 1300-READ-EMPLOYEES-BY-ID.
 
        2300-PREV-BY-EMPLOYEE-ID.
       *    >>> DEBUGGING ONLY <<<
@@ -551,10 +555,23 @@
       *         PROGRAM AND CALLED IT FROM HERE VIA 'LINK' & CONTAINER.
 
            INITIALIZE EFILMO.
-
+           
            MOVE EIBTRNID TO TRANFLO.
-           MOVE WS-FILTERS-MSG TO MESSFLO.
-           MOVE DFHTURQ TO MESSFLC.
+
+      *    IF THIS IS THE FIRST INVOCATION OF THIS PARAGRAPH, IE.
+      *    FIRST STEP IN THE CONVERSATION, THEN NO FILTERS HAVE BEEN 
+      *    SET YET, SO WE JUST DISPLAY A MESSAGE.
+           IF LST-NO-FILTERS-SET THEN
+              MOVE WS-FILTERS-MSG-SF TO MESSFLO
+              MOVE DFHTURQ TO MESSFLC
+           END-IF.
+
+      *    IF THIS IS A RE-RENDER OF THE FILTERS SCREEN, IE. BY
+      *    PRESSING THE PF3 KEY ON THE LISTING PAGE, WE RE-SET THE MAP 
+      *    FIELDS TO THE LAST KNOWN SET OF VALUES.
+           IF LST-FILTERS-SET THEN
+              PERFORM 3600-LOAD-FILTER-CRITERIA
+           END-IF.
 
       *    WE RENDER THE INITIAL FILTER MAP.
            EXEC CICS SEND
@@ -581,11 +598,11 @@
       *    WITH FILTER CRITERIA ENTERED AND RECEIVED INTO THE MAP'S
       *    INPUT SECTION, WE PASS THE DATA TO THE CONTAINER AND THEN
       *    PROCEED INTO THE FILE ACCESS LOGIC.
-           PERFORM 3100-SAVE-FILTERS-CRITERIA.
+           PERFORM 3100-SAVE-FILTER-CRITERIA.
 
-       3100-SAVE-FILTERS-CRITERIA.
+       3100-SAVE-FILTER-CRITERIA.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '3100-SAVE-FILTERS-CRITERIA' TO WS-DEBUG-AID.
+           MOVE '3100-SAVE-FILTER-CRITERIA' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -802,6 +819,61 @@
               SET WS-DATE-FILTER-PASSED TO TRUE
               EXIT 
            END-IF.
+      
+      *    IF BOTH FILTERS WERE SET, WE CHECK THE EMPLOYEE START DATE
+      *    AGAINST THE FILTERS.
+           IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES AND
+              LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
+              IF EMP-START-DATE IS GREATER THAN LST-EMPL-DATE-AFTER AND
+                 EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
+      *          SUCCESS!
+                 SET WS-DATE-FILTER-PASSED TO TRUE
+                 EXIT
+              END-IF   
+           END-IF.
+
+      *    IF ONLY DATE-BEFORE FILTER WAS SET.
+           IF LST-EMPL-DATE-AFTER IS EQUAL TO SPACES THEN
+              IF EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
+      *          SUCCESS!
+                 SET WS-DATE-FILTER-PASSED TO TRUE
+                 EXIT
+              END-IF
+           END-IF.
+
+      *    IF ONLY DATE-AFTER FILTER WAS SET.
+           IF LST-EMPL-DATE-BEFORE IS EQUAL TO SPACES THEN
+              IF EMP-START-DATE IS GREATER THAN LST-EMPL-DATE-AFTER THEN
+      *          SUCCESS!
+                 SET WS-DATE-FILTER-PASSED TO TRUE
+                 EXIT
+              END-IF
+           END-IF.
+
+       3600-LOAD-FILTER-CRITERIA.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3600-LOAD-FILTER-CRITERIA' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE LST-SELECT-KEY-TYPE TO KEYSELO.
+           MOVE LST-SELECT-KEY-VALUE TO MATCHO.
+
+           PERFORM VARYING WS-INDEX
+              FROM 1 BY 1
+              UNTIL WS-INDEX IS GREATER THAN 4
+                   MOVE LST-INCL-DEPT-ID(WS-INDEX)
+                      TO DPTINCLO(WS-INDEX)
+                   MOVE LST-EXCL-DEPT-ID(WS-INDEX)
+                      TO DPTEXCLO(WS-INDEX)
+           END-PERFORM.
+
+           MOVE LST-EMPL-DATE-AFTER TO EDATEAO.
+           MOVE LST-EMPL-DATE-BEFORE TO EDATEBO.
+
+           MOVE WS-FILTERS-MSG-EF TO MESSFLO.
+           MOVE DFHTURQ TO MESSFLC.
+
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
