@@ -27,7 +27,7 @@
              10 LST-FILTERS-FLAG        PIC X(1)   VALUE SPACE.
                 88 LST-FILTERS-SET                 VALUE 'Y'.
                 88 LST-NO-FILTERS-SET              VALUE SPACE.
-             10 LST-SELECT-KEY-TYPE     PIC X(1)   VALUE '1'.
+             10 LST-SELECT-KEY-TYPE     PIC X(1)   VALUE SPACE.
                 88 LST-SEL-BY-EMPLOYEE-ID          VALUE '1'.
                 88 LST-SEL-BY-EMPLOYEE-NAME        VALUE '2'.
              10 LST-SELECT-KEY-VALUE    PIC X(30)  VALUE SPACES.
