@@ -45,23 +45,6 @@
                                                  VALUE
                 'Edit Filter Criteria And Press ENTER To Continue.'.
       *
-       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'Y'.
-          88 I-AM-DEBUGGING                      VALUE 'Y'.
-          88 NOT-DEBUGGING                       VALUE 'N'.
-      *
-       01 WS-DEBUG-AID                 PIC X(45) VALUE SPACES.
-      *
-       01 WS-DEBUG-MESSAGE.
-          05 FILLER                    PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT             PIC X(45) VALUE SPACES.
-          05 FILLER                    PIC X(1)  VALUE '>'.
-          05 FILLER                    PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP          PIC 9(8)  VALUE ZEROES.
-          05 FILLER                    PIC X(1)  VALUE '>'.
-          05 FILLER                    PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
-          05 FILLER                    PIC X(1)  VALUE '>'.
-      *
        01 WS-FILTER-FLAGS.
           03 WS-FILTERS-CHECK          PIC X(1)  VALUE SPACES.
              88 WS-FILTERS-PASSED                VALUE 'Y'.
@@ -82,7 +65,24 @@
       *
        01 WS-MAXIMUM-EMP-ID            PIC 9(8)  VALUE 99999999.
        01 WS-LINES-PER-PAGE            PIC S9(4) USAGE IS BINARY
-                                                 VALUE +5.
+                                                 VALUE +16.
+      *
+       01 WS-DEBUG-AID                 PIC X(45) VALUE SPACES.
+      *
+       01 WS-DEBUG-MESSAGE.
+          05 FILLER                    PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT             PIC X(45) VALUE SPACES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP          PIC 9(8)  VALUE ZEROES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+      *
+       01 WS-DEBUG-MODE                PIC X(1)  VALUE SPACES.
+          88 I-AM-DEBUGGING                      VALUE 'Y'.
+          88 NOT-DEBUGGING                       VALUE SPACES.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -93,6 +93,13 @@
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            INITIALIZE EIBRESP EIBRESP2.
            PERFORM 9300-DEBUG-AID.
+
+      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
+           SET I-AM-DEBUGGING TO TRUE
+
+           IF I-AM-DEBUGGING THEN 
+              MOVE 3 TO WS-LINES-PER-PAGE
+           END-IF.
       *    >>> -------------- <<<
 
       *    PSEUDO-CONVERSATIONAL PROGRAM DESIGN.
@@ -146,6 +153,7 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE '1000-FIRST-INTERACTION (END)' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
        1100-INITIALIZE-VARIABLES.
@@ -429,6 +437,7 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
        2100-SHOW-DETAILS.
@@ -494,10 +503,6 @@
       *       PAGE) AND SUBTRACT 1 FROM IT TO GET THE STARTING POINT
       *       FOR OUR UPCOMING 'BACKWARDS BROWSING'.
               IF LST-CURRENT-RECORD(1) IS NOT EQUAL TO SPACES THEN
-      *          >>> DEBUGGING ONLY <<<
-                 MOVE '2300-PREV: NORMAL CASE' TO WS-DEBUG-AID
-                 PERFORM 9300-DEBUG-AID
-      *          >>> -------------- <<<
                  MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD
                  SUBTRACT 1 FROM EMP-EMPLOYEE-ID
               ELSE
@@ -605,10 +610,6 @@
       *    IF AN INVALID KEY WAS PRESEED ON THE PREVOUS MAP DISPLAY,
       *    WE ISSUE A WARNING MESSAGE ON NEXT RENDER.
            IF WS-ACTION-INVALID THEN
-      *       >>> DEBUGGING ONLY <<<
-              MOVE '3000-> IF ACTION INVALID' TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
               MOVE WS-MESSAGE TO MESSFLO
               MOVE DFHPINK TO MESSFLC
            END-IF.
@@ -637,40 +638,20 @@
 
            EVALUATE EIBAID
            WHEN DFHENTER
-      *         >>> DEBUGGING ONLY <<<
-                MOVE '3000-> <ENTER> KEY PRESSED' TO WS-DEBUG-AID
-                PERFORM 9300-DEBUG-AID
-      *         >>> -------------- <<<
                 MOVE 'Filter Criteria Entered' TO WS-MESSAGE
                 SET WS-ACTION-DISPLAY TO TRUE
            WHEN DFHPF3
-      *         >>> DEBUGGING ONLY <<<
-                MOVE '3000-> <PF3> KEY PRESSED' TO WS-DEBUG-AID
-                PERFORM 9300-DEBUG-AID
-      *         >>> -------------- <<<
                 MOVE 'Filter Criteria Cancelled' TO WS-MESSAGE
                 SET WS-ACTION-EXIT TO TRUE
            WHEN DFHPF10
-      *         >>> DEBUGGING ONLY <<<
-                MOVE '3000-> <PF10> KEY PRESSED' TO WS-DEBUG-AID
-                PERFORM 9300-DEBUG-AID
-      *         >>> -------------- <<<
                 MOVE 'Sign Off Requested' TO WS-MESSAGE
                 SET WS-ACTION-SIGN-OFF TO TRUE
                 PERFORM 9200-SIGN-USER-OFF
            WHEN DFHPF12
-      *         >>> DEBUGGING ONLY <<<
-                MOVE '3000-> <PF12> KEY PRESSED' TO WS-DEBUG-AID
-                PERFORM 9300-DEBUG-AID
-      *         >>> -------------- <<<
                 MOVE 'Clear Criteria Requested' TO WS-MESSAGE
                 SET WS-ACTION-CLEAR TO TRUE
                 INITIALIZE LST-FILTERS
            WHEN OTHER
-      *         >>> DEBUGGING ONLY <<<
-                MOVE '3000-> ANY OTHER KEY PRESSED' TO WS-DEBUG-AID
-                PERFORM 9300-DEBUG-AID
-      *         >>> -------------- <<<
                 MOVE 'Invalid Key!' TO WS-MESSAGE
                 SET WS-ACTION-INVALID TO TRUE
            END-EVALUATE.
@@ -728,6 +709,10 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE LST-FILTERS(01:45) TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+           MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+           MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -788,10 +773,24 @@
       *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    IF KEY FILTERS WERE NOT SET OR NOT FULLY SET, WE JUST 'OK' 
-      *    IT AND RETURN.
-           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES OR
+      *    IF KEY FILTERS WERE NOT SET WE JUST 'OK' IT AND RETURN.
+           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES AND
               LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
+              SET WS-KEY-FILTER-PASSED TO TRUE
+              EXIT
+           END-IF.
+
+      *    IF JUST 'KEY' WAS OMITTED, WE GUESS IT FROM THE VALUE!
+           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES THEN
+              IF FUNCTION TRIM(LST-SELECT-KEY-VALUE) IS NUMERIC THEN
+                 MOVE '1' TO LST-SELECT-KEY-TYPE
+              ELSE
+                 MOVE '2' TO LST-SELECT-KEY-TYPE
+              END-IF
+           END-IF.
+      
+      *    IF JUST 'VALUE' WAS OMITTED, WE ALSO IGNORE THE FILTER.
+           IF LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
               SET WS-KEY-FILTER-PASSED TO TRUE
               EXIT
            END-IF.
