@@ -65,16 +65,20 @@
        01 WS-FILTER-FLAGS.
           03 WS-FILTERS-CHECK          PIC X(1)  VALUE SPACES.
              88 WS-FILTERS-PASSED                VALUE 'Y'.
-      *
           03 WS-KEY-FILTER-CHECK       PIC X(1)  VALUE SPACES.
              88 WS-KEY-FILTER-PASSED             VALUE 'Y'.
-      *
           03 WS-DEPT-FILTER-CHECK      PIC X(1)  VALUE SPACES.
              88 WS-DEPT-FILTER-PASSED            VALUE 'Y'.
              88 WS-DEPT-FILTER-FAILED            VALUE 'N'.
-      *
           03 WS-DATE-FILTER-CHECK      PIC X(1)  VALUE SPACES.
              88 WS-DATE-FILTER-PASSED            VALUE 'Y'.
+          03 WS-FILTER-ACTIONS         PIC X(1)  VALUE SPACES.
+             88 WS-ACTION-DISPLAY                VALUE 'D'.
+             88 WS-ACTION-EXIT                   VALUE 'E'.
+             88 WS-ACTION-SIGN-OFF               VALUE 'S'.
+             88 WS-ACTION-CLEAR                  VALUE 'C'.
+             88 WS-ACTION-INVALID                VALUE 'I'.
+             88 WS-ACTION-NOT-SET                VALUE SPACES.
       *
        01 WS-MAXIMUM-EMP-ID            PIC 9(8)  VALUE 99999999.
        01 WS-LINES-PER-PAGE            PIC S9(4) USAGE IS BINARY
@@ -178,10 +182,16 @@
 
       *    THIS WILL BE A 'FULLY CONVERSATIONAL' MAP DISPLAY.
 
-      *    AFTER THE USER SETS THE INITIAL FILTER VALUES (OR LEAVES
-      *    THEM BLANK) LOGIC WILL PICK UP FROM HERE AND INTO THE NEXT
-      *    PARAGRAPH ('1300-READ-EMPLOYEES-BY-ID').
-           PERFORM 3000-DISPLAY-FILTERS-SCREEN.
+      *    AFTER THE USER SETS INITIAL FILTER VALUES (OR LEAVES THEM 
+      *    BLANK) LOGIC WILL MOVE FORWARDS INTO THE NEXT STEPS, IE. 
+      *    '1300-READ-EMPLOYEES-BY-ID', ET AL.
+
+           INITIALIZE WS-FILTER-ACTIONS.
+
+           PERFORM 3000-DISPLAY-FILTERS-SCREEN
+              UNTIL WS-ACTION-DISPLAY
+              OR WS-ACTION-EXIT
+              OR WS-ACTION-SIGN-OFF.
 
        1300-READ-EMPLOYEES-BY-ID.
       *    >>> DEBUGGING ONLY <<<
@@ -330,7 +340,7 @@
 
            INITIALIZE LST-CURRENT-RECORD-AREA.
            INITIALIZE WS-READ-COUNTER.
-           
+
            PERFORM 1310-START-BROWSING.
 
            SET LST-RECORD-INDEX TO WS-LINES-PER-PAGE.
@@ -404,7 +414,7 @@
            WHEN DFHENTER
                 PERFORM 2100-SHOW-DETAILS
            WHEN DFHPF3
-                PERFORM 2200-GET-FILTERS
+                PERFORM 2200-SHOW-FILTERS
            WHEN DFHPF7
                 PERFORM 2300-PREV-BY-EMPLOYEE-ID
            WHEN DFHPF8
@@ -447,19 +457,25 @@
                    END-IF
            END-PERFORM.
 
-       2200-GET-FILTERS.
+       2200-SHOW-FILTERS.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2200-GET-FILTERS' TO WS-DEBUG-AID.
+           MOVE '2200-SHOW-FILTERS' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           PERFORM 3000-DISPLAY-FILTERS-SCREEN.
-           PERFORM 2210-RESET-BROWSE-VALUES.
+           INITIALIZE WS-FILTER-ACTIONS.
+
+           PERFORM 3000-DISPLAY-FILTERS-SCREEN
+              UNTIL WS-ACTION-DISPLAY
+              OR WS-ACTION-EXIT
+              OR WS-ACTION-SIGN-OFF.
+
+           PERFORM 2210-RESET-BROWSING-VALUES.
            PERFORM 1300-READ-EMPLOYEES-BY-ID.
 
-       2210-RESET-BROWSE-VALUES.
+       2210-RESET-BROWSING-VALUES.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2210-RESET-BROWSE-VALUES' TO WS-DEBUG-AID.
+           MOVE '2210-RESET-BROWSING-VALUES' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -563,13 +579,16 @@
       *       - IF THERE REALLY WAS A NEED FOR A PSEUDO-CONVERSATIONAL
       *         FILTERS MAP, THEN I WOULD HAVE DONE IT AS A SEPARATE
       *         PROGRAM AND CALLED IT FROM HERE VIA 'LINK' & CONTAINER.
+      *       - DESPITE BEING FULLY CONVERSATIONL, THE MAP MAY/WILL
+      *         RE-DISPLAY ON LOOP UNTIL THE USER EITHER HITS 'ENTER'
+      *         TO MOVE FORWARD OR EXITS VIA DESIGNATED <PF> KEYS.
 
            INITIALIZE EFILMO.
-           
+
            MOVE EIBTRNID TO TRANFLO.
 
       *    IF THIS IS THE FIRST INVOCATION OF THE PARAGRAPH, IE.
-      *    FIRST STEP IN THE CONVERSATION, THEN NO FILTERS HAVE BEEN 
+      *    FIRST STEP IN THE CONVERSATION, THEN NO FILTERS HAVE BEEN
       *    SET YET AND WE JUST DISPLAY A MESSAGE.
            IF LST-NO-FILTERS-SET THEN
               MOVE WS-FILTERS-MSG-SF TO MESSFLO
@@ -577,10 +596,21 @@
            END-IF.
 
       *    IF THIS IS A RE-RENDER OF THE FILTERS SCREEN, IE. BY
-      *    PRESSING THE PF3 KEY ON THE LISTING PAGE, WE RESTORE THE MAP 
+      *    PRESSING THE PF3 KEY ON THE LISTING PAGE, WE RESTORE THE MAP
       *    FIELDS TO THE LAST ENTERED SET OF VALUES.
            IF LST-FILTERS-SET THEN
               PERFORM 3600-LOAD-FILTER-CRITERIA
+           END-IF.
+
+      *    IF AN INVALID KEY WAS PRESEED ON THE PREVOUS MAP DISPLAY,
+      *    WE ISSUE A WARNING MESSAGE ON NEXT RENDER.
+           IF WS-ACTION-INVALID THEN
+      *       >>> DEBUGGING ONLY <<<
+              MOVE '3000-> IF ACTION INVALID' TO WS-DEBUG-AID
+              PERFORM 9300-DEBUG-AID
+      *       >>> -------------- <<<
+              MOVE WS-MESSAGE TO MESSFLO
+              MOVE DFHPINK TO MESSFLC
            END-IF.
 
       *    WE RENDER THE INITIAL FILTER MAP.
@@ -605,16 +635,45 @@
 
       *    <<<<<    PROGRAM EXECUTION RESUMES HERE   >>>>>
 
-      *    >>> DEBUGGING ONLY <<<
-           MOVE EFILMI(1:45) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-           MOVE EFILMI(46:45) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-           MOVE EFILMI(91:45) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-           MOVE EFILMI(136:45) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
+           EVALUATE EIBAID
+           WHEN DFHENTER
+      *         >>> DEBUGGING ONLY <<<
+                MOVE '3000-> <ENTER> KEY PRESSED' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                MOVE 'Filter Criteria Entered' TO WS-MESSAGE
+                SET WS-ACTION-DISPLAY TO TRUE
+           WHEN DFHPF3
+      *         >>> DEBUGGING ONLY <<<
+                MOVE '3000-> <PF3> KEY PRESSED' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                MOVE 'Filter Criteria Cancelled' TO WS-MESSAGE
+                SET WS-ACTION-EXIT TO TRUE
+           WHEN DFHPF10
+      *         >>> DEBUGGING ONLY <<<
+                MOVE '3000-> <PF10> KEY PRESSED' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                MOVE 'Sign Off Requested' TO WS-MESSAGE
+                SET WS-ACTION-SIGN-OFF TO TRUE
+                PERFORM 9200-SIGN-USER-OFF
+           WHEN DFHPF12
+      *         >>> DEBUGGING ONLY <<<
+                MOVE '3000-> <PF12> KEY PRESSED' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                MOVE 'Clear Criteria Requested' TO WS-MESSAGE
+                SET WS-ACTION-CLEAR TO TRUE
+                INITIALIZE LST-FILTERS
+           WHEN OTHER
+      *         >>> DEBUGGING ONLY <<<
+                MOVE '3000-> ANY OTHER KEY PRESSED' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                MOVE 'Invalid Key!' TO WS-MESSAGE
+                SET WS-ACTION-INVALID TO TRUE
+           END-EVALUATE.
 
       *    WITH FILTER CRITERIA ENTERED AND RECEIVED INTO THE MAP'S
       *    INPUT SECTION, WE PASS THE DATA TO THE CONTAINER AND THEN
@@ -631,7 +690,7 @@
               MOVE KEYSELI TO LST-SELECT-KEY-TYPE
               SET LST-FILTERS-SET TO TRUE
            END-IF.
- 
+
            IF MATCHI IS NOT EQUAL TO LOW-VALUE THEN
               MOVE MATCHI TO LST-SELECT-KEY-VALUE
               SET LST-FILTERS-SET TO TRUE
@@ -640,7 +699,7 @@
            PERFORM VARYING WS-INDEX
               FROM 1 BY 1
               UNTIL WS-INDEX IS GREATER THAN 4
-                   IF DPTINCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUE 
+                   IF DPTINCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUE
                       MOVE DPTINCLI(WS-INDEX)
                          TO LST-INCL-DEPT-ID(WS-INDEX)
                       SET LST-FILTERS-SET TO TRUE
@@ -650,7 +709,7 @@
            PERFORM VARYING WS-INDEX
               FROM 1 BY 1
               UNTIL WS-INDEX IS GREATER THAN 4
-                   IF DPTEXCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUE 
+                   IF DPTEXCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUE
                       MOVE DPTEXCLI(WS-INDEX)
                          TO LST-EXCL-DEPT-ID(WS-INDEX)
                       SET LST-FILTERS-SET TO TRUE
@@ -670,12 +729,8 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE LST-FILTERS(01:45) TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
-           MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-           MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
-           
+
        3200-APPLY-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3200-APPLY-FILTERS' TO WS-DEBUG-AID.
@@ -686,25 +741,25 @@
       *
       *       - UNLIKE THE PLURALSIGHT EXAMPLE, HERE THE FILTERS ARE
       *         'WILDCARDED' BY DEFAULT, MEANING THE FILTER STRINGS
-      *         ENTERED BY THE USER WILL BE LOOKED FOR BY THE 
-      *         'INSPECT' COMMAND ON ANY POSITION OF THE ID OR NAME 
+      *         ENTERED BY THE USER WILL BE LOOKED FOR BY THE
+      *         'INSPECT' COMMAND ON ANY POSITION OF THE ID OR NAME
       *         FIELDS.
       *
       *       - THIS MEANS A FILTER OF '15' ON ID WILL GET EMPLOYEES
       *         '15', '115', '159', '315', '515300', '1571' AND SO ON.
       *
       *       - SAME WITH NAMES, A FILTER OF 'mar' WILL GET EMPLOYEES
-      *         NAMED 'MARIA', 'LAMARR', 'MARSHALL' AND SO ON. 
+      *         NAMED 'MARIA', 'LAMARR', 'MARSHALL' AND SO ON.
       *
-      *       - I MADE THE NAME CHECKING CASE-INSENSITIVE, MEANING 
+      *       - I MADE THE NAME CHECKING CASE-INSENSITIVE, MEANING
       *         'MAR' AND 'mar' WILL YIELD THE SAME RESULTS.
       *
-      *       - NO USE OF ACTUAL WILDCARDS LIKE '*' IS NEEDED, AS 
+      *       - NO USE OF ACTUAL WILDCARDS LIKE '*' IS NEEDED, AS
       *         THE 'INSPECT' COMMAND WILL DO THE JOB FOR US!
       *
-      *       - I COULD HAVE IMPLEMENTED AN ACTUAL WILDCARD USAGE 
-      *         AND/OR AN 'EXACT MATCH' OPTION, BUT I WOULD RATHER 
-      *         FOCUS ON SPECIFIC 'CICS' STUFF AND JUST LEAVE THE 
+      *       - I COULD HAVE IMPLEMENTED AN ACTUAL WILDCARD USAGE
+      *         AND/OR AN 'EXACT MATCH' OPTION, BUT I WOULD RATHER
+      *         FOCUS ON SPECIFIC 'CICS' STUFF AND JUST LEAVE THE
       *         'MOST USEFUL' FILTER SCENARIO BY DEFAULT.
 
            INITIALIZE WS-FILTER-FLAGS WS-INSP-COUNTER.
@@ -712,8 +767,8 @@
       *    IF NO FILTERS WERE SET, THEN WE JUST 'OK' THE RECORD.
            IF LST-NO-FILTERS-SET THEN
               SET WS-FILTERS-PASSED TO TRUE
-              EXIT 
-           END-IF. 
+              EXIT
+           END-IF.
 
       *    IF FILTERS WERE SET, THEN WE CHECK THEM ALL.
            PERFORM 3300-APPLY-KEY-FILTERS.
@@ -733,20 +788,22 @@
       *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    IF NO KEY FILTERS WERE SET, WE JUST 'OK' IT AND RETURN.
-           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES THEN
+      *    IF KEY FILTERS WERE NOT SET OR NOT FULLY SET, WE JUST 'OK' 
+      *    IT AND RETURN.
+           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES OR
+              LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
               SET WS-KEY-FILTER-PASSED TO TRUE
               EXIT
            END-IF.
 
-      *    OTHERWISE, WE CHECK THE KEY FILTERS.      
+      *    OTHERWISE, WE CHECK THE KEY FILTERS.
 
       *    SELECT OPTION '1' -> 'EMPLOYEE ID' FILTER.
            IF LST-SEL-BY-EMPLOYEE-ID THEN
               INSPECT EMP-KEY
                  TALLYING WS-INSP-COUNTER
-                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
-  
+                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+
               IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
                  SET WS-KEY-FILTER-PASSED TO TRUE
               END-IF
@@ -756,13 +813,13 @@
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
               INSPECT FUNCTION UPPER-CASE(EMP-PRIMARY-NAME)
                  TALLYING WS-INSP-COUNTER
-                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE) 
-  
+                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+
               IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
                  SET WS-KEY-FILTER-PASSED TO TRUE
               END-IF
            END-IF.
-      
+
        3400-APPLY-DEPT-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3400-APPLY-DEPT-FILTERS' TO WS-DEBUG-AID.
@@ -800,7 +857,7 @@
                       END-IF
               END-PERFORM
            END-IF.
-     
+
       *    SECOND, THE 'NEGATIVE' DEPARTMENT EXCLUSION FILTERS.
            IF LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
       *       NO 'EXCLUDE' FILTERS, SO *NO* DEPARTMENTS ARE OFF.
@@ -832,9 +889,9 @@
       *    IF NO DATE FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
            IF LST-EMPLOYMENT-DATE-FILTERS IS EQUAL TO SPACES THEN
               SET WS-DATE-FILTER-PASSED TO TRUE
-              EXIT 
+              EXIT
            END-IF.
-      
+
       *    IF BOTH FILTERS WERE SET, WE CHECK THE EMPLOYEE START DATE
       *    AGAINST THE FILTERS.
            IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES AND
@@ -844,7 +901,7 @@
       *          SUCCESS!
                  SET WS-DATE-FILTER-PASSED TO TRUE
                  EXIT
-              END-IF   
+              END-IF
            END-IF.
 
       *    IF ONLY DATE-BEFORE FILTER WAS SET.
@@ -878,25 +935,25 @@
       *    MAKES CHANGES TO THEM, *ONLY* THE NEW OR MODIFIED
       *    VALUES WILL BE PASSED BACK BY THE 'RECEIVE' COMMAND.
       *
-      *    VALUES THAT WERE RE-DISPLAYED BUT *NOT* MODIFIED WILL NOT 
-      *    BE PASSED BACK, BUT THAT WILL NOT BE A PROBLEM SINCE WE 
+      *    VALUES THAT WERE RE-DISPLAYED BUT *NOT* MODIFIED WILL NOT
+      *    BE PASSED BACK, BUT THAT WILL NOT BE A PROBLEM SINCE WE
       *    ALREADY HAVE THEM STORED IN THE CONTAINER!
       *
       *    THEREFORE:
       *
       *       - UPON RETURN FROM THE EDIT FILTERS SCREEN, WE JUST
-      *         UPDATE THE CONTAINER WITH THE NEW OR MODIFIED VALUES 
+      *         UPDATE THE CONTAINER WITH THE NEW OR MODIFIED VALUES
       *         THAT WERE *INDEED* PASSED BACK TO US.
-      *       - THE ONES THAT WERE *NOT* MODIFIED WILL STAY IN THE 
-      *         CONTAINER 'AS ARE' AND WILL TOO BE USED FOR THE NEXT 
+      *       - THE ONES THAT WERE *NOT* MODIFIED WILL STAY IN THE
+      *         CONTAINER 'AS ARE' AND WILL TOO BE USED FOR THE NEXT
       *         RENDERING OF THE LISTING PAGE.
       *
-      *    THUS, I COMPLETELY AVOIDED PLURALSIGHT'S PRACTICE OF SETTING 
-      *    UP 'MODIFIED FIELD FLAGS' AS I SAW REALLY NO NEED TO DO SO 
+      *    THUS, I COMPLETELY AVOIDED PLURALSIGHT'S PRACTICE OF SETTING
+      *    UP 'MODIFIED FIELD FLAGS' AS I SAW REALLY NO NEED TO DO SO
       *    (DUE TO KEEPING STATE IN THE CONTAINER!)
 
            INITIALIZE EFILMO.
-            
+
            MOVE LST-SELECT-KEY-TYPE TO KEYSELO.
            MOVE LST-SELECT-KEY-VALUE TO MATCHO.
 
@@ -1012,11 +1069,11 @@
 
        9110-SET-FILTERS-LINE.
       *    IF NO FILTERS WERE SET, WE JUST DISPLAY A DEFAULT MESSAGE.
-           IF LST-NO-FILTERS-SET THEN 
+           IF LST-NO-FILTERS-SET THEN
               MOVE '(No Filters Set)' TO FLTRSO
-              EXIT 
+              EXIT
            END-IF.
-                
+
       *    OTHERWISE, WE DISPLAY FEEBACK ABOUT FILTERS SET BY THE USER.
            IF LST-SEL-BY-EMPLOYEE-ID THEN
               STRING 'Employee ID Contains "'
@@ -1024,7 +1081,7 @@
                      '"'
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT 
+              EXIT
            END-IF.
 
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
@@ -1033,23 +1090,23 @@
                      '"'
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT 
+              EXIT
            END-IF.
 
-           IF LST-INCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN 
+           IF LST-INCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN
               STRING 'Include Departments: '
                      FUNCTION TRIM(LST-INCLUDE-DEPT-FILTERS)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT 
+              EXIT
            END-IF.
 
-           IF LST-EXCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN 
+           IF LST-EXCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN
               STRING 'Exclude Departments: '
                      FUNCTION TRIM(LST-EXCLUDE-DEPT-FILTERS)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT 
+              EXIT
            END-IF.
 
            IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES THEN
@@ -1057,7 +1114,7 @@
                      FUNCTION TRIM(LST-EMPL-DATE-AFTER)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT 
+              EXIT
            END-IF.
 
            IF LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
