@@ -33,6 +33,7 @@
           05 WS-LINE-DISPLAY           PIC 9(2).
           05 WS-INSP-COUNTER           PIC S9(2) USAGE IS BINARY.
           05 WS-INDEX                  PIC S9(2) USAGE IS BINARY.
+          05 WS-DEPT-KEY               PIC X(8).
       *
        01 WS-DISPLAY-MESSAGES.
           05 WS-MESSAGE                PIC X(79) VALUE SPACES.
@@ -95,7 +96,7 @@
            PERFORM 9300-DEBUG-AID.
 
       *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
-           SET I-AM-DEBUGGING TO TRUE
+      *    SET I-AM-DEBUGGING TO TRUE
 
            IF I-AM-DEBUGGING THEN 
               MOVE 3 TO WS-LINES-PER-PAGE
@@ -593,9 +594,10 @@
            MOVE EIBTRNID TO TRANFLO.
 
       *    IF THIS IS THE FIRST INVOCATION OF THE PARAGRAPH, IE.
-      *    FIRST STEP IN THE CONVERSATION, THEN NO FILTERS HAVE BEEN
-      *    SET YET AND WE JUST DISPLAY A MESSAGE.
+      *    FIRST STEP IN THE CONVERSATION, WE SET A DEFAULT SELECT 
+      *    ORDER AND ALSO DISPLAY A MESSAGE TO THE USER.
            IF LST-NO-FILTERS-SET THEN
+              MOVE '1' TO KEYSELO
               MOVE WS-FILTERS-MSG-SF TO MESSFLO
               MOVE DFHTURQ TO MESSFLC
            END-IF.
@@ -643,6 +645,7 @@
            WHEN DFHPF3
                 MOVE 'Filter Criteria Cancelled' TO WS-MESSAGE
                 SET WS-ACTION-EXIT TO TRUE
+                PERFORM 9200-SIGN-USER-OFF
            WHEN DFHPF10
                 MOVE 'Sign Off Requested' TO WS-MESSAGE
                 SET WS-ACTION-SIGN-OFF TO TRUE
@@ -710,10 +713,10 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE LST-FILTERS(01:45) TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
-           MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-           MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
+      *    MOVE LST-FILTERS(46:45) TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
+      *    MOVE LST-FILTERS(91:22) TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
        3200-APPLY-FILTERS.
@@ -747,12 +750,12 @@
       *         FOCUS ON SPECIFIC 'CICS' STUFF AND JUST LEAVE THE
       *         'MOST USEFUL' FILTER SCENARIO BY DEFAULT.
 
-           INITIALIZE WS-FILTER-FLAGS WS-INSP-COUNTER.
+           INITIALIZE WS-FILTER-FLAGS. 
 
       *    IF NO FILTERS WERE SET, THEN WE JUST 'OK' THE RECORD.
            IF LST-NO-FILTERS-SET THEN
               SET WS-FILTERS-PASSED TO TRUE
-              EXIT
+              EXIT PARAGRAPH 
            END-IF.
 
       *    IF FILTERS WERE SET, THEN WE CHECK THEM ALL.
@@ -773,32 +776,29 @@
       *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    IF KEY FILTERS WERE NOT SET WE JUST 'OK' IT AND RETURN.
-           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES AND
-              LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
+      *    IF 'VALUE' WAS OMITTED, WE IGNORE THE FILTER.
+           IF LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
               SET WS-KEY-FILTER-PASSED TO TRUE
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
 
-      *    IF JUST 'KEY' WAS OMITTED, WE GUESS IT FROM THE VALUE!
-           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES THEN
+      *    OTHERWISE, WE CHECK THE KEY FILTERS.
+
+      *    IF 'KEY' WAS OMITTED BUT WE GOT A 'VALUE', THEN WE GUESS THE 
+      *    KEY FROM THE VALUE!
+           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES AND 
+              LST-SELECT-KEY-VALUE IS NOT EQUAL TO SPACES THEN
               IF FUNCTION TRIM(LST-SELECT-KEY-VALUE) IS NUMERIC THEN
                  MOVE '1' TO LST-SELECT-KEY-TYPE
               ELSE
                  MOVE '2' TO LST-SELECT-KEY-TYPE
               END-IF
            END-IF.
-      
-      *    IF JUST 'VALUE' WAS OMITTED, WE ALSO IGNORE THE FILTER.
-           IF LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
-              SET WS-KEY-FILTER-PASSED TO TRUE
-              EXIT
-           END-IF.
-
-      *    OTHERWISE, WE CHECK THE KEY FILTERS.
 
       *    SELECT OPTION '1' -> 'EMPLOYEE ID' FILTER.
            IF LST-SEL-BY-EMPLOYEE-ID THEN
+              INITIALIZE WS-INSP-COUNTER
+
               INSPECT EMP-KEY
                  TALLYING WS-INSP-COUNTER
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
@@ -810,6 +810,8 @@
 
       *    SELECT OPTION '2' -> 'EMPLOYEE NAME' FILTER.
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
+              INITIALIZE WS-INSP-COUNTER
+
               INSPECT FUNCTION UPPER-CASE(EMP-PRIMARY-NAME)
                  TALLYING WS-INSP-COUNTER
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
@@ -825,16 +827,15 @@
       *    PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    IF NO DEPARTMENT FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
+      *    IF NO DEPARTMENT FILTERS WERE SET, WE JUST 'OK' IT.
            IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES AND
               LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
               SET WS-DEPT-FILTER-PASSED TO TRUE
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
 
       *    OTHERWISE, WE CHECK THE DEPARTMENT FILTERS.
-      *       - WE ONLY CHECK FOR EQUALITY HERE.
-      *       - NO WILDCARDING OR INSPECTING FOR NOW!
+           MOVE EMP-DEPARTMENT-ID TO WS-DEPT-KEY.
 
       *    FIRST, THE 'POSITIVE' DEPARTMENT INCLUSION FILTERS.
            IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
@@ -848,9 +849,16 @@
                  OR WS-DEPT-FILTER-PASSED
                       IF LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
                          IS NOT EQUAL TO SPACES THEN
-                         IF EMP-DEPARTMENT-ID IS EQUAL TO
-                            LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX) THEN
-      *                     IT MATCHES! SO WE SET THE 'PASSED' FLAG
+                         
+                         INITIALIZE WS-INSP-COUNTER
+
+                         INSPECT WS-DEPT-KEY
+                            TALLYING WS-INSP-COUNTER
+                            FOR ALL FUNCTION TRIM
+                            (LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX))
+
+                         IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+      *                     SUCCESS! IT PASSES THE FILTER.
                             SET WS-DEPT-FILTER-PASSED TO TRUE
                          END-IF
                       END-IF
@@ -860,7 +868,7 @@
       *    SECOND, THE 'NEGATIVE' DEPARTMENT EXCLUSION FILTERS.
            IF LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
       *       NO 'EXCLUDE' FILTERS, SO *NO* DEPARTMENTS ARE OFF.
-      *       WE MANTAIN THE STATUS QUO (ID EST 'INCLUDE' OUTCOME)
+      *       WE MANTAIN THE STATUS QUO (AS IN THE 'INCLUDE' OUTCOME)
               CONTINUE
            ELSE
       *       WE NEED TO AVOID ALL 'BLACK-LISTED' DEPARTMENTS TO PASS.
@@ -870,9 +878,16 @@
                  OR WS-DEPT-FILTER-FAILED
                       IF LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX)
                          IS NOT EQUAL TO SPACES THEN
-                         IF EMP-DEPARTMENT-ID IS EQUAL TO
-                            LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX) THEN
-      *                     BLACKLISTED! SO WE SET THE 'FAILED' FLAG
+
+                         INITIALIZE WS-INSP-COUNTER
+
+                         INSPECT WS-DEPT-KEY
+                            TALLYING WS-INSP-COUNTER
+                            FOR ALL FUNCTION TRIM
+                            (LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX))
+
+                         IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+      *                     BLACKLISTED! IT DOESN'T MAKE THE CUT.
                             SET WS-DEPT-FILTER-FAILED TO TRUE
                          END-IF
                       END-IF
@@ -888,8 +903,10 @@
       *    IF NO DATE FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
            IF LST-EMPLOYMENT-DATE-FILTERS IS EQUAL TO SPACES THEN
               SET WS-DATE-FILTER-PASSED TO TRUE
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
+
+      *    OTHERWISE, WE CHECK THE DATE FILTERS.
 
       *    IF BOTH FILTERS WERE SET, WE CHECK THE EMPLOYEE START DATE
       *    AGAINST THE FILTERS.
@@ -899,7 +916,7 @@
                  EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
       *          SUCCESS!
                  SET WS-DATE-FILTER-PASSED TO TRUE
-                 EXIT
+                 EXIT PARAGRAPH
               END-IF
            END-IF.
 
@@ -908,7 +925,7 @@
               IF EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
       *          SUCCESS!
                  SET WS-DATE-FILTER-PASSED TO TRUE
-                 EXIT
+                 EXIT PARAGRAPH
               END-IF
            END-IF.
 
@@ -917,7 +934,7 @@
               IF EMP-START-DATE IS GREATER THAN LST-EMPL-DATE-AFTER THEN
       *          SUCCESS!
                  SET WS-DATE-FILTER-PASSED TO TRUE
-                 EXIT
+                 EXIT PARAGRAPH
               END-IF
            END-IF.
 
@@ -1070,7 +1087,7 @@
       *    IF NO FILTERS WERE SET, WE JUST DISPLAY A DEFAULT MESSAGE.
            IF LST-NO-FILTERS-SET THEN
               MOVE '(No Filters Set)' TO FLTRSO
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
 
       *    OTHERWISE, WE DISPLAY FEEBACK ABOUT FILTERS SET BY THE USER.
@@ -1080,7 +1097,7 @@
                      '"'
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
 
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
@@ -1097,7 +1114,7 @@
                      FUNCTION TRIM(LST-INCLUDE-DEPT-FILTERS)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
 
            IF LST-EXCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN
@@ -1105,7 +1122,7 @@
                      FUNCTION TRIM(LST-EXCLUDE-DEPT-FILTERS)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
 
            IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES THEN
@@ -1113,7 +1130,7 @@
                      FUNCTION TRIM(LST-EMPL-DATE-AFTER)
                  DELIMITED BY SIZE INTO FLTRSO
               END-STRING
-              EXIT
+              EXIT PARAGRAPH
            END-IF.
 
            IF LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
