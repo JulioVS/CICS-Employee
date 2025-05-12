@@ -64,7 +64,7 @@
              88 WS-ACTION-INVALID                VALUE 'I'.
              88 WS-ACTION-NOT-SET                VALUE SPACES.
       *
-       01 WS-MAXIMUM-EMP-ID            PIC 9(8)  VALUE 99999999.
+       01 WS-MAX-ID-VALUE              PIC 9(8)  VALUE 99999999.
        01 WS-LINES-PER-PAGE            PIC S9(4) USAGE IS BINARY
                                                  VALUE +16.
       *
@@ -96,7 +96,7 @@
            PERFORM 9300-DEBUG-AID.
 
       *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
-      *    SET I-AM-DEBUGGING TO TRUE
+           SET I-AM-DEBUGGING TO TRUE
 
            IF I-AM-DEBUGGING THEN 
               MOVE 3 TO WS-LINES-PER-PAGE
@@ -126,11 +126,13 @@
       *    FIX => NONE NEEDED!
 
            EVALUATE WS-CICS-RESPONSE
-           WHEN DFHRESP(NORMAL)
-                PERFORM 2000-PROCESS-USER-INPUT
            WHEN DFHRESP(CHANNELERR)
            WHEN DFHRESP(CONTAINERERR)
+      *         1ST INTERACTION -> NO CONTAINER YET (CREATE IT)
                 PERFORM 1000-FIRST-INTERACTION
+           WHEN DFHRESP(NORMAL)
+      *         NEXT INTERACTIONS -> CONTAINER FOUND (CONTINUE)
+                PERFORM 2000-PROCESS-USER-INPUT
            WHEN OTHER
                 MOVE 'Error Retrieving Container!' TO WS-MESSAGE
            END-EVALUATE.
@@ -150,7 +152,7 @@
            PERFORM 1100-INITIALIZE-VARIABLES.
            PERFORM 1150-INITIALIZE-CONTAINER.
            PERFORM 1200-GET-INITIAL-FILTERS.
-           PERFORM 1300-READ-EMPLOYEES-BY-ID.
+           PERFORM 1300-READ-EMPLOYEES-BY-KEY.
 
       *    >>> DEBUGGING ONLY <<<
            MOVE '1000-FIRST-INTERACTION (END)' TO WS-DEBUG-AID.
@@ -193,7 +195,7 @@
 
       *    AFTER THE USER SETS INITIAL FILTER VALUES (OR LEAVES THEM 
       *    BLANK) LOGIC WILL MOVE FORWARDS INTO THE NEXT STEPS, IE. 
-      *    '1300-READ-EMPLOYEES-BY-ID', ET AL.
+      *    '1300-READ-EMPLOYEES-BY-KEY', ET AL.
 
            INITIALIZE WS-FILTER-ACTIONS.
 
@@ -202,9 +204,13 @@
               OR WS-ACTION-EXIT
               OR WS-ACTION-SIGN-OFF.
 
-       1300-READ-EMPLOYEES-BY-ID.
+       1300-READ-EMPLOYEES-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1300-READ-EMPLOYEES-BY-ID' TO WS-DEBUG-AID.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1300-READ-EMPLOYEES-BY-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1300-READ-EMPLOYEES-BY-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -239,15 +245,27 @@
 
        1310-START-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1310-START-BROWSING' TO WS-DEBUG-AID.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1310-START-BROWSING (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1310-START-BROWSING (NM)' TO WS-DEBUG-AID
+           END-IF.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           EXEC CICS STARTBR
-                FILE(APP-EMP-MASTER-FILE-NAME)
-                RIDFLD(EMP-EMPLOYEE-ID)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS STARTBR
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS STARTBR
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF
 
       *    WILL GIVE A '16' (+20) ERROR RETURN CODE IF NOT DEFINED AS
       *    'BROWSABLE' IN THE CICS FILE DEFINITION ENTRY!
@@ -284,22 +302,41 @@
       *    >>> DEBUGGING ONLY <<<
            INITIALIZE WS-DEBUG-AID.
            ADD 1 TO WS-READ-COUNTER.
-           STRING '1320-READ-NEXT-RECORD'
-                  '('
-                  WS-READ-COUNTER
-                  ')'
-              DELIMITED BY SIZE
-              INTO WS-DEBUG-AID
-           END-STRING.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              STRING '1320-READ-NEXT-RECORD (ID)'
+                     '('
+                     WS-READ-COUNTER
+                     ')'
+                 DELIMITED BY SIZE
+                 INTO WS-DEBUG-AID
+              END-STRING
+           ELSE
+              STRING '1320-READ-NEXT-RECORD (NM)'
+                     '('
+                     WS-READ-COUNTER
+                     ')'
+                 DELIMITED BY SIZE
+                 INTO WS-DEBUG-AID
+              END-STRING
+           END-IF.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           EXEC CICS READNEXT
-                FILE(APP-EMP-MASTER-FILE-NAME)
-                RIDFLD(EMP-EMPLOYEE-ID)
-                INTO (EMPLOYEE-MASTER-RECORD)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS READNEXT
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS READNEXT
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
@@ -324,14 +361,25 @@
 
        1330-END-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1330-END-BROWSING' TO WS-DEBUG-AID.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+              MOVE '1330-END-BROWSING (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1330-END-BROWSING (NM)' TO WS-DEBUG-AID
+           END-IF
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           EXEC CICS ENDBR
-                FILE(APP-EMP-MASTER-FILE-NAME)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+              EXEC CICS ENDBR
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS ENDBR
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
@@ -341,9 +389,13 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       1400-READ-BACKWARDS-BY-ID.
+       1400-READ-BACKWARDS-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1400-READ-BACKWARDS-BY-ID' TO WS-DEBUG-AID.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+              MOVE '1400-READ-BACKWARDS-BY-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1400-READ-BACKWARDS-BY-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -365,22 +417,49 @@
       *    >>> DEBUGGING ONLY <<<
            INITIALIZE WS-DEBUG-AID.
            ADD 1 TO WS-READ-COUNTER.
-           STRING '1410-READ-PREV-RECORD'
-                  '('
-                  WS-READ-COUNTER
-                  ')'
-              DELIMITED BY SIZE
-              INTO WS-DEBUG-AID
-           END-STRING.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+              STRING '1410-READ-PREV-RECORD (ID)'
+                     '('
+                     WS-READ-COUNTER
+                     ')'
+                 DELIMITED BY SIZE
+                 INTO WS-DEBUG-AID
+              END-STRING
+           ELSE
+              STRING '1410-READ-PREV-RECORD (NM)'
+                     '('
+                     WS-READ-COUNTER
+                     ')'
+                 DELIMITED BY SIZE
+                 INTO WS-DEBUG-AID
+              END-STRING
+           END-IF.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           EXEC CICS READPREV
-                FILE(APP-EMP-MASTER-FILE-NAME)
-                RIDFLD(EMP-EMPLOYEE-ID)
-                INTO (EMPLOYEE-MASTER-RECORD)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+      *       >>> DEBUGGING ONLY <<<
+              MOVE EMP-EMPLOYEE-ID TO WS-DEBUG-AID
+              PERFORM 9300-DEBUG-AID
+      *       >>> -------------- <<<
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+      *       >>> DEBUGGING ONLY <<<
+              MOVE EMP-PRIMARY-NAME TO WS-DEBUG-AID
+              PERFORM 9300-DEBUG-AID
+      *       >>> -------------- <<<
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
@@ -425,9 +504,9 @@
            WHEN DFHPF3
                 PERFORM 2200-SHOW-FILTERS
            WHEN DFHPF7
-                PERFORM 2300-PREV-BY-EMPLOYEE-ID
+                PERFORM 2300-PREV-BY-EMPLOYEE-KEY
            WHEN DFHPF8
-                PERFORM 2400-NEXT-BY-EMPLOYEE-ID
+                PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
            WHEN DFHPF10
                 PERFORM 9200-SIGN-USER-OFF
            WHEN DFHPF12
@@ -481,7 +560,7 @@
               OR WS-ACTION-SIGN-OFF.
 
            PERFORM 2210-RESET-BROWSING-VALUES.
-           PERFORM 1300-READ-EMPLOYEES-BY-ID.
+           PERFORM 1300-READ-EMPLOYEES-BY-KEY.
 
        2210-RESET-BROWSING-VALUES.
       *    >>> DEBUGGING ONLY <<<
@@ -493,9 +572,13 @@
            INITIALIZE LST-CURRENT-RECORD-AREA.
            INITIALIZE LST-FILE-FLAG.
 
-       2300-PREV-BY-EMPLOYEE-ID.
+       2300-PREV-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2300-PREV-BY-EMPLOYEE-ID' TO WS-DEBUG-AID.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2300-PREV-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2300-PREV-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -505,7 +588,12 @@
       *       FOR OUR UPCOMING 'BACKWARDS BROWSING'.
               IF LST-CURRENT-RECORD(1) IS NOT EQUAL TO SPACES THEN
                  MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD
-                 SUBTRACT 1 FROM EMP-EMPLOYEE-ID
+
+                 IF LST-SEL-BY-EMPLOYEE-ID THEN
+                    SUBTRACT 1 FROM EMP-EMPLOYEE-ID
+                 ELSE
+                    MOVE LOW-VALUES TO EMP-PRIMARY-NAME(31:8)
+                 END-IF
               ELSE
       *          >>> DEBUGGING ONLY <<<
                  MOVE '2300-PREV: EDGE CASE!' TO WS-DEBUG-AID
@@ -514,7 +602,11 @@
       *          UNLESS WE ARE ON AN 'EMPTY DETAIL PAGE' EDGE CASE!
       *          IN ORDER TO GO BACKWARDS, WE JUST SET THE EMPLOYEE ID
       *          TO A FICTIONAL 'MAXIMUM VALUE'.
-                 MOVE WS-MAXIMUM-EMP-ID TO EMP-EMPLOYEE-ID
+                 IF LST-SEL-BY-EMPLOYEE-ID THEN
+                    MOVE WS-MAX-ID-VALUE TO EMP-EMPLOYEE-ID
+                 ELSE
+                    MOVE HIGH-VALUES TO EMP-PRIMARY-NAME
+                 END-IF
               END-IF
 
       *       RESET THE 'TOF'/'EOF' FILE FLAG.
@@ -523,15 +615,19 @@
               SUBTRACT 1 FROM LST-CURRENT-PAGE-NUMBER
 
       *       AND NOW READ THE EMPLOYEE MASTER FILE BACKWARDS!!!
-              PERFORM 1400-READ-BACKWARDS-BY-ID
+              PERFORM 1400-READ-BACKWARDS-BY-KEY
            ELSE
               MOVE 'No Previous Records To Display!' TO WS-MESSAGE
               MOVE DFHPROTN TO HLPPF7A
            END-IF.
 
-       2400-NEXT-BY-EMPLOYEE-ID.
+       2400-NEXT-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2400-NEXT-BY-EMPLOYEE-ID' TO WS-DEBUG-AID.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -543,8 +639,14 @@
 
            IF NOT LST-END-OF-FILE THEN
               ADD 1 TO LST-CURRENT-PAGE-NUMBER
-              ADD 1 TO EMP-EMPLOYEE-ID
-              PERFORM 1300-READ-EMPLOYEES-BY-ID
+
+              IF LST-SEL-BY-EMPLOYEE-ID THEN
+                 ADD 1 TO EMP-EMPLOYEE-ID
+              ELSE
+                 MOVE HIGH-VALUES TO EMP-PRIMARY-NAME(31:8)
+              END-IF
+
+              PERFORM 1300-READ-EMPLOYEES-BY-KEY
            ELSE
               MOVE 'No More Records To Display!' TO WS-MESSAGE
               MOVE DFHPROTN TO HLPPF8A
@@ -597,7 +699,7 @@
       *    FIRST STEP IN THE CONVERSATION, WE SET A DEFAULT SELECT 
       *    ORDER AND ALSO DISPLAY A MESSAGE TO THE USER.
            IF LST-NO-FILTERS-SET THEN
-              MOVE '1' TO KEYSELO
+              MOVE '1' TO KEYSELO LST-SELECT-KEY-TYPE
               MOVE WS-FILTERS-MSG-SF TO MESSFLO
               MOVE DFHTURQ TO MESSFLC
            END-IF.
@@ -672,7 +774,6 @@
 
            IF KEYSELI IS NOT EQUAL TO LOW-VALUE THEN
               MOVE KEYSELI TO LST-SELECT-KEY-TYPE
-              SET LST-FILTERS-SET TO TRUE
            END-IF.
 
            IF MATCHI IS NOT EQUAL TO LOW-VALUE THEN
@@ -786,7 +887,7 @@
 
       *    IF 'KEY' WAS OMITTED BUT WE GOT A 'VALUE', THEN WE GUESS THE 
       *    KEY FROM THE VALUE!
-           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES AND 
+           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES AND
               LST-SELECT-KEY-VALUE IS NOT EQUAL TO SPACES THEN
               IF FUNCTION TRIM(LST-SELECT-KEY-VALUE) IS NUMERIC THEN
                  MOVE '1' TO LST-SELECT-KEY-TYPE
