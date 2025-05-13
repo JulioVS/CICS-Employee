@@ -45,6 +45,17 @@
           05 WS-FILTERS-MSG-EF         PIC X(79)
                                                  VALUE
                 'Edit Filter Criteria And Press ENTER To Continue.'.
+          05 WS-FILTERS-BANNER.
+             10 WS-FIL-KEY-TYPE        PIC X(3)  VALUE SPACES.
+             10 WS-FIL-KEY-VALUE       PIC X(10) VALUE SPACES.
+             10 FILLER                 PIC X(4)  VALUE ' IN:'.
+             10 WS-FIL-INCLUDE         PIC X(10) VALUE SPACES.
+             10 FILLER                 PIC X(4)  VALUE ' EX:'.
+             10 WS-FIL-EXCLUDE         PIC X(10) VALUE SPACES.
+             10 FILLER                 PIC X(4)  VALUE ' AF:'.
+             10 WS-FIL-AFTER           PIC X(8)  VALUE SPACES.
+             10 FILLER                 PIC X(4)  VALUE ' BF:'.
+             10 WS-FIL-BEFORE          PIC X(8)  VALUE SPACES.
       *
        01 WS-FILTER-FLAGS.
           03 WS-FILTERS-CHECK          PIC X(1)  VALUE SPACES.
@@ -1227,54 +1238,39 @@
            END-IF.
 
       *    OTHERWISE, WE DISPLAY FEEBACK ABOUT FILTERS SET BY THE USER.
+           INITIALIZE WS-FILTERS-BANNER.
+
            IF LST-SEL-BY-EMPLOYEE-ID THEN
-              STRING 'Employee ID Contains "'
-                     FUNCTION TRIM(LST-SELECT-KEY-VALUE)
-                     '"'
-                 DELIMITED BY SIZE INTO FLTRSO
-              END-STRING
-              EXIT PARAGRAPH
+              MOVE 'ID:' TO WS-FIL-KEY-TYPE 
+              MOVE FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+                 TO WS-FIL-KEY-VALUE
            END-IF.
 
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
-              STRING 'Employee Name Contains "'
-                     FUNCTION TRIM(LST-SELECT-KEY-VALUE)
-                     '"'
-                 DELIMITED BY SIZE INTO FLTRSO
-              END-STRING
-              EXIT
+              MOVE 'NM:' TO WS-FIL-KEY-TYPE 
+              MOVE FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+                 TO WS-FIL-KEY-VALUE
            END-IF.
 
            IF LST-INCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN
-              STRING 'Include Departments: '
-                     FUNCTION TRIM(LST-INCLUDE-DEPT-FILTERS)
-                 DELIMITED BY SIZE INTO FLTRSO
-              END-STRING
-              EXIT PARAGRAPH
+              MOVE FUNCTION TRIM(LST-INCLUDE-DEPT-FILTERS)
+                 TO WS-FIL-INCLUDE
            END-IF.
 
            IF LST-EXCLUDE-DEPT-FILTERS IS NOT EQUAL TO SPACES THEN
-              STRING 'Exclude Departments: '
-                     FUNCTION TRIM(LST-EXCLUDE-DEPT-FILTERS)
-                 DELIMITED BY SIZE INTO FLTRSO
-              END-STRING
-              EXIT PARAGRAPH
+              MOVE FUNCTION TRIM(LST-EXCLUDE-DEPT-FILTERS)
+                 TO WS-FIL-EXCLUDE
            END-IF.
 
            IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES THEN
-              STRING 'Employment Date After: '
-                     FUNCTION TRIM(LST-EMPL-DATE-AFTER)
-                 DELIMITED BY SIZE INTO FLTRSO
-              END-STRING
-              EXIT PARAGRAPH
+              MOVE FUNCTION TRIM(LST-EMPL-DATE-AFTER) TO WS-FIL-AFTER 
            END-IF.
 
            IF LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
-              STRING 'Employement Date Before: '
-                     FUNCTION TRIM(LST-EMPL-DATE-BEFORE)
-                 DELIMITED BY SIZE INTO FLTRSO
-              END-STRING
+              MOVE FUNCTION TRIM(LST-EMPL-DATE-BEFORE) TO WS-FIL-BEFORE  
            END-IF.
+
+           MOVE WS-FILTERS-BANNER TO FLTRSO.
 
        9200-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<
