@@ -96,7 +96,7 @@
            PERFORM 9300-DEBUG-AID.
 
       *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
-           SET I-AM-DEBUGGING TO TRUE
+      *    SET I-AM-DEBUGGING TO TRUE
 
            IF I-AM-DEBUGGING THEN 
               MOVE 3 TO WS-LINES-PER-PAGE
@@ -181,6 +181,7 @@
       *    SET INITIAL VALUES FOR LIST CONTAINER.
            MOVE APP-LIST-PROGRAM-NAME TO LST-PROGRAM-NAME.
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
+           MOVE '1' TO LST-SELECT-KEY-TYPE.
 
        1200-GET-INITIAL-FILTERS.
       *    >>> DEBUGGING ONLY <<<
@@ -404,6 +405,24 @@
 
            PERFORM 1310-START-BROWSING.
 
+      *    <<< PATCH FOR BACKWARDS BROWSING BY NAME CASE >>>
+      *
+      *    A CRUDE DUMMY READ BECAUSE I COULD NOT SUBTRACT THE PRIMARY
+      *    NAME ALT-KEY FOR 'PAGE DOWN'. SO, THE START BROWSE WILL GET
+      *    EQUALITY AND THIS DUMMY READ WILL GET THE ALREADY DISPLAYED
+      *    TOP-OF-CURRENT-PAGE PRIMARY NAME, WHICH WE WILL IGNORE AND
+      *    THEN LET THE BACKWARDS BROWSING LOOP START PROPER TO GET THE
+      *    PREVIOUS 16 RECORDS.
+      *
+           IF LST-SEL-BY-EMPLOYEE-NAME THEN 
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   END-EXEC           
+           END-IF.
+      *    <<< ----------------------------------------- >>>
+
            SET LST-RECORD-INDEX TO WS-LINES-PER-PAGE.
            PERFORM 1410-READ-PREV-RECORD
               UNTIL LST-RECORD-INDEX IS LESS THAN 1
@@ -592,7 +611,23 @@
                  IF LST-SEL-BY-EMPLOYEE-ID THEN
                     SUBTRACT 1 FROM EMP-EMPLOYEE-ID
                  ELSE
-                    MOVE LOW-VALUES TO EMP-PRIMARY-NAME(31:8)
+      *             A PROBLEM:
+      *
+      *             THE STRING KEY 'SUBTRACTING' LOGIC (ADDING A 
+      *             LOW-VALUE TAIL) JUST-WON'T-FUCKNG-WORK!
+      *
+      *             NO. MATTER. WHAT. I. DO.
+      *
+      *             THEREFORE, I GIVE UP ON IT AND I WILL JUST ADD A
+      *             DUMMY RAW 'CICS READPREV' COMMAND TO RE-READ AND 
+      *             DISCARD THE CURRENT TOP OF PAGE PRIMARY NAME KEY 
+      *             AND THEN TRIGGER THE LOOP PROPER TO READ THE 
+      *             PREVIOUS 16 RECORDS!
+      *          
+      *             SO, NOTHING TO DO HERE THEN.
+      *
+      *             MOVE LOW-VALUES TO EMP-PRIMARY-NAME(38:)
+                    CONTINUE 
                  END-IF
               ELSE
       *          >>> DEBUGGING ONLY <<<
@@ -643,7 +678,7 @@
               IF LST-SEL-BY-EMPLOYEE-ID THEN
                  ADD 1 TO EMP-EMPLOYEE-ID
               ELSE
-                 MOVE HIGH-VALUES TO EMP-PRIMARY-NAME(31:8)
+                 MOVE HIGH-VALUES TO EMP-PRIMARY-NAME(38:)
               END-IF
 
               PERFORM 1300-READ-EMPLOYEES-BY-KEY
@@ -699,7 +734,7 @@
       *    FIRST STEP IN THE CONVERSATION, WE SET A DEFAULT SELECT 
       *    ORDER AND ALSO DISPLAY A MESSAGE TO THE USER.
            IF LST-NO-FILTERS-SET THEN
-              MOVE '1' TO KEYSELO LST-SELECT-KEY-TYPE
+              MOVE LST-SELECT-KEY-TYPE TO KEYSELO
               MOVE WS-FILTERS-MSG-SF TO MESSFLO
               MOVE DFHTURQ TO MESSFLC
            END-IF.
