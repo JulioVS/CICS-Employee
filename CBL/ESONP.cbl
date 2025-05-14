@@ -13,12 +13,14 @@
       *      - REGISTERED USERS.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
+      *      - IBM'S BMS SUPPORT.
       ******************************************************************
        COPY ECONST.
        COPY ESONMAP.
        COPY EREGUSR.
        COPY EMONCTR.
        COPY DFHAID.
+       COPY DFHBMSCA.
       ******************************************************************
       *   DEFINE MY SESSION STATE DATA FOR PASSING INTO COMM-AREA.
       ******************************************************************
@@ -37,9 +39,26 @@
           05 WS-LOGIN-OUTCOME     PIC X(1)  VALUE SPACE.
              88 WS-LOGIN-SUCCESS            VALUE 'Y'.
       *
-       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'Y'.
+       01 WS-DEBUG-AID            PIC X(45) VALUE SPACES.
+      *
+       01 WS-DEBUG-MESSAGE.
+          05 FILLER               PIC X(5)  VALUE '<DBG:'.
+          05 WS-DEBUG-TEXT        PIC X(30) VALUE SPACES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<MSG:'.
+          05 WS-MESSAGE           PIC X(9)  VALUE SPACES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP     PIC 9(8)  VALUE ZEROES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2    PIC 9(8)  VALUE ZEROES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+      *
+       01 WS-DEBUG-MODE           PIC X(1)  VALUE SPACES.
           88 I-AM-DEBUGGING                 VALUE 'Y'.
-          88 NOT-DEBUGGING                  VALUE 'N'.
+          88 NOT-DEBUGGING                  VALUE SPACES.
+
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
       ******************************************************************
@@ -50,6 +69,15 @@
       *-----------------------------------------------------------------
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
+           INITIALIZE EIBRESP EIBRESP2.
+           PERFORM 9300-DEBUG-AID.
+
+      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
+           SET I-AM-DEBUGGING TO TRUE
+      *    >>> -------------- <<<
 
            IF EIBCALEN IS EQUAL TO ZERO THEN
               PERFORM 1000-FIRST-INTERACTION
@@ -62,6 +90,11 @@
       *-----------------------------------------------------------------
 
        1000-FIRST-INTERACTION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1000-FIRST-INTERACTION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    THIS IS THE START OF THE (PSEUDO) CONVERSATION,
       *    MEANING THE FIRST INTERACTION OF THE PROCESS,
       *    HENCE THE EMPTY COMM-AREA.-
@@ -69,6 +102,11 @@
            PERFORM 9200-SEND-MAP-AND-RETURN.
 
        1100-INITIALIZE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1100-INITIALIZE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    INITIALIZE SESSION STATE, MAP OUPUT, WORK VARS AND CONTAINER
            INITIALIZE WS-SESSION-STATE.
            INITIALIZE WS-WORKING-VARS.
@@ -84,6 +122,11 @@
       *-----------------------------------------------------------------
 
        2000-PROCESS-USER-INPUT.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2000-PROCESS-USER-INPUT' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    THIS IS THE CONTINUATION OF THE CONVERSATION,
       *    MEANING THE SECOND INTERACTION OF THE PROCESS,
       *    HENCE THE COMM-AREA IS NOT EMPTY.
@@ -104,7 +147,14 @@
            WHEN DFHPF12
                 PERFORM 2100-CANCEL-SIGN-ON
            WHEN DFHENTER
-                PERFORM 3000-SIGN-ON-USER
+                IF USERIDI IS EQUAL TO LOW-VALUE OR
+                   USERIDI IS EQUAL TO SPACES OR
+                   PASSWDI IS EQUAL TO LOW-VALUE OR
+                   PASSWDI IS EQUAL TO SPACES THEN
+                   MOVE "Invalid Credentials!" TO MESSO
+                ELSE
+                   PERFORM 3000-SIGN-ON-USER
+                END-IF
            WHEN OTHER
                 MOVE "Invalid Key!" TO MESSO
            END-EVALUATE.
@@ -112,6 +162,11 @@
            PERFORM 9200-SEND-MAP-AND-RETURN.
 
        2100-CANCEL-SIGN-ON.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2100-CANCEL-SIGN-ON' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    CLEAR USER SCREEN AND END CONVERSATION
            EXEC CICS SEND CONTROL
                 ERASE
@@ -121,6 +176,11 @@
                 END-EXEC.
 
        3000-SIGN-ON-USER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3000-SIGN-ON-USER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            PERFORM 3100-UPDATE-STATE.
            PERFORM 3200-LOOKUP-USER-ID.
 
@@ -137,6 +197,11 @@
            END-IF.
 
        3100-UPDATE-STATE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3100-UPDATE-STATE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    IF NEW DATA WAS RECEIVED, UPDATE STATE
            IF USERIDI IS NOT EQUAL TO LOW-VALUE THEN
               MOVE USERIDI TO WS-USER-ID
@@ -146,6 +211,11 @@
            END-IF.
 
        3200-LOOKUP-USER-ID.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3200-LOOKUP-USER-ID' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    LOOKUP THE USER ID IN VSAM FILE
            EXEC CICS READ
                 FILE(APP-REG-USER-FILE-NAME)
@@ -165,12 +235,22 @@
            END-EVALUATE.
 
        3300-CHECK-USER-STATUS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3300-CHECK-USER-STATUS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    CALL ACTIVITY MONITOR PROGRAM WITH "SIGN-ON" ACTION.
            SET MON-AC-SIGN-ON TO TRUE.
            PERFORM 3310-CALL-ACTIVITY-MONITOR.
            PERFORM 3320-EVALUATE-RESPONSE.
 
        3310-CALL-ACTIVITY-MONITOR.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3310-CALL-ACTIVITY-MONITOR' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
            MOVE APP-SIGNON-PROGRAM-NAME TO MON-LINKING-PROGRAM.
            MOVE WS-USER-ID TO MON-USER-ID.
@@ -193,6 +273,11 @@
            END-EVALUATE.
 
        3315-PUT-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3315-PUT-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            EXEC CICS PUT
                 CONTAINER(APP-ACTMON-CONTAINER-NAME)
                 CHANNEL(APP-ACTMON-CHANNEL-NAME)
@@ -209,6 +294,11 @@
            END-EVALUATE.
 
        3320-EVALUATE-RESPONSE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3320-EVALUATE-RESPONSE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    GET THE RESPONSE FROM THE ACTIVITY MONITOR PROGRAM
            EXEC CICS GET
                 CONTAINER(APP-ACTMON-CONTAINER-NAME)
@@ -229,10 +319,6 @@
       *    RELAY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
            MOVE MON-MESSAGE TO MESSO.
 
-      *    >>> DEBUGGING ONLY <<<
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-
       *    SEE IF IT RESULTED IN SUCCESS, FAIL, NEUTRAL OR ERROR.
            EVALUATE TRUE
            WHEN MON-PROCESSING-ERROR
@@ -251,6 +337,11 @@
            END-EVALUATE.
 
        3400-CHECK-USER-CREDENTIALS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3400-CHECK-USER-CREDENTIALS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-DATE.
 
       *    CHECK IF THE USER ID AND PASSWORD MATCH.
@@ -274,6 +365,11 @@
            END-IF.
 
        3500-NOTIFY-ACTIVITY-MONITOR.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3500-NOTIFY-ACTIVITY-MONITOR' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    NOTIFY ACTIVITY MONITOR OF A SUCCESSFUL SIGN-ON!
       *    (ONE-WAY OPERATION, NO RESPONSE EXPECTED)
            SET MON-AC-NOTIFY TO TRUE.
@@ -284,6 +380,11 @@
       *-----------------------------------------------------------------
 
        9100-TRANSFER-TO-LANDING-PAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9100-TRANSFER-TO-LANDING-PAGE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    PUT CONTAINER AND TRANSFER CONTROL TO INITIAL PROGRAM
       *    OF THE EMPLOYEE APP!
            PERFORM 3315-PUT-CONTAINER.
@@ -304,6 +405,25 @@
            END-EVALUATE.
 
        9200-SEND-MAP-AND-RETURN.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9200-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    CHANGE COLOR OF MESSAGE BASED ON TYPE/CONTENT.
+           MOVE DFHTURQ TO MESSC.
+
+           EVALUATE TRUE
+           WHEN MESSO(1:5) IS EQUAL TO 'Error'
+           WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
+           WHEN MESSO(6:3) IS EQUAL TO 'Not'
+           WHEN MESSO(9:3) IS EQUAL TO 'Not'
+           WHEN MESSO(9:8) IS EQUAL TO 'Inactive'
+                MOVE DFHRED TO MESSC
+           WHEN MESSO(1:7) IS EQUAL TO 'Unknown'
+                MOVE DFHYELLO TO MESSC
+           END-EVALUATE
+
       *    PRESENT INITIAL SIGN-ON SCREEN TO THE USER.
            EXEC CICS SEND
                 MAP(APP-SIGNON-MAP-NAME)
@@ -319,15 +439,36 @@
                 TRANSID(EIBTRNID)
                 END-EXEC.
 
+      *9300-DEBUG-AID.
+      **    >>> DEBUGGING ONLY <<<
+      *    IF I-AM-DEBUGGING THEN
+      *       EXEC CICS SEND TEXT
+      *            FROM (ACTIVITY-MONITOR-CONTAINER)
+      *            END-EXEC
+      *       EXEC CICS RECEIVE
+      *            LENGTH(LENGTH OF EIBAID)
+      *            END-EXEC
+      *       MOVE MON-MESSAGE(32:48) TO MESSO
+      *    END-IF.
+      **    >>> -------------- <<<
+
        9300-DEBUG-AID.
       *    >>> DEBUGGING ONLY <<<
            IF I-AM-DEBUGGING THEN
+              INITIALIZE WS-DEBUG-MESSAGE
+
+              MOVE WS-DEBUG-AID TO WS-DEBUG-TEXT
+              MOVE MESSO TO WS-MESSAGE
+              MOVE EIBRESP TO WS-DEBUG-EIBRESP
+              MOVE EIBRESP2 TO WS-DEBUG-EIBRESP2
+
               EXEC CICS SEND TEXT
-                   FROM (ACTIVITY-MONITOR-CONTAINER)
+                   FROM (WS-DEBUG-MESSAGE)
                    END-EXEC
               EXEC CICS RECEIVE
                    LENGTH(LENGTH OF EIBAID)
                    END-EXEC
-              MOVE MON-MESSAGE(32:48) TO MESSO
+
+              INITIALIZE EIBRESP EIBRESP2
            END-IF.
       *    >>> -------------- <<<

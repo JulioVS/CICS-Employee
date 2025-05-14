@@ -63,14 +63,36 @@
       *
           05 WS-ELAPSED-MINUTES        PIC S9(4).
       *
-       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'Y'.
+       01 WS-DEBUG-AID                 PIC X(45) VALUE SPACES.
+      *
+       01 WS-DEBUG-MESSAGE.
+          05 FILLER                    PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT             PIC X(45) VALUE SPACES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP          PIC 9(8)  VALUE ZEROES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
+          05 FILLER                    PIC X(1)  VALUE '>'.
+      *
+       01 WS-DEBUG-MODE                PIC X(1)  VALUE SPACES.
           88 I-AM-DEBUGGING                      VALUE 'Y'.
-          88 NOT-DEBUGGING                       VALUE 'N'.
+          88 NOT-DEBUGGING                       VALUE SPACES.
                 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
        MAIN-LOGIC SECTION.
       *-----------------------------------------------------------------
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
+           INITIALIZE EIBRESP EIBRESP2.
+           PERFORM 9300-DEBUG-AID.
+
+      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
+           SET I-AM-DEBUGGING TO TRUE
+      *    >>> -------------- <<<
 
            PERFORM 1000-INITIAL-SETUP.
            PERFORM 2000-PROCESS-REQUEST.
@@ -81,6 +103,11 @@
       *-----------------------------------------------------------------
 
        1000-INITIAL-SETUP.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1000-INITIAL-SETUP' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            INITIALIZE WS-WORKING-VARS.
 
            PERFORM 1100-GET-DATA-FROM-CALLER.
@@ -88,6 +115,11 @@
            PERFORM 1300-GET-USER-ACTIVITY-QUEUE.
 
        1100-GET-DATA-FROM-CALLER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1100-GET-DATA-FROM-CALLER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    GET CONTAINER SENT FROM THE CALLING PROGRAM.
            EXEC CICS GET
                 CONTAINER(APP-ACTMON-CONTAINER-NAME)
@@ -113,6 +145,11 @@
            INITIALIZE MON-RESPONSE.
 
        1200-GET-SIGN-ON-RULES.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1200-GET-SIGN-ON-RULES' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    GET SIGN-ON RULES FROM TEMPORARY QUEUE, IF AVAILABLE.
       *    IF NOT, GET THEM FROM THE VSAM FILE.
            MOVE APP-SIGNON-RULES-ITEM-NUM TO WS-ITEM-NUMBER.
@@ -138,6 +175,11 @@
            END-EVALUATE.
 
        1210-LOAD-RULES-FROM-FILE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1210-LOAD-RULES-FROM-FILE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    LOAD SIGN-ON RULES FROM VSAM [RRDS] FILE.
       *      - JUST A SINGLE RECORD IN RELATIVE RECORD NUMBER 1.
            EXEC CICS READ
@@ -158,6 +200,11 @@
            END-EVALUATE.
 
        1220-WRITE-RULES-TO-QUEUE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1220-WRITE-RULES-TO-QUEUE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    SET UP SIGN-ON RULES QUEUE TO PROVIDE IN-MEMORY ACCESS.
            MOVE APP-SIGNON-RULES-ITEM-NUM TO WS-ITEM-NUMBER.
 
@@ -179,6 +226,11 @@
            END-EVALUATE.
 
        1300-GET-USER-ACTIVITY-QUEUE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1300-GET-USER-ACTIVITY-QUEUE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    ACTIVITY QUEUE NAME HAS A FIXED PREFIX AND A VARIABLE
       *    'USER ID' SUFFIX.
            MOVE APP-ACTMON-QUEUE-PREFIX TO WS-UA-QNAME-PREFIX.
@@ -206,6 +258,11 @@
            END-EVALUATE.
 
        1310-NO-USER-ACTIVITY-QUEUE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1310-NO-USER-ACTIVITY-QUEUE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            IF MON-LINKING-PROGRAM IS EQUAL TO APP-SIGNON-PROGRAM-NAME
       *       VALID SCENARIO - FIRST INTERACTION SINCE APP STARTUP
       *                        OR PREVIOUS SIGN-OFF.
@@ -224,6 +281,11 @@
            END-IF.
 
        1320-INIT-USER-ACTIVITY-QUEUE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1320-INIT-USER-ACTIVITY-QUEUE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            INITIALIZE USER-ACTIVITY-RECORD.
 
       *    SET THE USER ACTIVITY QUEUE TO INITIAL VALUES.
@@ -260,6 +322,11 @@
       *-----------------------------------------------------------------
 
        2000-PROCESS-REQUEST.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2000-PROCESS-REQUEST' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            EVALUATE TRUE
            WHEN MON-AC-SIGN-OFF
       *         NOTIFICATION OF USER SIGN-OFF - DELETE QUEUE.
@@ -281,6 +348,11 @@
            END-EVALUATE.
 
        2100-SIGN-USER-OFF.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2100-SIGN-USER-OFF' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    DELETE USER ACTIVITY QUEUE.
            EXEC CICS DELETEQ TS
                 QNAME(WS-USER-ACTIVITY-QUEUE-NAME)
@@ -303,6 +375,11 @@
            PERFORM 9100-RETURN-TO-CICS.
 
        2200-SET-SIGNED-ON-STATUS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2200-SET-SIGNED-ON-STATUS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    UPDATE USER ACTIVITY QUEUE WITH SIGN-ON STATUS.
            SET ACT-ST-SIGNED-ON TO TRUE.
            SET MON-ST-SIGNED-ON TO TRUE.
@@ -313,6 +390,11 @@
            PERFORM 9000-RETURN-TO-CALLER.
 
        2250-UPDATE-USER-ACT-QUEUE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2250-UPDATE-USER-ACT-QUEUE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    UPDATE USER ACTIVITY QUEUE.
            MOVE FUNCTION CURRENT-DATE(1:14) TO
               ACT-LAST-ACTIVITY-TIMESTAMP.
@@ -339,6 +421,11 @@
            END-EVALUATE.
 
        2300-SIGN-ON-USER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2300-SIGN-ON-USER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            EVALUATE TRUE
            WHEN ACT-ST-LOCKED-OUT
                 PERFORM 3000-LOCKED-OUT-CASE
@@ -358,6 +445,11 @@
            END-EVALUATE.
 
        3000-LOCKED-OUT-CASE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3000-LOCKED-OUT-CASE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    CHECK IF LOCKOUT TIME HAS EXPIRED.
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-TIMESTAMP.
            MOVE ACT-LAST-ACTIVITY-TIMESTAMP TO WS-LOCKOUT-TIMESTAMP.
@@ -392,6 +484,11 @@
            END-IF.
 
        4000-SIGNED-ON-CASE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4000-SIGNED-ON-CASE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    CHECK IF THE USER SESSION HAS TIMED OUT.
            MOVE FUNCTION CURRENT-DATE(1:14) TO WS-CURRENT-TIMESTAMP.
            MOVE ACT-LAST-ACTIVITY-TIMESTAMP TO WS-ACTIVITY-TIMESTAMP.
@@ -429,6 +526,11 @@
            END-IF.
 
        5000-IN-PROCESS-CASE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5000-IN-PROCESS-CASE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    SET DEFAULT RESPONSE - USER STILL IN 'IN-PROCESS'.
       *    (IT MAY CHANGE IF CONDITIONS BELOWS DICTATE IT)
            SET MON-ST-IN-PROCESS TO TRUE
@@ -484,6 +586,7 @@
 
        9000-RETURN-TO-CALLER.
       *    >>> DEBUGGING ONLY <<<
+           MOVE '9000-RETURN-TO-CALLER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -500,6 +603,11 @@
                 END-EXEC.
 
        9100-RETURN-TO-CICS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9100-RETURN-TO-CICS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    STRANGELY, WE WIPE THE USER'S SCREEN FROM HERE!
       *    (VIA AN INHERITED TERMINAL CONNECTION)
            EXEC CICS SEND CONTROL
@@ -514,6 +622,7 @@
 
        9200-REDIRECT-TO-SIGNON.
       *    >>> DEBUGGING ONLY <<<
+           MOVE '9200-REDIRECT-TO-SIGNON' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -535,17 +644,37 @@
       *    THEN EXIT FROM THIS PROGRAM!
            PERFORM 9100-RETURN-TO-CICS.
 
+      *9300-DEBUG-AID.
+      **    >>> DEBUGGING ONLY <<<
+      *    IF I-AM-DEBUGGING THEN
+      *       STRING '<'
+      *              USER-ACTIVITY-RECORD
+      *              '>'
+      *              '<'
+      *              MON-MESSAGE
+      *              '>' DELIMITED BY SIZE
+      *          INTO WS-MESSAGE 
+      *       END-STRING
+      *       MOVE WS-MESSAGE TO MON-MESSAGE
+      *    END-IF.
+      **    >>> -------------- <<<
+
        9300-DEBUG-AID.
       *    >>> DEBUGGING ONLY <<<
            IF I-AM-DEBUGGING THEN
-              STRING '<'
-                     USER-ACTIVITY-RECORD
-                     '>'
-                     '<'
-                     MON-MESSAGE
-                     '>' DELIMITED BY SIZE
-                 INTO WS-MESSAGE 
-              END-STRING
-              MOVE WS-MESSAGE TO MON-MESSAGE
+              INITIALIZE WS-DEBUG-MESSAGE
+
+              MOVE WS-DEBUG-AID TO WS-DEBUG-TEXT
+              MOVE EIBRESP TO WS-DEBUG-EIBRESP
+              MOVE EIBRESP2 TO WS-DEBUG-EIBRESP2
+
+              EXEC CICS SEND TEXT
+                   FROM (WS-DEBUG-MESSAGE)
+                   END-EXEC
+              EXEC CICS RECEIVE
+                   LENGTH(LENGTH OF EIBAID)
+                   END-EXEC
+
+              INITIALIZE EIBRESP EIBRESP2
            END-IF.
-      *    >>> -------------- <<<
+      *    >>> -------------- <<<      
