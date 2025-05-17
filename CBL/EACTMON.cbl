@@ -275,8 +275,8 @@
       *       AS A FIRST INTERACTION, JUST SET STATUS TO IN-PROCESS,
       *       UPDATE CONTAINER AND RETURN TO CALLER.
               SET MON-ST-IN-PROCESS TO TRUE
-              SET MON-SUCCESSFUL-RUN TO TRUE
-              MOVE 'Sign-On In Process' TO MON-MESSAGE
+              SET MON-NORMAL-END TO TRUE
+              MOVE 'Sign-On In Process!' TO MON-MESSAGE
               PERFORM 9000-RETURN-TO-CALLER
            ELSE
       *       INVALID SCENARIO - REPORT AND LEAVE.
@@ -296,8 +296,6 @@
       *    SET THE USER ACTIVITY QUEUE TO INITIAL VALUES.
            MOVE MON-USER-ID TO ACT-USER-ID.
            MOVE MON-USER-CATEGORY TO ACT-USER-CATEGORY.
-
-           SET ACT-CT-NOT-SET TO TRUE.
            SET ACT-ST-IN-PROCESS TO TRUE.
            
            MOVE 1 TO ACT-ATTEMPT-NUMBER.
@@ -334,6 +332,8 @@
            MOVE '2000-PROCESS-REQUEST' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           INITIALIZE MON-RESPONSE.
 
            EVALUATE TRUE
            WHEN MON-AC-SIGN-OFF
@@ -390,9 +390,12 @@
 
       *    UPDATE USER ACTIVITY QUEUE WITH SIGN-ON STATUS.
            SET ACT-ST-SIGNED-ON TO TRUE.
-           SET MON-ST-SIGNED-ON TO TRUE.
-
            INITIALIZE ACT-ATTEMPT-NUMBER.
+
+           SET MON-ST-SIGNED-ON TO TRUE.
+           SET MON-NORMAL-END TO TRUE.
+           MOVE 'Sign-On Successful!' TO MON-MESSAGE
+
 
            PERFORM 2250-UPDATE-USER-ACT-QUEUE.
            PERFORM 9000-RETURN-TO-CALLER.
@@ -480,15 +483,15 @@
            IF WS-ELAPSED-MINUTES > SIG-LOCKOUT-INTERVAL THEN
               SET ACT-ST-SIGNED-ON TO TRUE
               SET MON-ST-SIGNED-ON TO TRUE
-              SET MON-SUCCESSFUL-RUN TO TRUE
+              SET MON-NORMAL-END TO TRUE
               INITIALIZE ACT-ATTEMPT-NUMBER
 
-              MOVE 'Sign-On Lockout Expired' TO MON-MESSAGE
+              MOVE 'Sign-On Lockout Expired!' TO MON-MESSAGE
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE
               SET MON-ST-LOCKED-OUT TO TRUE
-              SET MON-SUCCESSFUL-RUN TO TRUE
+              SET MON-NORMAL-END TO TRUE
               MOVE 'Sign-On Lockout Still In Effect!' TO MON-MESSAGE
               PERFORM 9000-RETURN-TO-CALLER
            END-IF.
@@ -523,15 +526,15 @@
            IF WS-ELAPSED-MINUTES > SIG-INACTIVITY-INTERVAL THEN
               SET ACT-ST-IN-PROCESS TO TRUE
               SET MON-ST-IN-PROCESS TO TRUE
-              SET MON-SUCCESSFUL-RUN TO TRUE
+              SET MON-NORMAL-END TO TRUE
               MOVE 'Sign-On Has Timed Out!' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE
               SET MON-ST-SIGNED-ON TO TRUE
-              SET MON-SUCCESSFUL-RUN TO TRUE
-              MOVE 'Sign-On Still Active' TO MON-MESSAGE
+              SET MON-NORMAL-END TO TRUE
+              MOVE 'Sign-On Still Active!' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9000-RETURN-TO-CALLER
@@ -569,7 +572,7 @@
            IF WS-ELAPSED-MINUTES > SIG-INACTIVITY-INTERVAL THEN
       *       IF SO, REDIRECT TO SIGN-ON (BACK TO THE START)
               INITIALIZE ACT-ATTEMPT-NUMBER
-              SET MON-SUCCESSFUL-RUN TO TRUE
+              SET MON-NORMAL-END TO TRUE
               MOVE 'Sign-On Attempt Has Timed Out!' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
@@ -580,14 +583,14 @@
       *          IF SO, LOCK THE USER OUT.
                  SET ACT-ST-LOCKED-OUT TO TRUE
                  SET MON-ST-LOCKED-OUT TO TRUE
-                 SET MON-SUCCESSFUL-RUN TO TRUE
+                 SET MON-NORMAL-END TO TRUE
                  INITIALIZE ACT-ATTEMPT-NUMBER
                  MOVE 'User Is Now Locked Out!' TO MON-MESSAGE
               ELSE
       *          IF NOT, JUST INCREMENT ATTEMPT NUMBER.
                  ADD 1 TO ACT-ATTEMPT-NUMBER
-                 SET MON-SUCCESSFUL-RUN TO TRUE
-                 MOVE 'Sign-On Still Active' TO MON-MESSAGE
+                 SET MON-NORMAL-END TO TRUE
+                 MOVE 'Sign-On Still Active!' TO MON-MESSAGE
               END-IF
 
       *       UPDATE QUEUE AND RETURN TO CALLER.

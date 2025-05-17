@@ -10,9 +10,9 @@
           05 REG-DETAILS.        
              10 REG-USER-PASSWORD       PIC X(8).
              10 REG-USER-CATEGORY       PIC X(3).
-                88 REG-CT-ADMINISTRATOR           VALUE 'ADM'.
-                88 REG-CT-MANAGER                 VALUE 'MGR'.
                 88 REG-CT-STANDARD                VALUE 'STD'.
+                88 REG-CT-MANAGER                 VALUE 'MGR'.
+                88 REG-CT-ADMINISTRATOR           VALUE 'ADM'.
                 88 REG-CT-NOT-SET                 VALUE SPACES.
              10 REG-STATUS              PIC X(1).
                 88 REG-ST-ACTIVE                  VALUE 'A'.

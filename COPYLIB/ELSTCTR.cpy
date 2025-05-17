@@ -5,9 +5,9 @@
       ******************************************************************
        01 LIST-EMPLOYEE-CONTAINER.
           05 LST-USER-CATEGORY          PIC X(3).
-             88 LST-CT-ADMINISTRATOR               VALUE 'ADM'.
-             88 LST-CT-MANAGER                     VALUE 'MGR'.
              88 LST-CT-STANDARD                    VALUE 'STD'.
+             88 LST-CT-MANAGER                     VALUE 'MGR'.
+             88 LST-CT-ADMINISTRATOR               VALUE 'ADM'.
              88 LST-CT-NOT-SET                     VALUE SPACES.
           05 LST-PROGRAM-NAME           PIC X(8).
           05 LST-CURRENT-PAGE-NUMBER    PIC 9(6).
