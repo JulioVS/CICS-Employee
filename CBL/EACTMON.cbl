@@ -346,8 +346,8 @@
       *         NOTIFICATION OF SIGN-ON ATTEMPT - CHECKS HIS STATUS.
                 PERFORM 2300-SIGN-ON-USER
            WHEN MON-AC-APP-FUNCTION
-      *         NOT YET IMPLEMENTED - STALL.
-                CONTINUE
+      *         ALREADY SIGNED-ON - CHECK FOR TIMEOUT SCENARIO.
+                PERFORM 4000-SIGNED-ON-CASE
            WHEN MON-AC-NOT-SET
       *         NO SPECIFIED ACTION, NOTHING TO DO.
                 MOVE 'No Action Was Requested!' TO MON-MESSAGE

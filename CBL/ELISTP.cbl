@@ -163,6 +163,13 @@
            PERFORM 1100-INITIALIZE-VARIABLES.
            PERFORM 1150-INITIALIZE-CONTAINER.
            PERFORM 1200-GET-INITIAL-FILTERS.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
+              PERFORM 4000-CHECK-USER-STATUS
+           END-IF.
+      *    >>> --------------------- <<<
+
            PERFORM 1300-READ-EMPLOYEES-BY-KEY.
 
       *    >>> DEBUGGING ONLY <<<
@@ -522,6 +529,12 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+      *    >>> CALL ACTIVITY MONITOR <<<
+           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
+              PERFORM 4000-CHECK-USER-STATUS
+           END-IF.
+      *    >>> --------------------- <<<
+
            EXEC CICS RECEIVE
                 MAP(APP-LIST-MAP-NAME)
                 MAPSET(APP-LIST-MAPSET-NAME)
@@ -538,9 +551,9 @@
            WHEN DFHPF8
                 PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
            WHEN DFHPF10
-                PERFORM 9200-SIGN-USER-OFF
+                PERFORM 2500-SIGN-OFF
            WHEN DFHPF12
-                PERFORM 2500-CANCEL-ACTION
+                PERFORM 2600-CANCEL-ACTION
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
@@ -698,9 +711,23 @@
               MOVE DFHPROTN TO HLPPF8A
            END-IF.
 
-       2500-CANCEL-ACTION.
+       2500-SIGN-OFF.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2500-CANCEL-ACTION' TO WS-DEBUG-AID.
+           MOVE '2500-SIGN-OFF' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
+              SET MON-AC-SIGN-OFF TO TRUE
+              PERFORM 4200-CALL-ACTIVITY-MONITOR
+           END-IF.
+      *    >>> --------------------- <<<
+
+           PERFORM 9200-SIGN-USER-OFF.
+
+       2600-CANCEL-ACTION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2600-CANCEL-ACTION' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1141,6 +1168,98 @@
            MOVE WS-FILTERS-MSG-EF TO MESSFLO.
            MOVE DFHTURQ TO MESSFLC.
 
+
+      *-----------------------------------------------------------------
+       ACTIVITY-MONITOR SECTION.
+      *-----------------------------------------------------------------
+
+       4000-CHECK-USER-STATUS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4000-CHECK-USER-STATUS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    CHECK IF THE USER IS ALREADY SIGNED ON TO THE ACTIVITY
+           PERFORM 4100-GET-MONITOR-CONTAINER.
+           
+      *    IF THE USER IS SIGNED ON, CHECK IF SESSION IS STILL ACTIVE.
+           SET MON-AC-APP-FUNCTION TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+
+
+       4100-GET-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4100-GET-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS GET
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                INTO (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Getting Activity Monitor!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       4200-CALL-ACTIVITY-MONITOR.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4200-CALL-ACTIVITY-MONITOR' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID. 
+      *    >>> -------------- <<<
+
+      *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
+           MOVE APP-LIST-PROGRAM-NAME TO MON-LINKING-PROGRAM.
+           INITIALIZE MON-RESPONSE.
+
+           PERFORM 4300-PUT-MONITOR-CONTAINER.
+
+           EXEC CICS LINK
+                PROGRAM(APP-ACTMON-PROGRAM-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                TRANSID(EIBTRNID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Linking to Activity Monitor!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       4300-PUT-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4300-PUT-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                FROM (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
