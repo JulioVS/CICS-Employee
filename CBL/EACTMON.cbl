@@ -91,7 +91,7 @@
            PERFORM 9300-DEBUG-AID.
 
       *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
-           SET I-AM-DEBUGGING TO TRUE
+      *    SET I-AM-DEBUGGING TO TRUE
       *    >>> -------------- <<<
 
            PERFORM 1000-INITIAL-SETUP.
@@ -108,7 +108,11 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+           INITIALIZE ACTIVITY-MONITOR-CONTAINER.
+           INITIALIZE USER-ACTIVITY-RECORD.
+           INITIALIZE SIGN-ON-RULES-RECORD.
            INITIALIZE WS-WORKING-VARS.
+           INITIALIZE WS-USER-ACTIVITY-QUEUE-NAME.
 
            PERFORM 1100-GET-DATA-FROM-CALLER.
            PERFORM 1200-GET-SIGN-ON-RULES.
@@ -271,6 +275,7 @@
       *       AS A FIRST INTERACTION, JUST SET STATUS TO IN-PROCESS,
       *       UPDATE CONTAINER AND RETURN TO CALLER.
               SET MON-ST-IN-PROCESS TO TRUE
+              SET MON-SUCCESSFUL-RUN TO TRUE
               MOVE 'Sign-On In Process' TO MON-MESSAGE
               PERFORM 9000-RETURN-TO-CALLER
            ELSE
@@ -290,8 +295,11 @@
 
       *    SET THE USER ACTIVITY QUEUE TO INITIAL VALUES.
            MOVE MON-USER-ID TO ACT-USER-ID.
+           MOVE MON-USER-CATEGORY TO ACT-USER-CATEGORY.
+
            SET ACT-CT-NOT-SET TO TRUE.
            SET ACT-ST-IN-PROCESS TO TRUE.
+           
            MOVE 1 TO ACT-ATTEMPT-NUMBER.
            MOVE FUNCTION CURRENT-DATE(1:14) TO
               ACT-LAST-ACTIVITY-TIMESTAMP.
@@ -469,9 +477,10 @@
            END-IF.
 
       *    IF ENOUGH TIME HAS PASSED, UNLOCK THE USER AND UPDATE QUEUE.
-           IF WS-ELAPSED-MINUTES > SR-LOCKOUT-INTERVAL THEN
+           IF WS-ELAPSED-MINUTES > SIG-LOCKOUT-INTERVAL THEN
               SET ACT-ST-SIGNED-ON TO TRUE
               SET MON-ST-SIGNED-ON TO TRUE
+              SET MON-SUCCESSFUL-RUN TO TRUE
               INITIALIZE ACT-ATTEMPT-NUMBER
 
               MOVE 'Sign-On Lockout Expired' TO MON-MESSAGE
@@ -479,6 +488,7 @@
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE
               SET MON-ST-LOCKED-OUT TO TRUE
+              SET MON-SUCCESSFUL-RUN TO TRUE
               MOVE 'Sign-On Lockout Still In Effect!' TO MON-MESSAGE
               PERFORM 9000-RETURN-TO-CALLER
            END-IF.
@@ -510,15 +520,17 @@
            INITIALIZE ACT-ATTEMPT-NUMBER.
 
       *    IF TIMEOUT HAS OCCURRED, REVOKE SIGN-ON AND UPDATE QUEUE.
-           IF WS-ELAPSED-MINUTES > SR-INACTIVITY-INTERVAL THEN
+           IF WS-ELAPSED-MINUTES > SIG-INACTIVITY-INTERVAL THEN
               SET ACT-ST-IN-PROCESS TO TRUE
               SET MON-ST-IN-PROCESS TO TRUE
+              SET MON-SUCCESSFUL-RUN TO TRUE
               MOVE 'Sign-On Has Timed Out!' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE
               SET MON-ST-SIGNED-ON TO TRUE
+              SET MON-SUCCESSFUL-RUN TO TRUE
               MOVE 'Sign-On Still Active' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
@@ -554,24 +566,27 @@
            END-IF.
 
       *    CHECK IF TIMEOUT HAS OCCURRED.
-           IF WS-ELAPSED-MINUTES > SR-INACTIVITY-INTERVAL THEN
+           IF WS-ELAPSED-MINUTES > SIG-INACTIVITY-INTERVAL THEN
       *       IF SO, REDIRECT TO SIGN-ON (BACK TO THE START)
               INITIALIZE ACT-ATTEMPT-NUMBER
+              SET MON-SUCCESSFUL-RUN TO TRUE
               MOVE 'Sign-On Attempt Has Timed Out!' TO MON-MESSAGE
 
               PERFORM 2250-UPDATE-USER-ACT-QUEUE
               PERFORM 9200-REDIRECT-TO-SIGNON
            ELSE
       *       IF NOT, CHECK IF THE USER HAS EXCEEDED MAXIMUM ATTEMPTS.
-              IF ACT-ATTEMPT-NUMBER > SR-MAXIMUM-ATTEMPTS THEN
+              IF ACT-ATTEMPT-NUMBER > SIG-MAXIMUM-ATTEMPTS THEN
       *          IF SO, LOCK THE USER OUT.
                  SET ACT-ST-LOCKED-OUT TO TRUE
                  SET MON-ST-LOCKED-OUT TO TRUE
+                 SET MON-SUCCESSFUL-RUN TO TRUE
                  INITIALIZE ACT-ATTEMPT-NUMBER
                  MOVE 'User Is Now Locked Out!' TO MON-MESSAGE
               ELSE
       *          IF NOT, JUST INCREMENT ATTEMPT NUMBER.
                  ADD 1 TO ACT-ATTEMPT-NUMBER
+                 SET MON-SUCCESSFUL-RUN TO TRUE
                  MOVE 'Sign-On Still Active' TO MON-MESSAGE
               END-IF
 
@@ -643,21 +658,6 @@
 
       *    THEN EXIT FROM THIS PROGRAM!
            PERFORM 9100-RETURN-TO-CICS.
-
-      *9300-DEBUG-AID.
-      **    >>> DEBUGGING ONLY <<<
-      *    IF I-AM-DEBUGGING THEN
-      *       STRING '<'
-      *              USER-ACTIVITY-RECORD
-      *              '>'
-      *              '<'
-      *              MON-MESSAGE
-      *              '>' DELIMITED BY SIZE
-      *          INTO WS-MESSAGE 
-      *       END-STRING
-      *       MOVE WS-MESSAGE TO MON-MESSAGE
-      *    END-IF.
-      **    >>> -------------- <<<
 
        9300-DEBUG-AID.
       *    >>> DEBUGGING ONLY <<<
