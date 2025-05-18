@@ -162,7 +162,6 @@
 
            PERFORM 1100-INITIALIZE-VARIABLES.
            PERFORM 1150-INITIALIZE-CONTAINER.
-           PERFORM 1200-GET-INITIAL-FILTERS.
 
       *    >>> CALL ACTIVITY MONITOR <<<
            IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
@@ -170,6 +169,7 @@
            END-IF.
       *    >>> --------------------- <<<
 
+           PERFORM 1200-GET-INITIAL-FILTERS.
            PERFORM 1300-READ-EMPLOYEES-BY-KEY.
 
       *    >>> DEBUGGING ONLY <<<
@@ -551,7 +551,7 @@
            WHEN DFHPF8
                 PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
            WHEN DFHPF10
-                PERFORM 2500-SIGN-OFF
+                PERFORM 2500-SIGN-USER-OFF
            WHEN DFHPF12
                 PERFORM 2600-CANCEL-ACTION
            WHEN OTHER
@@ -711,9 +711,9 @@
               MOVE DFHPROTN TO HLPPF8A
            END-IF.
 
-       2500-SIGN-OFF.
+       2500-SIGN-USER-OFF.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2500-SIGN-OFF' TO WS-DEBUG-AID.
+           MOVE '2500-SIGN-USER-OFF' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
 
       *    >>> CALL ACTIVITY MONITOR <<<
@@ -723,7 +723,7 @@
            END-IF.
       *    >>> --------------------- <<<
 
-           PERFORM 9200-SIGN-USER-OFF.
+           PERFORM 9200-COLD-RETURN.
 
        2600-CANCEL-ACTION.
       *    >>> DEBUGGING ONLY <<<
@@ -820,11 +820,11 @@
            WHEN DFHPF3
                 MOVE 'Filter Criteria Cancelled' TO WS-MESSAGE
                 SET WS-ACTION-EXIT TO TRUE
-                PERFORM 9200-SIGN-USER-OFF
+                PERFORM 2500-SIGN-USER-OFF
            WHEN DFHPF10
                 MOVE 'Sign Off Requested' TO WS-MESSAGE
                 SET WS-ACTION-SIGN-OFF TO TRUE
-                PERFORM 9200-SIGN-USER-OFF
+                PERFORM 2500-SIGN-USER-OFF
            WHEN DFHPF12
                 MOVE 'Clear Criteria Requested' TO WS-MESSAGE
                 SET WS-ACTION-CLEAR TO TRUE
@@ -1397,15 +1397,16 @@
 
            MOVE WS-FILTERS-BANNER TO FLTRSO.
 
-       9200-SIGN-USER-OFF.
+       9200-COLD-RETURN.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9200-SIGN-USER-OFF' TO WS-DEBUG-AID.
+           MOVE '9200-COLD-RETURN' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    SIGN USER OFF FROM CICS:
+      *    SIGN-OFF OR CANCEL:
       *      - CLEAR TERMINAL SCREEN.
       *      - COLD RETURN TO CICS.
+      *      - END OF CONVERSATION.
 
            EXEC CICS SEND CONTROL
                 ERASE
