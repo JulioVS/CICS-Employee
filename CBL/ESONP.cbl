@@ -99,7 +99,7 @@
       *    MEANING THE FIRST INTERACTION OF THE PROCESS,
       *    HENCE THE EMPTY COMM-AREA.-
            PERFORM 1100-INITIALIZE.
-           PERFORM 9200-SEND-MAP-AND-RETURN.
+           PERFORM 9100-SEND-MAP-AND-RETURN.
 
        1100-INITIALIZE.
       *    >>> DEBUGGING ONLY <<<
@@ -160,7 +160,7 @@
                 MOVE "Invalid Key!" TO MESSO
            END-EVALUATE.
 
-           PERFORM 9200-SEND-MAP-AND-RETURN.
+           PERFORM 9100-SEND-MAP-AND-RETURN.
 
        2100-CANCEL-SIGN-ON.
       *    >>> DEBUGGING ONLY <<<
@@ -194,7 +194,7 @@
 
            IF WS-LOGIN-SUCCESS THEN
               PERFORM 3500-NOTIFY-ACTIVITY-MONITOR
-              PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+              PERFORM 9000-TRANSFER-TO-LANDING-PAGE
            END-IF.
 
        3100-UPDATE-STATE.
@@ -329,10 +329,10 @@
            WHEN MON-PROCESSING-ERROR
            WHEN MON-ST-LOCKED-OUT
       *         ON LOCKOUT OR ERROR, SEND BACK TO THE START
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN MON-ST-SIGNED-ON
       *         ON SUCCESSFUL SIGN-ON, SEND TO INITIAL APP SCREEN
-                PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+                PERFORM 9000-TRANSFER-TO-LANDING-PAGE
            WHEN MON-ST-IN-PROCESS
            WHEN MON-ST-NOT-SET
       *         ON NEUTRAL, CONTINUE TO CHECK USER CREDENTIALS
@@ -384,9 +384,9 @@
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
 
-       9100-TRANSFER-TO-LANDING-PAGE.
+       9000-TRANSFER-TO-LANDING-PAGE.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9100-TRANSFER-TO-LANDING-PAGE' TO WS-DEBUG-AID.
+           MOVE '9000-TRANSFER-TO-LANDING-PAGE' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -395,23 +395,51 @@
            PERFORM 3315-PUT-CONTAINER.
 
       *    'XCTL' CALLS THE PROGRAM BUT DOES *NOT* RETURN AFTERWARDS!
-           EXEC CICS XCTL
-                PROGRAM(APP-LANDING-PROGRAM-NAME)
-                CHANNEL(APP-ACTMON-CHANNEL-NAME)
-                RESP(WS-CICS-RESPONSE)
+      *    EXEC CICS XCTL
+      *         PROGRAM(APP-LANDING-PROGRAM-NAME)
+      *         CHANNEL(APP-ACTMON-CHANNEL-NAME)
+      *         RESP(WS-CICS-RESPONSE)
+      *         END-EXEC.
+
+      *    >>> ------------------------------------------------- <<<
+      *    AGAIN, I COULD *NOT* MAKE PLURALSIGHT'S EXAMPLE WORK!
+      *    SO I AM USING A 'START' CALL INSTEAD OF 'XCTL'!
+      *
+      *    - THE 'XCTL' CHANGED PROGRAMS BUT NOT THE TRANSACTION ID,
+      *      WHICH MADE IT IMPOSSIBLE FOR THE PSEUDO-CONVERSATIONAL 
+      *      PAGINATION TO WORK, SINCE EACH TIME YOU PRESSED A KEY 
+      *      THE LOGIC WOULD BOUNCE BACK TO *THIS* PROGRAM AND NOT 
+      *      THE EMPLOYEES LISTING ONE!
+      *    - CHANGING THE TRANSACTION ID TO 'ELST' AFTERWARDS THROWED 
+      *      AN 'ASRA' ABEND, WHICH I COULD NOT FIGURE OUT HOW TO FIX!
+      *    - THEREFORE THE MOST LOGICAL SOLUTION WAS TO USE A 'START'
+      *      CALL TO THE 'ELST' TRANSACTION PROPER, WHICH WORKED FINE!
+      *    >>> ------------------------------------------------- <<<
+
+      *    INITIATE A NEW LIST EMPLOYEES TRANSACTION!
+           EXEC CICS START
+                TRANSID(APP-LIST-TRANSACTION-ID)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                TERMID(EIBTRMID)
                 END-EXEC.
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
+           WHEN DFHRESP(TERMIDERR)
+                MOVE "Invalid Terminal ID!" TO MESSO
+                PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN OTHER
-                MOVE "Error Linking To Landing Page!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                MOVE "Error Starting New Transaction!" TO MESSO
+                PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       9200-SEND-MAP-AND-RETURN.
+      *    THEN EXIT FROM THIS PROGRAM!
+           PERFORM 9200-RETURN-TO-CICS.
+
+       9100-SEND-MAP-AND-RETURN.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9200-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
+           MOVE '9100-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -442,6 +470,24 @@
            EXEC CICS RETURN
                 COMMAREA(WS-SESSION-STATE)
                 TRANSID(EIBTRNID)
+                END-EXEC.
+
+       9200-RETURN-TO-CICS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9200-RETURN-TO-CICS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    STRANGELY, WE WIPE THE USER'S SCREEN FROM HERE!
+      *    (VIA AN INHERITED TERMINAL CONNECTION)
+           EXEC CICS SEND CONTROL
+                ERASE
+                FREEKB
+                TERMINAL
+                END-EXEC.
+
+      *    RETURN TO CICS - END OF PROCESSING.
+           EXEC CICS RETURN
                 END-EXEC.
 
        9300-DEBUG-AID.

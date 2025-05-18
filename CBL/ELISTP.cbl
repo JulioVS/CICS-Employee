@@ -156,26 +156,19 @@
 
        1000-FIRST-INTERACTION.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (START)' TO WS-DEBUG-AID.
+           MOVE '1000-FIRST-INTERACTION' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
            PERFORM 1100-INITIALIZE-VARIABLES.
-           PERFORM 1150-INITIALIZE-CONTAINER.
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
-              PERFORM 4000-CHECK-USER-STATUS
-           END-IF.
+           PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
+           PERFORM 1150-INITIALIZE-CONTAINER.
            PERFORM 1200-GET-INITIAL-FILTERS.
            PERFORM 1300-READ-EMPLOYEES-BY-KEY.
-
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (END)' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
 
        1100-INITIALIZE-VARIABLES.
       *    >>> DEBUGGING ONLY <<<
@@ -197,6 +190,7 @@
       *    >>> -------------- <<<
 
       *    SET INITIAL VALUES FOR LIST CONTAINER.
+           MOVE MON-USER-CATEGORY TO LST-USER-CATEGORY.
            MOVE APP-LIST-PROGRAM-NAME TO LST-PROGRAM-NAME.
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
            MOVE '1' TO LST-SELECT-KEY-TYPE.
@@ -475,10 +469,6 @@
       *    >>> -------------- <<<
 
            IF LST-SEL-BY-EMPLOYEE-ID THEN 
-      *       >>> DEBUGGING ONLY <<<
-              MOVE EMP-EMPLOYEE-ID TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
               EXEC CICS READPREV
                    FILE(APP-EMP-MASTER-FILE-NAME)
                    RIDFLD(EMP-EMPLOYEE-ID)
@@ -486,10 +476,6 @@
                    RESP(WS-CICS-RESPONSE)
                    END-EXEC
            ELSE
-      *       >>> DEBUGGING ONLY <<<
-              MOVE EMP-PRIMARY-NAME TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
               EXEC CICS READPREV
                    FILE(APP-EMP-MASTER-PATH-NAME)
                    RIDFLD(EMP-PRIMARY-NAME)
@@ -525,14 +511,12 @@
 
        2000-PROCESS-USER-INPUT.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (START)' TO WS-DEBUG-AID.
+           MOVE '2000-PROCESS-USER-INPUT' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
-              PERFORM 4000-CHECK-USER-STATUS
-           END-IF.
+           PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
            EXEC CICS RECEIVE
@@ -557,11 +541,6 @@
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
-
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
 
        2100-SHOW-DETAILS.
       *    >>> DEBUGGING ONLY <<<
@@ -658,6 +637,7 @@
                  MOVE '2300-PREV: EDGE CASE!' TO WS-DEBUG-AID
                  PERFORM 9300-DEBUG-AID
       *          >>> -------------- <<<
+      
       *          UNLESS WE ARE ON AN 'EMPTY DETAIL PAGE' EDGE CASE!
       *          IN ORDER TO GO BACKWARDS, WE JUST SET THE EMPLOYEE ID
       *          TO A FICTIONAL 'MAXIMUM VALUE'.
@@ -715,15 +695,14 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE '2500-SIGN-USER-OFF' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
-              SET MON-AC-SIGN-OFF TO TRUE
-              PERFORM 4200-CALL-ACTIVITY-MONITOR
-           END-IF.
+           SET MON-AC-SIGN-OFF TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
       *    >>> --------------------- <<<
 
-           PERFORM 9200-COLD-RETURN.
+           PERFORM 9200-RETURN-TO-CICS.
 
        2600-CANCEL-ACTION.
       *    >>> DEBUGGING ONLY <<<
@@ -902,7 +881,7 @@
        3200-APPLY-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3200-APPLY-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    FILTER LOGIC.
@@ -953,7 +932,7 @@
        3300-APPLY-KEY-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3300-APPLY-KEY-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    IF 'VALUE' WAS OMITTED, WE IGNORE THE FILTER.
@@ -1004,7 +983,7 @@
        3400-APPLY-DEPT-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3400-APPLY-DEPT-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    IF NO DEPARTMENT FILTERS WERE SET, WE JUST 'OK' IT.
@@ -1077,7 +1056,7 @@
        3500-APPLY-DATE-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3500-APPLY-DATE-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    IF NO DATE FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
@@ -1206,10 +1185,10 @@
                 CONTINUE
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
+      *         PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE 'Error Getting Activity Monitor!' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
+      *         PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        4200-CALL-ACTIVITY-MONITOR.
@@ -1267,6 +1246,7 @@
 
        9000-SEND-MAP-AND-RETURN.
       *    >>> DEBUGGING ONLY <<<
+           MOVE '9000-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1305,6 +1285,11 @@
                 END-EXEC.
 
        9100-POPULATE-MAP.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9100-POPULATE-MAP' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            INITIALIZE ELSTMO.
 
       *    DISPLAY TRANSACTION ID AND PAGE NUMBER.
@@ -1312,7 +1297,7 @@
            MOVE LST-CURRENT-PAGE-NUMBER TO PAGENO.
 
       *    DISPLAY FILTERS LINE.
-           PERFORM 9110-SET-FILTERS-LINE.
+           PERFORM 9150-SET-FILTERS-LINE.
 
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
@@ -1355,7 +1340,12 @@
                    MOVE EMP-DEPARTMENT-ID TO DPTIDO(LINEO-INDEX)
            END-PERFORM.
 
-       9110-SET-FILTERS-LINE.
+       9150-SET-FILTERS-LINE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9150-SET-FILTERS-LINE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    IF NO FILTERS WERE SET, WE JUST DISPLAY A DEFAULT MESSAGE.
            IF LST-NO-FILTERS-SET THEN
               MOVE '(No Filters Set)' TO FLTRSO
@@ -1397,9 +1387,9 @@
 
            MOVE WS-FILTERS-BANNER TO FLTRSO.
 
-       9200-COLD-RETURN.
+       9200-RETURN-TO-CICS.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9200-COLD-RETURN' TO WS-DEBUG-AID.
+           MOVE '9200-RETURN-TO-CICS' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
