@@ -380,6 +380,26 @@
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
 
+      *    DELETE CURRENT CONTAINER.
+           EXEC CICS DELETE
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+                
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'Activity Mon Container Not Found!' TO MON-MESSAGE
+                SET MON-PROCESSING-ERROR TO TRUE
+                PERFORM 9000-RETURN-TO-CALLER
+           WHEN OTHER
+                MOVE 'Activity Mon Container Exception!' TO MON-MESSAGE
+                SET MON-PROCESSING-ERROR TO TRUE
+                PERFORM 9000-RETURN-TO-CALLER
+           END-EVALUATE.
+
            PERFORM 9100-RETURN-TO-CICS.
 
        2200-SET-SIGNED-ON-STATUS.
@@ -628,11 +648,11 @@
 
       *    STRANGELY, WE WIPE THE USER'S SCREEN FROM HERE!
       *    (VIA AN INHERITED TERMINAL CONNECTION)
-           EXEC CICS SEND CONTROL
-                ERASE
-                FREEKB
-                TERMINAL
-                END-EXEC.
+      *    EXEC CICS SEND CONTROL
+      *         ERASE
+      *         FREEKB
+      *         TERMINAL
+      *         END-EXEC.
 
       *    RETURN TO CICS - END OF PROCESSING.
            EXEC CICS RETURN
