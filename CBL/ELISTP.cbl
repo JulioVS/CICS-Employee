@@ -92,9 +92,11 @@
           05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
           05 FILLER                    PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE                PIC X(1)  VALUE SPACES.
+      *   DEBUGGING MODE -> SET TO 'Y' FOR TESTING PURPOSES ONLY!
+      *
+       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'N'.
           88 I-AM-DEBUGGING                      VALUE 'Y'.
-          88 NOT-DEBUGGING                       VALUE SPACES.
+          88 NOT-DEBUGGING                       VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -103,7 +105,6 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           SET I-AM-DEBUGGING TO TRUE.
            PERFORM 9300-DEBUG-AID.
 
            IF I-AM-DEBUGGING THEN 
@@ -562,8 +563,11 @@
                          DELIMITED BY SIZE
                          INTO WS-MESSAGE
                       END-STRING
+                      EXIT
                    END-IF
            END-PERFORM.
+
+           PERFORM 9250-TRANSFER-TO-VIEW-PAGE.
 
        2200-SHOW-FILTERS.
       *    >>> DEBUGGING ONLY <<<
@@ -1402,6 +1406,29 @@
 
            EXEC CICS RETURN
                 END-EXEC.
+
+       9250-TRANSFER-TO-VIEW-PAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9250-TRANSFER-TO-VIEW-PAGE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS START
+                TRANSID(APP-VIEW-TRANSACTION-ID)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                TERMID(EIBTRMID)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(TERMIDERR)
+                MOVE "Invalid Terminal ID!" TO MESSO
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE "Error Starting New Transaction!" TO MESSO
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
 
        9300-DEBUG-AID.
       *    >>> DEBUGGING ONLY <<<

@@ -55,9 +55,11 @@
           05 WS-DEBUG-EIBRESP2    PIC 9(8)  VALUE ZEROES.
           05 FILLER               PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE           PIC X(1)  VALUE SPACES.
+      *   DEBUGGING MODE -> SET TO 'Y' FOR TESTING PURPOSES ONLY!
+      *
+       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'N'.
           88 I-AM-DEBUGGING                 VALUE 'Y'.
-          88 NOT-DEBUGGING                  VALUE SPACES.
+          88 NOT-DEBUGGING                  VALUE 'N'.
 
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
@@ -72,7 +74,6 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           SET I-AM-DEBUGGING TO TRUE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 

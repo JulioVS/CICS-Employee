@@ -40,9 +40,11 @@
           05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE         PIC X(1)  VALUE SPACES.
+      *   DEBUGGING MODE -> SET TO 'Y' FOR TESTING PURPOSES ONLY!
+      *
+       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'N'.
           88 I-AM-DEBUGGING               VALUE 'Y'.
-          88 NOT-DEBUGGING                VALUE SPACES.
+          88 NOT-DEBUGGING                VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -51,9 +53,37 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           SET I-AM-DEBUGGING TO TRUE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           EXEC CICS GET
+                CONTAINER(APP-LIST-CONTAINER-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                INTO (LIST-EMPLOYEE-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+      *         >>> DEBUGGING ONLY <<<
+                MOVE 'MAIN-> NO CONTAINER FOUND!' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                PERFORM 9000-RETURN-TO-CICS
+           WHEN DFHRESP(NORMAL)
+      *         >>> DEBUGGING ONLY <<<
+                MOVE 'MAIN-> ALL GOOD, PROCESS INPUT' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                PERFORM 2000-PROCESS-USER-INPUT
+           WHEN OTHER
+      *         >>> DEBUGGING ONLY <<<
+                MOVE 'MAIN-> GET CONTAINER ERROR!' TO WS-DEBUG-AID
+                PERFORM 9300-DEBUG-AID
+      *         >>> -------------- <<<
+                PERFORM 9000-RETURN-TO-CICS
+           END-EVALUATE.
 
            EXEC CICS SEND
                 MAP(APP-VIEW-MAP-NAME)
@@ -62,13 +92,34 @@
                 ERASE
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-                
+
            EXEC CICS RECEIVE
                 MAP(APP-VIEW-MAP-NAME)
                 MAPSET(APP-VIEW-MAPSET-NAME)
                 INTO (EDETMI)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
+
+           EVALUATE EIBAID
+           WHEN DFHENTER
+                MOVE '2000-> Pressed ENTER' TO WS-DEBUG-AID
+           WHEN DFHPF3
+                MOVE '2000-> Pressed PF3' TO WS-DEBUG-AID
+           WHEN DFHPF7
+                MOVE '2000-> Pressed PF7' TO WS-DEBUG-AID
+           WHEN DFHPF8
+                MOVE '2000-> Pressed PF8' TO WS-DEBUG-AID
+           WHEN DFHPF10
+                MOVE '2000-> Pressed PF10' TO WS-DEBUG-AID
+           WHEN DFHPF12
+                MOVE '2000-> Pressed PF12' TO WS-DEBUG-AID
+           WHEN OTHER
+                MOVE '2000-> Invalid Key!' TO WS-DEBUG-AID
+           END-EVALUATE.
+
+      *    >>> DEBUGGING ONLY <<<
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
            CONTINUE.
 
@@ -93,6 +144,50 @@
            MOVE '2000-PROCESS-USER-INPUT' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           MOVE LST-CURRENT-RECORD(1) TO EMPLOYEE-MASTER-RECORD.
+
+           INITIALIZE EDETMO.
+
+           MOVE EIBTRNID TO TRANIDO.
+           MOVE EMP-EMPLOYEE-ID TO EMPLIDO.
+           MOVE EMP-PRIMARY-NAME TO PRNAMEO.
+           MOVE EMP-HONORIFIC TO HONORO.
+           MOVE EMP-SHORT-NAME TO SHNAMEO.
+           MOVE EMP-FULL-NAME TO FLNAMEO.
+
+           MOVE EMP-JOB-TITLE TO JBTITLO.
+           MOVE EMP-DEPARTMENT-ID TO DEPTIDO.
+           MOVE 'Unknown' TO DEPTNMO.
+
+           MOVE EMP-START-DATE TO STDATEO.
+           MOVE EMP-END-DATE TO ENDATEO.
+           MOVE EMP-APPRAISAL-DATE TO APPRDTO.
+
+           EVALUATE EMP-APPRAISAL-RESULT
+           WHEN 'E'
+                MOVE 'Exceeds Expectations' TO APPRRSO
+           WHEN 'M'
+                MOVE 'Meets Expectations' TO APPRRSO
+           WHEN 'U'
+                MOVE 'Uh Oh!' TO APPRRSO
+           WHEN OTHER
+                MOVE 'Unknown' TO APPRRSO
+           END-EVALUATE.
+
+           MOVE EMP-DELETE-FLAG TO DELFLGO.
+           MOVE EMP-DELETE-DATE TO DELDTO.
+
+           EVALUATE EMP-DELETE-FLAG
+           WHEN 'D'
+                MOVE 'Deleted' TO DELDSCO
+           WHEN 'A'
+                MOVE 'Active' TO DELDSCO
+           WHEN OTHER
+                MOVE 'Unknown' TO DELDSCO
+           END-EVALUATE.
+
+           MOVE 'So far so good!' TO MESSO.
 
            CONTINUE.
 
