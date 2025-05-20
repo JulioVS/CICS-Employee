@@ -1,8 +1,8 @@
        IDENTIFICATION DIVISION.
        PROGRAM-ID. ELISTP.
       ******************************************************************
-      *   CICS PLURALSIGHT 'EMPLOYEE APP'
-      *      - 'LIST EMPLOYEES' PROGRAM
+      *   CICS PLURALSIGHT 'EMPLOYEE APP'.
+      *      - 'LIST EMPLOYEES' PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
@@ -103,11 +103,8 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           INITIALIZE EIBRESP EIBRESP2.
+           SET I-AM-DEBUGGING TO TRUE.
            PERFORM 9300-DEBUG-AID.
-
-      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
-      *    SET I-AM-DEBUGGING TO TRUE
 
            IF I-AM-DEBUGGING THEN 
               MOVE 3 TO WS-LINES-PER-PAGE

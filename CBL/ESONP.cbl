@@ -1,8 +1,8 @@
        IDENTIFICATION DIVISION.
        PROGRAM-ID. ESONP.
       ******************************************************************
-      *   CICS PLURALSIGHT 'EMPLOYEE APP'
-      *      - 'SIGN ON' PROGRAM
+      *   CICS PLURALSIGHT 'EMPLOYEE APP'.
+      *      - 'SIGN ON' PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
@@ -72,11 +72,8 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           INITIALIZE EIBRESP EIBRESP2.
+           SET I-AM-DEBUGGING TO TRUE.
            PERFORM 9300-DEBUG-AID.
-
-      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
-      *    SET I-AM-DEBUGGING TO TRUE
       *    >>> -------------- <<<
 
            IF EIBCALEN IS EQUAL TO ZERO THEN
