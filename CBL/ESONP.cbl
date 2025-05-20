@@ -13,7 +13,7 @@
       *      - REGISTERED USERS.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
-      *      - IBM'S BMS SUPPORT.
+      *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
        COPY ESONMAP.

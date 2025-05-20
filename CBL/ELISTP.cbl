@@ -9,12 +9,12 @@
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
-      *      - LIST EMPLOYEES MAPSET (MODIFIED VERSION WITH ARRAYS)
+      *      - LIST EMPLOYEES MAPSET (MODIFIED VERSION WITH ARRAYS).
       *      - LIST EMPLOYEES CONTAINER.
       *      - EMPLOYEE MASTER RECORD.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
-      *      - IBM'S BMS SUPPORT.
+      *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
        COPY ELSTMAPM.

@@ -1,18 +1,24 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. ETEMPL.
+       PROGRAM-ID. EVIEWP.
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP'
-      *      - 'TEMPLATE' PROGRAM.
+      *      - 'SHOW EMPLOYEE DETAILS' PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
+      *      - EMPLOYEE DETAILS MAPSET.
+      *      - LIST EMPLOYEES CONTAINER.
+      *      - EMPLOYEE MASTER RECORD.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
+       COPY EDETMAP.
+       COPY ELSTCTR.
+       COPY EMPMAST.
        COPY DFHAID.
        COPY DFHBMSCA.
       ******************************************************************
@@ -48,6 +54,21 @@
            SET I-AM-DEBUGGING TO TRUE.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           EXEC CICS SEND
+                MAP(APP-VIEW-MAP-NAME)
+                MAPSET(APP-VIEW-MAPSET-NAME)
+                FROM (EDETMO)
+                ERASE
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+                
+           EXEC CICS RECEIVE
+                MAP(APP-VIEW-MAP-NAME)
+                MAPSET(APP-VIEW-MAPSET-NAME)
+                INTO (EDETMI)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
 
            CONTINUE.
 
