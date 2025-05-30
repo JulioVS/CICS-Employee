@@ -1,15 +1,15 @@
        IDENTIFICATION DIVISION.
        PROGRAM-ID. ELISTP.
       ******************************************************************
-      *   CICS PLURALSIGHT 'EMPLOYEE APP'
-      *      - 'LIST EMPLOYEES' PROGRAM
+      *   CICS PLURALSIGHT 'EMPLOYEE APP'.
+      *      - 'LIST EMPLOYEES' PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
-      *      - LIST EMPLOYEES MAPSET (MODIFIED VERSION WITH ARRAYS)
+      *      - LIST EMPLOYEES MAPSET (MODIFIED VERSION WITH ARRAYS).
       *      - LIST EMPLOYEES CONTAINER.
       *      - EMPLOYEE MASTER RECORD.
       *      - ACTIVITY MONITOR CONTAINER.
@@ -103,12 +103,10 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           INITIALIZE EIBRESP EIBRESP2.
            PERFORM 9300-DEBUG-AID.
 
-      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
       *    SET I-AM-DEBUGGING TO TRUE
-
+      
            IF I-AM-DEBUGGING THEN 
               MOVE 3 TO WS-LINES-PER-PAGE
            END-IF.
@@ -156,7 +154,7 @@
 
        1000-FIRST-INTERACTION.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (START)' TO WS-DEBUG-AID.
+           MOVE '1000-FIRST-INTERACTION' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -171,11 +169,6 @@
 
            PERFORM 1200-GET-INITIAL-FILTERS.
            PERFORM 1300-READ-EMPLOYEES-BY-KEY.
-
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '1000-FIRST-INTERACTION (END)' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
 
        1100-INITIALIZE-VARIABLES.
       *    >>> DEBUGGING ONLY <<<
@@ -475,10 +468,6 @@
       *    >>> -------------- <<<
 
            IF LST-SEL-BY-EMPLOYEE-ID THEN 
-      *       >>> DEBUGGING ONLY <<<
-              MOVE EMP-EMPLOYEE-ID TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
               EXEC CICS READPREV
                    FILE(APP-EMP-MASTER-FILE-NAME)
                    RIDFLD(EMP-EMPLOYEE-ID)
@@ -486,10 +475,6 @@
                    RESP(WS-CICS-RESPONSE)
                    END-EXEC
            ELSE
-      *       >>> DEBUGGING ONLY <<<
-              MOVE EMP-PRIMARY-NAME TO WS-DEBUG-AID
-              PERFORM 9300-DEBUG-AID
-      *       >>> -------------- <<<
               EXEC CICS READPREV
                    FILE(APP-EMP-MASTER-PATH-NAME)
                    RIDFLD(EMP-PRIMARY-NAME)
@@ -525,7 +510,7 @@
 
        2000-PROCESS-USER-INPUT.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (START)' TO WS-DEBUG-AID.
+           MOVE '2000-PROCESS-USER-INPUT' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -557,11 +542,6 @@
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
-
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-PROCESS-USER-INPUT (END)' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
 
        2100-SHOW-DETAILS.
       *    >>> DEBUGGING ONLY <<<
@@ -715,6 +695,7 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE '2500-SIGN-USER-OFF' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
       *    >>> CALL ACTIVITY MONITOR <<<
            IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
@@ -723,7 +704,7 @@
            END-IF.
       *    >>> --------------------- <<<
 
-           PERFORM 9200-COLD-RETURN.
+           PERFORM 9200-RETURN-TO-CICS.
 
        2600-CANCEL-ACTION.
       *    >>> DEBUGGING ONLY <<<
@@ -902,7 +883,7 @@
        3200-APPLY-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3200-APPLY-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    FILTER LOGIC.
@@ -953,7 +934,7 @@
        3300-APPLY-KEY-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3300-APPLY-KEY-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    IF 'VALUE' WAS OMITTED, WE IGNORE THE FILTER.
@@ -1004,7 +985,7 @@
        3400-APPLY-DEPT-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3400-APPLY-DEPT-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    IF NO DEPARTMENT FILTERS WERE SET, WE JUST 'OK' IT.
@@ -1077,7 +1058,7 @@
        3500-APPLY-DATE-FILTERS.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3500-APPLY-DATE-FILTERS' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    IF NO DATE FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
@@ -1267,6 +1248,7 @@
 
        9000-SEND-MAP-AND-RETURN.
       *    >>> DEBUGGING ONLY <<<
+           MOVE '9000-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1301,10 +1283,15 @@
 
            EXEC CICS RETURN
                 CHANNEL(APP-LIST-CHANNEL-NAME)
-                TRANSID(EIBTRNID)
+                TRANSID(APP-LIST-TRANSACTION-ID)
                 END-EXEC.
 
        9100-POPULATE-MAP.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9100-POPULATE-MAP' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
            INITIALIZE ELSTMO.
 
       *    DISPLAY TRANSACTION ID AND PAGE NUMBER.
@@ -1356,6 +1343,11 @@
            END-PERFORM.
 
        9110-SET-FILTERS-LINE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9110-SET-FILTERS-LINE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    IF NO FILTERS WERE SET, WE JUST DISPLAY A DEFAULT MESSAGE.
            IF LST-NO-FILTERS-SET THEN
               MOVE '(No Filters Set)' TO FLTRSO
@@ -1397,9 +1389,9 @@
 
            MOVE WS-FILTERS-BANNER TO FLTRSO.
 
-       9200-COLD-RETURN.
+       9200-RETURN-TO-CICS.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9200-COLD-RETURN' TO WS-DEBUG-AID.
+           MOVE '9200-RETURN-TO-CICS' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 

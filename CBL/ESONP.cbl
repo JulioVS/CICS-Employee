@@ -72,10 +72,7 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           INITIALIZE EIBRESP EIBRESP2.
            PERFORM 9300-DEBUG-AID.
-
-      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
       *    SET I-AM-DEBUGGING TO TRUE
       *    >>> -------------- <<<
 
@@ -235,6 +232,7 @@
                 MOVE "User Not Found!" TO MESSO
            WHEN OTHER
                 MOVE "Error Reading Users File!" TO MESSO
+                PERFORM 9200-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3300-CHECK-USER-STATUS.
@@ -273,8 +271,12 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
+           WHEN DFHRESP(PGMIDERR)
+                MOVE "Activity Monitor Program Not Found!" TO MESSO
+                PERFORM 9200-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE "Error Linking To Activity Monitor!" TO MESSO
+                PERFORM 9200-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3315-PUT-CONTAINER.
@@ -296,6 +298,7 @@
                 CONTINUE
            WHEN OTHER
                 MOVE "Error Writing Activity Monitor!" TO MESSO
+                PERFORM 9200-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3320-EVALUATE-RESPONSE.
@@ -318,7 +321,7 @@
                 CONTINUE
            WHEN OTHER
                 MOVE "Error Reading Activity Monitor!" TO MESSO
-                EXIT
+                PERFORM 9200-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
       *    RELAY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
@@ -339,6 +342,7 @@
                 CONTINUE
            WHEN OTHER
                 MOVE "Unknown Response From Activity Monitor!" TO MESSO
+                PERFORM 9200-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3400-CHECK-USER-CREDENTIALS.
@@ -404,6 +408,9 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
+           WHEN DFHRESP(PGMIDERR)
+                MOVE "Landing Page Program Not Found!" TO MESSO
+                PERFORM 9200-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE "Error Linking To Landing Page!" TO MESSO
                 PERFORM 9200-SEND-MAP-AND-RETURN
@@ -441,7 +448,7 @@
       *    AND ENDING THIS STEP OF THE CONVERSATION.
            EXEC CICS RETURN
                 COMMAREA(WS-SESSION-STATE)
-                TRANSID(EIBTRNID)
+                TRANSID(APP-SIGNON-TRANSACTION-ID)
                 END-EXEC.
 
        9300-DEBUG-AID.

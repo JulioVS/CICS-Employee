@@ -1,8 +1,8 @@
        IDENTIFICATION DIVISION.
        PROGRAM-ID. EACTMON.
       ******************************************************************
-      *   CICS PLURALSIGHT 'EMPLOYEE APP'
-      *      - 'ACTIVITY MONITOR' PROGRAM
+      *   CICS PLURALSIGHT 'EMPLOYEE APP'.
+      *      - 'ACTIVITY MONITOR' PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
@@ -87,10 +87,7 @@
 
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
-           INITIALIZE EIBRESP EIBRESP2.
            PERFORM 9300-DEBUG-AID.
-
-      *    UNCOMMENT THE FOLLOWING LINE FOR DEBUGGING MODE!
       *    SET I-AM-DEBUGGING TO TRUE
       *    >>> -------------- <<<
 
