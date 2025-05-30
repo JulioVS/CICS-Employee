@@ -14,7 +14,7 @@
       *      - EMPLOYEE MASTER RECORD.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
-      *      - IBM'S BMS SUPPORT.
+      *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
        COPY ELSTMAPM.
@@ -92,9 +92,9 @@
           05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
           05 FILLER                    PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE                PIC X(1)  VALUE SPACES.
+       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'N'.
           88 I-AM-DEBUGGING                      VALUE 'Y'.
-          88 NOT-DEBUGGING                       VALUE SPACES.
+          88 NOT-DEBUGGING                       VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -105,8 +105,6 @@
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
 
-      *    SET I-AM-DEBUGGING TO TRUE
-      
            IF I-AM-DEBUGGING THEN 
               MOVE 3 TO WS-LINES-PER-PAGE
            END-IF.
@@ -159,14 +157,12 @@
       *    >>> -------------- <<<
 
            PERFORM 1100-INITIALIZE-VARIABLES.
-           PERFORM 1150-INITIALIZE-CONTAINER.
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
-              PERFORM 4000-CHECK-USER-STATUS
-           END-IF.
+           PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
+           PERFORM 1150-INITIALIZE-CONTAINER.
            PERFORM 1200-GET-INITIAL-FILTERS.
            PERFORM 1300-READ-EMPLOYEES-BY-KEY.
 
@@ -190,6 +186,7 @@
       *    >>> -------------- <<<
 
       *    SET INITIAL VALUES FOR LIST CONTAINER.
+           MOVE MON-USER-CATEGORY TO LST-USER-CATEGORY.
            MOVE APP-LIST-PROGRAM-NAME TO LST-PROGRAM-NAME.
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
            MOVE '1' TO LST-SELECT-KEY-TYPE.
@@ -515,9 +512,7 @@
       *    >>> -------------- <<<
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
-              PERFORM 4000-CHECK-USER-STATUS
-           END-IF.
+           PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
            EXEC CICS RECEIVE
@@ -638,6 +633,7 @@
                  MOVE '2300-PREV: EDGE CASE!' TO WS-DEBUG-AID
                  PERFORM 9300-DEBUG-AID
       *          >>> -------------- <<<
+
       *          UNLESS WE ARE ON AN 'EMPTY DETAIL PAGE' EDGE CASE!
       *          IN ORDER TO GO BACKWARDS, WE JUST SET THE EMPLOYEE ID
       *          TO A FICTIONAL 'MAXIMUM VALUE'.
@@ -698,10 +694,8 @@
       *    >>> -------------- <<<
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS EQUAL TO APP-SIGNON-TRANSACTION-ID THEN
-              SET MON-AC-SIGN-OFF TO TRUE
-              PERFORM 4200-CALL-ACTIVITY-MONITOR
-           END-IF.
+           SET MON-AC-SIGN-OFF TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
       *    >>> --------------------- <<<
 
            PERFORM 9200-RETURN-TO-CICS.
@@ -793,6 +787,10 @@
                 END-EXEC.
 
       *    <<<<<    PROGRAM EXECUTION RESUMES HERE   >>>>>
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
 
            EVALUATE EIBAID
            WHEN DFHENTER
@@ -1215,6 +1213,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Activity Monitor Program Not Found!' TO WS-MESSAGE
            WHEN OTHER
                 MOVE 'Error Linking to Activity Monitor!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN

@@ -1,8 +1,8 @@
        IDENTIFICATION DIVISION.
        PROGRAM-ID. ESONP.
       ******************************************************************
-      *   CICS PLURALSIGHT 'EMPLOYEE APP'
-      *      - 'SIGN ON' PROGRAM
+      *   CICS PLURALSIGHT 'EMPLOYEE APP'.
+      *      - 'SIGN ON' PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
@@ -13,7 +13,7 @@
       *      - REGISTERED USERS.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
-      *      - IBM'S BMS SUPPORT.
+      *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
        COPY ESONMAP.
@@ -55,9 +55,9 @@
           05 WS-DEBUG-EIBRESP2    PIC 9(8)  VALUE ZEROES.
           05 FILLER               PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE           PIC X(1)  VALUE SPACES.
+       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'N'.
           88 I-AM-DEBUGGING                 VALUE 'Y'.
-          88 NOT-DEBUGGING                  VALUE SPACES.
+          88 NOT-DEBUGGING                  VALUE 'N'.
 
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
@@ -73,7 +73,6 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
-      *    SET I-AM-DEBUGGING TO TRUE
       *    >>> -------------- <<<
 
            IF EIBCALEN IS EQUAL TO ZERO THEN
@@ -96,7 +95,7 @@
       *    MEANING THE FIRST INTERACTION OF THE PROCESS,
       *    HENCE THE EMPTY COMM-AREA.-
            PERFORM 1100-INITIALIZE.
-           PERFORM 9200-SEND-MAP-AND-RETURN.
+           PERFORM 9100-SEND-MAP-AND-RETURN.
 
        1100-INITIALIZE.
       *    >>> DEBUGGING ONLY <<<
@@ -157,7 +156,7 @@
                 MOVE "Invalid Key!" TO MESSO
            END-EVALUATE.
 
-           PERFORM 9200-SEND-MAP-AND-RETURN.
+           PERFORM 9100-SEND-MAP-AND-RETURN.
 
        2100-CANCEL-SIGN-ON.
       *    >>> DEBUGGING ONLY <<<
@@ -172,6 +171,10 @@
 
            EXEC CICS RETURN
                 END-EXEC.
+
+      *-----------------------------------------------------------------
+       SIGN-ON SECTION.
+      *-----------------------------------------------------------------
 
        3000-SIGN-ON-USER.
       *    >>> DEBUGGING ONLY <<<
@@ -191,7 +194,7 @@
 
            IF WS-LOGIN-SUCCESS THEN
               PERFORM 3500-NOTIFY-ACTIVITY-MONITOR
-              PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+              PERFORM 9000-TRANSFER-TO-LANDING-PAGE
            END-IF.
 
        3100-UPDATE-STATE.
@@ -232,7 +235,7 @@
                 MOVE "User Not Found!" TO MESSO
            WHEN OTHER
                 MOVE "Error Reading Users File!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3300-CHECK-USER-STATUS.
@@ -273,10 +276,10 @@
                 CONTINUE
            WHEN DFHRESP(PGMIDERR)
                 MOVE "Activity Monitor Program Not Found!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE "Error Linking To Activity Monitor!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3315-PUT-CONTAINER.
@@ -298,7 +301,7 @@
                 CONTINUE
            WHEN OTHER
                 MOVE "Error Writing Activity Monitor!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3320-EVALUATE-RESPONSE.
@@ -321,7 +324,7 @@
                 CONTINUE
            WHEN OTHER
                 MOVE "Error Reading Activity Monitor!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
       *    RELAY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
@@ -332,17 +335,17 @@
            WHEN MON-PROCESSING-ERROR
            WHEN MON-ST-LOCKED-OUT
       *         ON LOCKOUT OR ERROR, SEND BACK TO THE START
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN MON-ST-SIGNED-ON
       *         ON SUCCESSFUL SIGN-ON, SEND TO INITIAL APP SCREEN
-                PERFORM 9100-TRANSFER-TO-LANDING-PAGE
+                PERFORM 9000-TRANSFER-TO-LANDING-PAGE
            WHEN MON-ST-IN-PROCESS
            WHEN MON-ST-NOT-SET
       *         ON NEUTRAL, CONTINUE TO CHECK USER CREDENTIALS
                 CONTINUE
            WHEN OTHER
                 MOVE "Unknown Response From Activity Monitor!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        3400-CHECK-USER-CREDENTIALS.
@@ -388,9 +391,9 @@
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
 
-       9100-TRANSFER-TO-LANDING-PAGE.
+       9000-TRANSFER-TO-LANDING-PAGE.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9100-TRANSFER-TO-LANDING-PAGE' TO WS-DEBUG-AID.
+           MOVE '9000-TRANSFER-TO-LANDING-PAGE' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -410,15 +413,15 @@
                 CONTINUE
            WHEN DFHRESP(PGMIDERR)
                 MOVE "Landing Page Program Not Found!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE "Error Linking To Landing Page!" TO MESSO
-                PERFORM 9200-SEND-MAP-AND-RETURN
+                PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       9200-SEND-MAP-AND-RETURN.
+       9100-SEND-MAP-AND-RETURN.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '9200-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
+           MOVE '9100-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 

@@ -76,9 +76,9 @@
           05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
           05 FILLER                    PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE                PIC X(1)  VALUE SPACES.
+       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'N'.
           88 I-AM-DEBUGGING                      VALUE 'Y'.
-          88 NOT-DEBUGGING                       VALUE SPACES.
+          88 NOT-DEBUGGING                       VALUE 'N'.
                 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -88,7 +88,6 @@
       *    >>> DEBUGGING ONLY <<<
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
-      *    SET I-AM-DEBUGGING TO TRUE
       *    >>> -------------- <<<
 
            PERFORM 1000-INITIAL-SETUP.
@@ -377,6 +376,26 @@
                 PERFORM 9000-RETURN-TO-CALLER
            END-EVALUATE.
 
+      *    DELETE CURRENT CONTAINER.
+           EXEC CICS DELETE
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'Activity Mon Container Not Found!' TO MON-MESSAGE
+                SET MON-PROCESSING-ERROR TO TRUE
+                PERFORM 9000-RETURN-TO-CALLER
+           WHEN OTHER
+                MOVE 'Activity Mon Container Exception!' TO MON-MESSAGE
+                SET MON-PROCESSING-ERROR TO TRUE
+                PERFORM 9000-RETURN-TO-CALLER
+           END-EVALUATE.
+
            PERFORM 9100-RETURN-TO-CICS.
 
        2200-SET-SIGNED-ON-STATUS.
@@ -625,11 +644,11 @@
 
       *    STRANGELY, WE WIPE THE USER'S SCREEN FROM HERE!
       *    (VIA AN INHERITED TERMINAL CONNECTION)
-           EXEC CICS SEND CONTROL
-                ERASE
-                FREEKB
-                TERMINAL
-                END-EXEC.
+      *    EXEC CICS SEND CONTROL
+      *         ERASE
+      *         FREEKB
+      *         TERMINAL
+      *         END-EXEC.
 
       *    RETURN TO CICS - END OF PROCESSING.
            EXEC CICS RETURN
