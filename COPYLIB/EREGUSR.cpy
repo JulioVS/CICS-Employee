@@ -7,7 +7,7 @@
        01 REGISTERED-USER-RECORD.
           05 REG-KEY.
              10 REG-USER-ID             PIC X(8).
-          05 REG-DETAILS.        
+          05 REG-DETAILS.
              10 REG-USER-PASSWORD       PIC X(8).
              10 REG-USER-CATEGORY       PIC X(3).
                 88 REG-CT-STANDARD                VALUE 'STD'.
@@ -18,8 +18,10 @@
                 88 REG-ST-ACTIVE                  VALUE 'A'.
                 88 REG-ST-INACTIVE                VALUE 'I'.
                 88 REG-ST-NOT-SET                 VALUE SPACES.
-             10 REG-LAST-EFFECTIVE-DATE PIC X(14).
-             10 REG-LED REDEFINES REG-LAST-EFFECTIVE-DATE.
+             10 REG-LAST-EFFECTIVE-DATE.
                 15 REG-LED-DATE         PIC X(8).
                 15 REG-LED-TIME         PIC X(6).
-             10 FILLER                  PIC X(66).
+          05 REG-FOREIGN-KEY.
+             10 REG-EMPLOYEE-ID         PIC 9(8).
+          05 REG-AVAILABLE-SPACE.
+             10 FILLER                  PIC X(58).
