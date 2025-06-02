@@ -47,7 +47,7 @@
           05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
           05 FILLER             PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'Y'.
+       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'N'.
           88 I-AM-DEBUGGING               VALUE 'Y'.
           88 NOT-DEBUGGING                VALUE 'N'.
 
@@ -136,11 +136,17 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+      *    >>> DEBUGGING ONLY <<<
+           IF I-AM-DEBUGGING AND EMP-EMPLOYEE-ID > 3 THEN
+              MOVE 99999999 TO EMP-EMPLOYEE-ID
+           END-IF.
+      *    >>> -------------- <<<
+
       *    READ EMPLOYEE MASTER FILE RECORD INTO CONTAINER.
            PERFORM 1310-START-BROWSING.
-           PERFORM 1320-READ-NEXT-RECORD.
 
            IF NOT DET-END-OF-FILE THEN
+              PERFORM 1320-READ-NEXT-RECORD
               PERFORM 1330-END-BROWSING
            END-IF.
 
@@ -428,7 +434,7 @@
            WHEN OTHER
                 MOVE '(Undefined)' TO DELDSCO
            END-EVALUATE
-           
+
            MOVE EMP-DELETE-DATE TO DELDTO.
 
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
@@ -444,6 +450,12 @@
            WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
                 MOVE DFHPINK TO MESSC
            END-EVALUATE
+
+      *    HERE, WE SET THE MODIFIED DATA TAG (MDT) OF ONE THE FIELDS 
+      *    TO 'ON' TO AVOID THE 'AEI9' ABEND THAT HAPPENS DUE TO A 
+      *    'MAPFAIL' CONDITION WHEN WE LATER RECEIVE THE MAP WITH JUST 
+      *    AN AID KEY PRESS AND NO MODIFIED DATA ON IT.
+           MOVE DFHBMFSE TO EMPLIDA. 
 
       *    POPULATE THE NAVIGATION FUNCTION KEY LABELS.
            IF NOT DET-TOP-OF-FILE THEN
