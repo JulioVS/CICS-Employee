@@ -280,6 +280,74 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+           EXEC CICS RECEIVE
+                MAP(APP-VIEW-MAP-NAME)
+                MAPSET(APP-VIEW-MAPSET-NAME)
+                INTO (EDETMI)
+                END-EXEC.
+
+           EVALUATE EIBAID
+           WHEN DFHENTER
+      *         PERFORM 2100-SHOW-DETAILS
+      *    WHEN DFHPF3
+      *         PERFORM 2200-SHOW-FILTERS
+      *    WHEN DFHPF7
+      *         PERFORM 2300-PREV-BY-EMPLOYEE-KEY
+           WHEN DFHPF8
+                PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
+           WHEN DFHPF10
+                PERFORM 2500-SIGN-USER-OFF
+           WHEN DFHPF12
+                PERFORM 2600-CANCEL-ACTION
+           WHEN OTHER
+                MOVE 'Invalid Key!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       2400-NEXT-BY-EMPLOYEE-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE DET-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+
+           IF NOT DET-END-OF-FILE THEN
+              IF DET-SEL-BY-EMPLOYEE-ID THEN
+                 ADD 1 TO EMP-EMPLOYEE-ID
+              ELSE
+                 MOVE HIGH-VALUES TO EMP-PRIMARY-NAME(38:)
+              END-IF
+              PERFORM 1300-READ-EMPLOYEE-BY-KEY
+           ELSE
+              MOVE 'No More Records To Display!' TO WS-MESSAGE
+              MOVE DFHPROTN TO HLPPF8A
+           END-IF.
+
+       2500-SIGN-USER-OFF.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2500-SIGN-USER-OFF' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+      *    SET MON-AC-SIGN-OFF TO TRUE.
+      *    PERFORM 4200-CALL-ACTIVITY-MONITOR.
+      **    >>> --------------------- <<<
+
+           PERFORM 9200-RETURN-TO-CICS.
+
+       2600-CANCEL-ACTION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2600-CANCEL-ACTION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 9200-RETURN-TO-CICS.
+
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
@@ -351,7 +419,16 @@
            MOVE EMP-APPRAISAL-DATE TO APPRDTO.
            MOVE EMP-APPRAISAL-RESULT TO APPRRSO.
            MOVE EMP-DELETE-FLAG TO DELFLGO.
-           MOVE '(Undefined)' TO DELDSCO.
+
+           EVALUATE TRUE
+           WHEN EMP-ACTIVE
+                MOVE 'Active' TO DELDSCO
+           WHEN EMP-DELETED
+                MOVE 'Deleted' TO DELDSCO
+           WHEN OTHER
+                MOVE '(Undefined)' TO DELDSCO
+           END-EVALUATE
+           
            MOVE EMP-DELETE-DATE TO DELDTO.
 
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
@@ -375,6 +452,25 @@
            IF NOT DET-END-OF-FILE THEN
               MOVE WS-PF8-LABEL TO HLPPF8O
            END-IF.
+
+       9200-RETURN-TO-CICS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9200-RETURN-TO-CICS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    SIGN-OFF OR CANCEL:
+      *      - CLEAR TERMINAL SCREEN.
+      *      - COLD RETURN TO CICS.
+      *      - END OF CONVERSATION.
+
+           EXEC CICS SEND CONTROL
+                ERASE
+                FREEKB
+                END-EXEC.
+
+           EXEC CICS RETURN
+                END-EXEC.
 
        9300-DEBUG-AID.
       *    >>> DEBUGGING ONLY <<<

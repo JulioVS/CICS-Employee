@@ -706,7 +706,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           CONTINUE.
+           PERFORM 9200-RETURN-TO-CICS.
 
       *-----------------------------------------------------------------
        FILTERS SECTION.
