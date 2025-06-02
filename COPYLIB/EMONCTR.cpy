@@ -1,6 +1,6 @@
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP' - ACTIVITY MONITOR.
-      *      - RECORD LAYOUT FOR 'EMONCTR' CONTAINER.
+      *      - LAYOUT FOR 'EMONCTR' CONTAINER.
       *      - NON-PERSISTENT (NO ASSOCIATED FILE).
       ******************************************************************
        01 ACTIVITY-MONITOR-CONTAINER.

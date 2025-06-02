@@ -1,6 +1,6 @@
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP ' - EMPLOYEE LIST.
-      *      - RECORD LAYOUT FOR 'ELSTCTR' CONTAINER.
+      *      - LAYOUT FOR 'ELSTCTR' CONTAINER.
       *      - NON-PERSISTENT (NO ASSOCIATED FILE).
       ******************************************************************
        01 LIST-EMPLOYEE-CONTAINER.

@@ -141,7 +141,7 @@
       *         NEXT INTERACTIONS -> CONTAINER FOUND (CONTINUE)
                 PERFORM 2000-PROCESS-USER-INPUT
            WHEN OTHER
-                MOVE 'Error Retrieving Container!' TO WS-MESSAGE
+                MOVE 'Error Retrieving List Container!' TO WS-MESSAGE
            END-EVALUATE.
 
            PERFORM 9000-SEND-MAP-AND-RETURN.
@@ -274,7 +274,7 @@
                    RIDFLD(EMP-PRIMARY-NAME)
                    RESP(WS-CICS-RESPONSE)
                    END-EXEC
-           END-IF
+           END-IF.
 
       *    WILL GIVE A '16' (+20) ERROR RETURN CODE IF NOT DEFINED AS
       *    'BROWSABLE' IN THE CICS FILE DEFINITION ENTRY!
@@ -1270,7 +1270,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'Error Putting Container!' TO WS-MESSAGE
+                MOVE 'Error Putting List Container!' TO WS-MESSAGE
            END-EVALUATE.
 
            EXEC CICS SEND

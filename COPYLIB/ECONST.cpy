@@ -3,7 +3,7 @@
       *      - APPLICATION CONSTANTS FOR 'EMPLOYEE' CICS APP.
       ******************************************************************
        01 APPLICATION-CONSTANTS.
-      *      SIGN-ON PROCESS 
+      *      SIGN-ON PROCESS
           05 APP-SIGNON-TRANSACTION-ID  PIC X(4)  VALUE 'ESON'.
           05 APP-SIGNON-PROGRAM-NAME    PIC X(7)  VALUE 'ESONP'.
           05 APP-SIGNON-MAPSET-NAME     PIC X(7)  VALUE 'ESONMAP'.
@@ -37,8 +37,16 @@
           05 APP-LIST-CONTAINER-NAME    PIC X(16) VALUE 'LSTContainer'.
           05 APP-LIST-CHANNEL-NAME      PIC X(16) VALUE 'DHFTRANSACTION'
            .
-      *     EMPLOYEE MASTER FILE
+      *      EMPLOYEE MASTER FILE
           05 APP-EMP-MASTER-FILE-NAME   PIC X(8)  VALUE 'EMPMAST'.
           05 APP-EMP-MASTER-PATH-NAME   PIC X(8)  VALUE 'EMPNAME'.
-      *     FILTERS 
+      *      FILTERS
           05 APP-FILTERS-MAP-NAME       PIC X(7)  VALUE 'EFILM'.
+      *      VIEW EMPLOYEE DETAILS
+          05 APP-VIEW-TRANSACTION-ID    PIC X(4)  VALUE 'EDET'.
+          05 APP-VIEW-PROGRAM-NAME      PIC X(8)  VALUE 'EVIEWP'.
+          05 APP-VIEW-MAPSET-NAME       PIC X(7)  VALUE 'EDETMAP'.
+          05 APP-VIEW-MAP-NAME          PIC X(7)  VALUE 'EDETM'.
+          05 APP-VIEW-CONTAINER-NAME    PIC X(16) VALUE 'DETContainer'.
+          05 APP-VIEW-CHANNEL-NAME      PIC X(16) VALUE 'DHFTRANSACTION'
+           .
