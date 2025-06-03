@@ -294,6 +294,80 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
+       1400-READ-BACKWARDS-BY-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1400-READ-BACKWARDS-BY-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1400-READ-BACKWARDS-BY-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 1310-START-BROWSING.
+
+      *    <<< PATCH FOR BACKWARDS BROWSING BY NAME CASE >>>
+           IF DET-SEL-BY-EMPLOYEE-NAME THEN
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   END-EXEC
+           END-IF.
+      *    <<< ----------------------------------------- >>>
+
+           IF NOT DET-TOP-OF-FILE THEN
+              PERFORM 1410-READ-PREV-RECORD
+              PERFORM 1330-END-BROWSING
+           END-IF.
+
+       1410-READ-PREV-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1410-READ-PREV-RECORD (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1410-READ-PREV-RECORD (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Reading Employee Master File' TO WS-MESSAGE
+                MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
+      *         PERFORM 3200-APPLY-FILTERS
+      *         IF WS-FILTERS-PASSED THEN
+      *            MOVE EMPLOYEE-MASTER-RECORD TO
+      *               LST-CURRENT-RECORD(LST-RECORD-INDEX)
+      *            SET LST-RECORD-INDEX DOWN BY 1
+      *         END-IF
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Previous Records Found!' TO WS-MESSAGE
+                SET DET-TOP-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'Start of Employee Master File' TO WS-MESSAGE
+                SET DET-TOP-OF-FILE TO TRUE
+           WHEN OTHER
+                MOVE 'Error Reading Previous Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
       *-----------------------------------------------------------------
        VIEWING SECTION.
       *-----------------------------------------------------------------
@@ -312,11 +386,11 @@
 
            EVALUATE EIBAID
            WHEN DFHENTER
-      *         PERFORM 2100-SHOW-DETAILS
-      *    WHEN DFHPF3
-      *         PERFORM 2200-SHOW-FILTERS
-      *    WHEN DFHPF7
-      *         PERFORM 2300-PREV-BY-EMPLOYEE-KEY
+                PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
+           WHEN DFHPF3
+                CONTINUE
+           WHEN DFHPF7
+                PERFORM 2300-PREV-BY-EMPLOYEE-KEY
            WHEN DFHPF8
                 PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
            WHEN DFHPF10
@@ -326,6 +400,33 @@
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
+
+       2300-PREV-BY-EMPLOYEE-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2300-PREV-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2300-PREV-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF NOT DET-TOP-OF-FILE THEN
+              IF DET-SEL-BY-EMPLOYEE-ID THEN
+                 SUBTRACT 1 FROM EMP-EMPLOYEE-ID
+              ELSE
+                 CONTINUE
+              END-IF
+
+      *       RESET 'FILE BOUNDARY' FLAG.
+              INITIALIZE DET-FILE-FLAG
+
+      *       READ FILE BACKWARDS!
+              PERFORM 1400-READ-BACKWARDS-BY-KEY
+           ELSE
+              MOVE 'No Previous Records To Display!' TO WS-MESSAGE
+              MOVE DFHPROTN TO HLPPF7A
+           END-IF.
 
        2400-NEXT-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
@@ -345,6 +446,11 @@
               ELSE
                  MOVE HIGH-VALUES TO EMP-PRIMARY-NAME(38:)
               END-IF
+
+      *       RESET 'FILE BOUNDARY' FLAG.
+              INITIALIZE DET-FILE-FLAG
+
+      *       READ FILE IN NORMAL (FORWARD) WAY.
               PERFORM 1300-READ-EMPLOYEE-BY-KEY
            ELSE
               MOVE 'No More Records To Display!' TO WS-MESSAGE
@@ -442,7 +548,7 @@
            MOVE EMP-START-DATE TO WS-INPUT-DATE.
            MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE.
            MOVE WS-OUTPUT-DATE TO STDATEO.
-               
+
            MOVE EMP-END-DATE TO WS-INPUT-DATE.
            MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE.
            MOVE WS-OUTPUT-DATE TO ENDATEO.
