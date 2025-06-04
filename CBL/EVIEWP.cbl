@@ -368,6 +368,51 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
+       1500-FIND-RECORD-BY-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1500-FIND-RECORD-BY-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1500-FIND-RECORD-BY-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS READ
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(DET-SELECT-KEY-VALUE)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS READ
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(DET-SELECT-KEY-VALUE)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Reading Employee Master File' TO WS-MESSAGE
+                MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
+      *         PERFORM 3200-APPLY-FILTERS
+      *         IF WS-FILTERS-PASSED THEN
+      *            MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
+      *         END-IF
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Record Found By That Key!' TO WS-MESSAGE
+                SET DET-END-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'End of Employee Master File' TO WS-MESSAGE
+                SET DET-END-OF-FILE TO TRUE
+           WHEN OTHER
+                MOVE 'Error Reading Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
       *-----------------------------------------------------------------
        VIEWING SECTION.
       *-----------------------------------------------------------------
@@ -386,7 +431,7 @@
 
            EVALUATE EIBAID
            WHEN DFHENTER
-                PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
+                PERFORM 2100-FIND-BY-EMPLOYEE-KEY
            WHEN DFHPF3
                 CONTINUE
            WHEN DFHPF7
@@ -400,6 +445,38 @@
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
+
+       2100-FIND-BY-EMPLOYEE-KEY.
+      *    IF EMPLOYEE ID WAS ENTERED, THEN FIND BY ID.
+           IF EMPLIDI IS NOT EQUAL TO LOW-VALUES AND
+              EMPLIDI IS NOT EQUAL TO SPACES THEN
+      *       --- BY ID ---
+              SET DET-SEL-BY-EMPLOYEE-ID TO TRUE
+              MOVE EMPLIDI TO DET-SELECT-KEY-VALUE
+           END-IF.
+
+      *    IF PRIMARY NAME WAS ENTERED, THEN FIND BY NAME.
+           IF PRNAMEI IS NOT EQUAL TO LOW-VALUES AND
+              PRNAMEI IS NOT EQUAL TO SPACES THEN
+      *       --- BY NAME ---
+              SET DET-SEL-BY-EMPLOYEE-NAME TO TRUE
+              MOVE PRNAMEI TO DET-SELECT-KEY-VALUE
+           END-IF.
+
+      *    >>> DEBUGGING ONLY <<<
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2100-FIND-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2100-FIND-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF DET-SELECT-KEY-VALUE IS NOT EQUAL TO SPACES THEN
+              PERFORM 1500-FIND-RECORD-BY-KEY
+           ELSE
+              MOVE 'No Valid Criteria Was Entered!' TO WS-MESSAGE
+           END-IF.
 
        2300-PREV-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
