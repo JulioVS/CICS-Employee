@@ -28,13 +28,13 @@ TRANID   DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT)
 *  DETAIL SECTION.
 *
          DFHMDF POS=(3,1),LENGTH=3,ATTRB=(ASKIP,NORM),INITIAL='Id:'
-EMPLID   DFHMDF POS=(3,5),LENGTH=8,ATTRB=(UNPROT,BRT,IC),              X
-               HILIGHT=UNDERLINE,COLOR=RED
+EMPLID   DFHMDF POS=(3,5),LENGTH=8,ATTRB=(NORM,NUM,IC),                X
+               HILIGHT=UNDERLINE
 *
          DFHMDF POS=(3,14),LENGTH=21,ATTRB=(ASKIP,NORM),               X
                INITIAL='        Primary Name:'
 PRNAME   DFHMDF POS=(3,36),LENGTH=38,ATTRB=(UNPROT,BRT),               X
-               HILIGHT=UNDERLINE,COLOR=RED
+               HILIGHT=UNDERLINE
 *
          DFHMDF POS=(4,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
                INITIAL='Honorific:'

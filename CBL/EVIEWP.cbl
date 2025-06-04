@@ -28,6 +28,7 @@
       ******************************************************************
        01 WS-WORKING-VARS.
           05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
+          05 WS-EMPLOYEE-ID     PIC X(8) JUSTIFIED RIGHT.
       *
        01 WS-DISPLAY-MESSAGES.
           05 WS-MESSAGE         PIC X(79) VALUE SPACES.
@@ -381,14 +382,14 @@
            IF DET-SEL-BY-EMPLOYEE-ID THEN
               EXEC CICS READ
                    FILE(APP-EMP-MASTER-FILE-NAME)
-                   RIDFLD(DET-SELECT-KEY-VALUE)
+                   RIDFLD(EMP-EMPLOYEE-ID)
                    INTO (EMPLOYEE-MASTER-RECORD)
                    RESP(WS-CICS-RESPONSE)
                    END-EXEC
            ELSE
               EXEC CICS READ
                    FILE(APP-EMP-MASTER-PATH-NAME)
-                   RIDFLD(DET-SELECT-KEY-VALUE)
+                   RIDFLD(EMP-PRIMARY-NAME)
                    INTO (EMPLOYEE-MASTER-RECORD)
                    RESP(WS-CICS-RESPONSE)
                    END-EXEC
@@ -404,7 +405,6 @@
       *         END-IF
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Record Found By That Key!' TO WS-MESSAGE
-                SET DET-END-OF-FILE TO TRUE
            WHEN DFHRESP(ENDFILE)
                 MOVE 'End of Employee Master File' TO WS-MESSAGE
                 SET DET-END-OF-FILE TO TRUE
@@ -452,7 +452,10 @@
               EMPLIDI IS NOT EQUAL TO SPACES THEN
       *       --- BY ID ---
               SET DET-SEL-BY-EMPLOYEE-ID TO TRUE
-              MOVE EMPLIDI TO DET-SELECT-KEY-VALUE
+
+              MOVE FUNCTION TRIM(EMPLIDI) TO WS-EMPLOYEE-ID
+              INSPECT WS-EMPLOYEE-ID REPLACING LEADING SPACES BY ZEROES
+              MOVE WS-EMPLOYEE-ID TO EMP-EMPLOYEE-ID
            END-IF.
 
       *    IF PRIMARY NAME WAS ENTERED, THEN FIND BY NAME.
@@ -460,7 +463,24 @@
               PRNAMEI IS NOT EQUAL TO SPACES THEN
       *       --- BY NAME ---
               SET DET-SEL-BY-EMPLOYEE-NAME TO TRUE
-              MOVE PRNAMEI TO DET-SELECT-KEY-VALUE
+
+      *       WE COMPENSATE FOR THE CICS TERMINAL CONVERTING ALL MAP
+      *       INPUT STRING DATA TO UPPER CASE! (A SYSTEM-WIDE
+      *       CONFIGURATION APPARENTLY).
+      *
+      *       WE TRIM IT AND CONVERT IT TO TITLE-CASE TO BEST MATCH
+      *       THE ALTERNATE-KEY FORMAT ON THE EMPLOYEES MASTER FILE.
+      *
+      *       - NOTE: THIS WILL *NOT* WORK IF THE PRIMARY NAME ON THE
+      *               EMPLOYEES MASTER FILE USES MORE UPPER-CASE
+      *               LETTERS THAN JUST THE FIRST ONE.
+      *
+              MOVE FUNCTION TRIM(PRNAMEI)
+                 TO EMP-PRIMARY-NAME
+              MOVE FUNCTION LOWER-CASE(EMP-PRIMARY-NAME)
+                 TO EMP-PRIMARY-NAME
+              MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
+                 TO EMP-PRIMARY-NAME(1:1)
            END-IF.
 
       *    >>> DEBUGGING ONLY <<<
@@ -472,11 +492,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           IF DET-SELECT-KEY-VALUE IS NOT EQUAL TO SPACES THEN
-              PERFORM 1500-FIND-RECORD-BY-KEY
-           ELSE
-              MOVE 'No Valid Criteria Was Entered!' TO WS-MESSAGE
-           END-IF.
+           PERFORM 1500-FIND-RECORD-BY-KEY.
 
        2300-PREV-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
