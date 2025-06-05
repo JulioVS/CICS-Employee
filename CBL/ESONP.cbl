@@ -410,7 +410,10 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                CONTINUE
+                MOVE 'Transferring To Landing Page' TO MESSO
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request!' TO MESSO
+                PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN DFHRESP(PGMIDERR)
                 MOVE "Landing Page Program Not Found!" TO MESSO
                 PERFORM 9100-SEND-MAP-AND-RETURN

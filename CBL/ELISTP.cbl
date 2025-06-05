@@ -105,7 +105,7 @@
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
 
-           IF I-AM-DEBUGGING THEN 
+           IF I-AM-DEBUGGING THEN
               MOVE 3 TO WS-LINES-PER-PAGE
            END-IF.
       *    >>> -------------- <<<
@@ -159,7 +159,9 @@
            PERFORM 1100-INITIALIZE-VARIABLES.
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           PERFORM 4000-CHECK-USER-STATUS.
+           IF EIBTRNID IS NOT EQUAL TO APP-LIST-TRANSACTION-ID
+              PERFORM 4000-CHECK-USER-STATUS
+           END-IF.
       *    >>> --------------------- <<<
 
            PERFORM 1150-INITIALIZE-CONTAINER.
@@ -202,8 +204,8 @@
 
       *    THIS WILL BE A 'FULLY CONVERSATIONAL' MAP DISPLAY.
 
-      *    AFTER THE USER SETS INITIAL FILTER VALUES (OR LEAVES THEM 
-      *    BLANK) LOGIC WILL MOVE FORWARDS INTO THE NEXT STEPS, IE. 
+      *    AFTER THE USER SETS INITIAL FILTER VALUES (OR LEAVES THEM
+      *    BLANK) LOGIC WILL MOVE FORWARDS INTO THE NEXT STEPS, IE.
       *    '1300-READ-EMPLOYEES-BY-KEY', ET AL.
 
            INITIALIZE WS-FILTER-ACTIONS.
@@ -370,7 +372,7 @@
 
        1330-END-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
               MOVE '1330-END-BROWSING (ID)' TO WS-DEBUG-AID
            ELSE
               MOVE '1330-END-BROWSING (NM)' TO WS-DEBUG-AID
@@ -378,7 +380,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
               EXEC CICS ENDBR
                    FILE(APP-EMP-MASTER-FILE-NAME)
                    RESP(WS-CICS-RESPONSE)
@@ -400,7 +402,7 @@
 
        1400-READ-BACKWARDS-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
-           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
               MOVE '1400-READ-BACKWARDS-BY-KEY (ID)' TO WS-DEBUG-AID
            ELSE
               MOVE '1400-READ-BACKWARDS-BY-KEY (NM)' TO WS-DEBUG-AID
@@ -422,12 +424,12 @@
       *    THEN LET THE BACKWARDS BROWSING LOOP START PROPER TO GET THE
       *    PREVIOUS 16 RECORDS.
       *
-           IF LST-SEL-BY-EMPLOYEE-NAME THEN 
+           IF LST-SEL-BY-EMPLOYEE-NAME THEN
               EXEC CICS READPREV
                    FILE(APP-EMP-MASTER-PATH-NAME)
                    RIDFLD(EMP-PRIMARY-NAME)
                    INTO (EMPLOYEE-MASTER-RECORD)
-                   END-EXEC           
+                   END-EXEC
            END-IF.
       *    <<< ----------------------------------------- >>>
 
@@ -444,7 +446,7 @@
       *    >>> DEBUGGING ONLY <<<
            INITIALIZE WS-DEBUG-AID.
            ADD 1 TO WS-READ-COUNTER.
-           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
               STRING '1410-READ-PREV-RECORD (ID)'
                      '('
                      WS-READ-COUNTER
@@ -464,7 +466,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           IF LST-SEL-BY-EMPLOYEE-ID THEN 
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
               EXEC CICS READPREV
                    FILE(APP-EMP-MASTER-FILE-NAME)
                    RIDFLD(EMP-EMPLOYEE-ID)
@@ -512,7 +514,9 @@
       *    >>> -------------- <<<
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           PERFORM 4000-CHECK-USER-STATUS.
+           IF EIBTRNID IS NOT EQUAL TO APP-LIST-TRANSACTION-ID
+              PERFORM 4000-CHECK-USER-STATUS
+           END-IF.
       *    >>> --------------------- <<<
 
            EXEC CICS RECEIVE
@@ -561,8 +565,39 @@
                          DELIMITED BY SIZE
                          INTO WS-MESSAGE
                       END-STRING
+
+                      SET LST-SELECT-LINE-NUMBER TO LINEO-INDEX
+                      PERFORM 2150-TRANSFER-TO-DETAILS-PAGE
                    END-IF
            END-PERFORM.
+
+       2150-TRANSFER-TO-DETAILS-PAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2150-TRANSFER-TO-DETAILS-PAGE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 9150-PUT-LIST-CONTAINER.
+
+           EXEC CICS XCTL
+                PROGRAM(APP-VIEW-PROGRAM-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Transferring To Details Page' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Details Program Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Transferring To Details Page!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
 
        2200-SHOW-FILTERS.
       *    >>> DEBUGGING ONLY <<<
@@ -612,21 +647,21 @@
                  ELSE
       *             A PROBLEM:
       *
-      *             THE STRING KEY 'SUBTRACTING' LOGIC (ADDING A 
+      *             THE STRING KEY 'SUBTRACTING' LOGIC (ADDING A
       *             LOW-VALUE TAIL) JUST-WON'T-FUCKNG-WORK!
       *
       *             NO. MATTER. WHAT. I. DO.
       *
       *             THEREFORE, I GIVE UP ON IT AND I WILL JUST ADD A
-      *             DUMMY RAW 'CICS READPREV' COMMAND TO RE-READ AND 
-      *             DISCARD THE CURRENT TOP OF PAGE PRIMARY NAME KEY 
-      *             AND THEN TRIGGER THE LOOP PROPER TO READ THE 
+      *             DUMMY RAW 'CICS READPREV' COMMAND TO RE-READ AND
+      *             DISCARD THE CURRENT TOP OF PAGE PRIMARY NAME KEY
+      *             AND THEN TRIGGER THE LOOP PROPER TO READ THE
       *             PREVIOUS 16 RECORDS!
-      *          
+      *
       *             SO, NOTHING TO DO HERE THEN.
       *
       *             MOVE LOW-VALUES TO EMP-PRIMARY-NAME(38:)
-                    CONTINUE 
+                    CONTINUE
                  END-IF
               ELSE
       *          >>> DEBUGGING ONLY <<<
@@ -744,7 +779,7 @@
            MOVE EIBTRNID TO TRANFLO.
 
       *    IF THIS IS THE FIRST INVOCATION OF THE PARAGRAPH, IE.
-      *    FIRST STEP IN THE CONVERSATION, WE SET A DEFAULT SELECT 
+      *    FIRST STEP IN THE CONVERSATION, WE SET A DEFAULT SELECT
       *    ORDER AND ALSO DISPLAY A MESSAGE TO THE USER.
            IF LST-NO-FILTERS-SET THEN
               MOVE LST-SELECT-KEY-TYPE TO KEYSELO
@@ -789,7 +824,9 @@
       *    <<<<<    PROGRAM EXECUTION RESUMES HERE   >>>>>
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           PERFORM 4000-CHECK-USER-STATUS.
+           IF EIBTRNID IS NOT EQUAL TO APP-LIST-TRANSACTION-ID
+              PERFORM 4000-CHECK-USER-STATUS
+           END-IF.
       *    >>> --------------------- <<<
 
            EVALUATE EIBAID
@@ -839,7 +876,7 @@
               FROM 1 BY 1
               UNTIL WS-INDEX IS GREATER THAN 4
                    IF DPTINCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUES AND
-                      DPTINCLI(WS-INDEX) IS NOT EQUAL TO SPACES 
+                      DPTINCLI(WS-INDEX) IS NOT EQUAL TO SPACES
                       MOVE FUNCTION TRIM(DPTINCLI(WS-INDEX))
                          TO LST-INCL-DEPT-ID(WS-INDEX)
                       SET LST-FILTERS-SET TO TRUE
@@ -850,7 +887,7 @@
               FROM 1 BY 1
               UNTIL WS-INDEX IS GREATER THAN 4
                    IF DPTEXCLI(WS-INDEX) IS NOT EQUAL TO LOW-VALUES AND
-                      DPTEXCLI(WS-INDEX) IS NOT EQUAL TO SPACES  
+                      DPTEXCLI(WS-INDEX) IS NOT EQUAL TO SPACES
                       MOVE FUNCTION TRIM(DPTEXCLI(WS-INDEX))
                          TO LST-EXCL-DEPT-ID(WS-INDEX)
                       SET LST-FILTERS-SET TO TRUE
@@ -909,12 +946,12 @@
       *         FOCUS ON SPECIFIC 'CICS' STUFF AND JUST LEAVE THE
       *         'MOST USEFUL' FILTER SCENARIO BY DEFAULT.
 
-           INITIALIZE WS-FILTER-FLAGS. 
+           INITIALIZE WS-FILTER-FLAGS.
 
       *    IF NO FILTERS WERE SET, THEN WE JUST 'OK' THE RECORD.
            IF LST-NO-FILTERS-SET THEN
               SET WS-FILTERS-PASSED TO TRUE
-              EXIT PARAGRAPH 
+              EXIT PARAGRAPH
            END-IF.
 
       *    IF FILTERS WERE SET, THEN WE CHECK THEM ALL.
@@ -943,7 +980,7 @@
 
       *    OTHERWISE, WE CHECK THE KEY FILTERS.
 
-      *    IF 'KEY' WAS OMITTED BUT WE GOT A 'VALUE', THEN WE GUESS THE 
+      *    IF 'KEY' WAS OMITTED BUT WE GOT A 'VALUE', THEN WE GUESS THE
       *    KEY FROM THE VALUE!
            IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES AND
               LST-SELECT-KEY-VALUE IS NOT EQUAL TO SPACES THEN
@@ -1008,7 +1045,7 @@
                  OR WS-DEPT-FILTER-PASSED
                       IF LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
                          IS NOT EQUAL TO SPACES THEN
-                         
+
                          INITIALIZE WS-INSP-COUNTER
 
                          INSPECT WS-DEPT-KEY
@@ -1160,7 +1197,7 @@
 
       *    CHECK IF THE USER IS ALREADY SIGNED ON TO THE ACTIVITY
            PERFORM 4100-GET-MONITOR-CONTAINER.
-           
+
       *    IF THE USER IS SIGNED ON, CHECK IF SESSION IS STILL ACTIVE.
            SET MON-AC-APP-FUNCTION TO TRUE.
            PERFORM 4200-CALL-ACTIVITY-MONITOR.
@@ -1194,7 +1231,7 @@
        4200-CALL-ACTIVITY-MONITOR.
       *    >>> DEBUGGING ONLY <<<
            MOVE '4200-CALL-ACTIVITY-MONITOR' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID. 
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
@@ -1258,20 +1295,7 @@
       *      - RETURN TO CICS.
 
            PERFORM 9100-POPULATE-MAP.
-
-           EXEC CICS PUT
-                CONTAINER(APP-LIST-CONTAINER-NAME)
-                CHANNEL(APP-LIST-CHANNEL-NAME)
-                FROM (LIST-EMPLOYEE-CONTAINER)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
-
-           EVALUATE WS-CICS-RESPONSE
-           WHEN DFHRESP(NORMAL)
-                CONTINUE
-           WHEN OTHER
-                MOVE 'Error Putting List Container!' TO WS-MESSAGE
-           END-EVALUATE.
+           PERFORM 9150-PUT-LIST-CONTAINER.
 
            EXEC CICS SEND
                 MAP(APP-LIST-MAP-NAME)
@@ -1358,13 +1382,13 @@
            INITIALIZE WS-FILTERS-BANNER.
 
            IF LST-SEL-BY-EMPLOYEE-ID THEN
-              MOVE 'ID:' TO WS-FIL-KEY-TYPE 
+              MOVE 'ID:' TO WS-FIL-KEY-TYPE
               MOVE FUNCTION TRIM(LST-SELECT-KEY-VALUE)
                  TO WS-FIL-KEY-VALUE
            END-IF.
 
            IF LST-SEL-BY-EMPLOYEE-NAME THEN
-              MOVE 'NM:' TO WS-FIL-KEY-TYPE 
+              MOVE 'NM:' TO WS-FIL-KEY-TYPE
               MOVE FUNCTION TRIM(LST-SELECT-KEY-VALUE)
                  TO WS-FIL-KEY-VALUE
            END-IF.
@@ -1380,14 +1404,34 @@
            END-IF.
 
            IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES THEN
-              MOVE FUNCTION TRIM(LST-EMPL-DATE-AFTER) TO WS-FIL-AFTER 
+              MOVE FUNCTION TRIM(LST-EMPL-DATE-AFTER) TO WS-FIL-AFTER
            END-IF.
 
            IF LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
-              MOVE FUNCTION TRIM(LST-EMPL-DATE-BEFORE) TO WS-FIL-BEFORE  
+              MOVE FUNCTION TRIM(LST-EMPL-DATE-BEFORE) TO WS-FIL-BEFORE
            END-IF.
 
            MOVE WS-FILTERS-BANNER TO FLTRSO.
+
+       9150-PUT-LIST-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9150-PUT-LIST-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-LIST-CONTAINER-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                FROM (LIST-EMPLOYEE-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting List Container!' TO WS-MESSAGE
+           END-EVALUATE.
 
        9200-RETURN-TO-CICS.
       *    >>> DEBUGGING ONLY <<<

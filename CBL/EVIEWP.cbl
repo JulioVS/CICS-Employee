@@ -12,6 +12,7 @@
       *      - EMPLOYEE DETAILS MAPSET.
       *      - EMPLOYEE DETAILS CONTAINER.
       *      - EMPLOYEE MASTER RECORD.
+      *      - LIST CONTAINER.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
@@ -20,6 +21,7 @@
        COPY EDETMAP.
        COPY EDETCTR.
        COPY EMPMAST.
+       COPY ELSTCTR.
        COPY EMONCTR.
        COPY DFHAID.
        COPY DFHBMSCA.
@@ -114,6 +116,17 @@
 
            PERFORM 1100-INITIALIZE-VARIABLES.
            PERFORM 1200-INITIALIZE-CONTAINER.
+
+      *    CHECK IF WE ARE COMING FROM THE 'LIST EMPLOYEES' VIEW AND
+      *    IF SO, RETRIEVE THE SELECTED RECORD FOR DISPLAY.
+           IF EIBTRNID IS EQUAL TO APP-LIST-TRANSACTION-ID THEN
+              PERFORM 3000-GET-LIST-CONTAINER
+              IF DET-EMPLOYEE-RECORD IS NOT EQUAL TO SPACES THEN
+                 EXIT PARAGRAPH
+              END-IF
+           END-IF.
+
+      *    IF NOT, JUST READ THE FIRST EMPLOYEE RECORD.
            PERFORM 1300-READ-EMPLOYEE-BY-KEY.
 
        1100-INITIALIZE-VARIABLES.
@@ -126,6 +139,7 @@
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
            INITIALIZE EMPLOYEE-DETAILS-CONTAINER.
            INITIALIZE EMPLOYEE-MASTER-RECORD.
+           INITIALIZE LIST-EMPLOYEE-CONTAINER.
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE EDETMO.
 
@@ -570,6 +584,39 @@
       *    >>> -------------- <<<
 
            PERFORM 9200-RETURN-TO-CICS.
+
+      *-----------------------------------------------------------------
+       LIST-CONTAINER SECTION.
+      *-----------------------------------------------------------------
+       3000-GET-LIST-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3000-GET-LIST-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS GET
+                CONTAINER(APP-LIST-CONTAINER-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                INTO (LIST-EMPLOYEE-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+      *         IF WE DON'T FIND IT, SOMETHING'S WRONG, BU WE JUST
+      *         LEAVE THE EMPLOYEE RECORD EMPLY SO THE LOGIC MOVES ON
+      *         THROUGH THE DEFAULT PATH (I.E. GET FIRST RECORD).
+                MOVE 'No List Container Found!' TO WS-MESSAGE
+                INITIALIZE DET-EMPLOYEE-RECORD
+           WHEN DFHRESP(NORMAL)
+      *         IF SUCCESSFULLY FOUND, WE USE THE EMPLOYEE RECORD DATA
+      *         FOR THE SELECTED LINE TO SHOW ITS DETAILS HERE.
+                MOVE LST-CURRENT-RECORD(LST-SELECT-LINE-NUMBER)
+                   TO DET-EMPLOYEE-RECORD
+           WHEN OTHER
+                MOVE 'Error Retrieving List Container!' TO WS-MESSAGE
+           END-EVALUATE.
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
