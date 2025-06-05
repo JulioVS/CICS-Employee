@@ -322,6 +322,10 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+                MOVE "No Activity Monitor Data Found!" TO MESSO
+                PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE "Error Reading Activity Monitor!" TO MESSO
                 PERFORM 9100-SEND-MAP-AND-RETURN

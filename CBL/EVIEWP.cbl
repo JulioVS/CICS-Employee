@@ -91,8 +91,8 @@
                 END-EXEC.
 
            EVALUATE WS-CICS-RESPONSE
-           WHEN DFHRESP(CONTAINERERR)
            WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
       *         1ST INTERACTION -> NO CONTAINER YET (CREATE IT)
                 PERFORM 1000-FIRST-INTERACTION
            WHEN DFHRESP(NORMAL)
@@ -115,6 +115,11 @@
       *    >>> -------------- <<<
 
            PERFORM 1100-INITIALIZE-VARIABLES.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
            PERFORM 1200-INITIALIZE-CONTAINER.
 
       *    CHECK IF WE ARE COMING FROM THE 'LIST EMPLOYEES' VIEW AND
@@ -150,8 +155,9 @@
       *    >>> -------------- <<<
 
       *    SET INITIAL VALUES FOR LIST CONTAINER.
+           MOVE 'ANONYMUS' TO DET-USER-ID.
+           MOVE 'STD' TO DET-USER-CATEGORY.
            MOVE '1' TO DET-SELECT-KEY-TYPE.
-      *    MOVE '2' TO DET-SELECT-KEY-TYPE.
            MOVE LOW-VALUE TO DET-SELECT-KEY-VALUE.
 
        1300-READ-EMPLOYEE-BY-KEY.
@@ -443,6 +449,10 @@
                 INTO (EDETMI)
                 END-EXEC.
 
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
            EVALUATE EIBAID
            WHEN DFHENTER
                 PERFORM 2100-FIND-BY-EMPLOYEE-KEY
@@ -452,6 +462,8 @@
                 PERFORM 2300-PREV-BY-EMPLOYEE-KEY
            WHEN DFHPF8
                 PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
+           WHEN DFHPF9
+                PERFORM 2700-SWITCH-DISPLAY-ORDER
            WHEN DFHPF10
                 PERFORM 2500-SIGN-USER-OFF
            WHEN DFHPF12
@@ -571,9 +583,9 @@
       *    >>> -------------- <<<
 
       *    >>> CALL ACTIVITY MONITOR <<<
-      *    SET MON-AC-SIGN-OFF TO TRUE.
-      *    PERFORM 4200-CALL-ACTIVITY-MONITOR.
-      **    >>> --------------------- <<<
+           SET MON-AC-SIGN-OFF TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+      *    >>> --------------------- <<<
 
            PERFORM 9200-RETURN-TO-CICS.
 
@@ -584,6 +596,21 @@
       *    >>> -------------- <<<
 
            PERFORM 9200-RETURN-TO-CICS.
+
+       2700-SWITCH-DISPLAY-ORDER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2700-SWITCH-DISPLAY-ORDER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              SET DET-SEL-BY-EMPLOYEE-NAME TO TRUE
+           ELSE
+              SET DET-SEL-BY-EMPLOYEE-ID TO TRUE
+           END-IF.
+
+      *    RESET 'FILE BOUNDARY' FLAG.
+           INITIALIZE DET-FILE-FLAG.
 
       *-----------------------------------------------------------------
        LIST-CONTAINER SECTION.
@@ -610,12 +637,117 @@
                 MOVE 'No List Container Found!' TO WS-MESSAGE
                 INITIALIZE DET-EMPLOYEE-RECORD
            WHEN DFHRESP(NORMAL)
-      *         IF SUCCESSFULLY FOUND, WE USE THE EMPLOYEE RECORD DATA
-      *         FOR THE SELECTED LINE TO SHOW ITS DETAILS HERE.
+      *         IF SUCCESSFULLY FOUND, WE RETRIEVE THE EMPLOYEE RECORD
+      *         FOR THE CURRENTLY SELECTED LINE, AS WELL AS THE CURRENT
+      *         DISPLAY ORDER FORM THE LIST CONTAINER.
+                MOVE LST-SELECT-KEY-TYPE TO DET-SELECT-KEY-TYPE
                 MOVE LST-CURRENT-RECORD(LST-SELECT-LINE-NUMBER)
                    TO DET-EMPLOYEE-RECORD
            WHEN OTHER
                 MOVE 'Error Retrieving List Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
+      *-----------------------------------------------------------------
+       ACTIVITY-MONITOR SECTION.
+      *-----------------------------------------------------------------
+
+       4000-CHECK-USER-STATUS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4000-CHECK-USER-STATUS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    CHECK IF THE USER IS ALREADY SIGNED ON TO THE ACTIVITY
+           PERFORM 4100-GET-MONITOR-CONTAINER.
+
+      *    IF THE USER IS SIGNED ON, CHECK IF SESSION IS STILL ACTIVE.
+           SET MON-AC-APP-FUNCTION TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+
+
+       4100-GET-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4100-GET-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS GET
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                INTO (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+      *         IF USER IS LOGGED IN, RETRIEVE ITS ID AND CATEGORY.
+                IF MON-NORMAL-END THEN
+                   MOVE MON-USER-ID TO DET-USER-ID
+                   MOVE MON-USER-CATEGORY TO DET-USER-CATEGORY
+                   MOVE 'Activity Monitor Data Found' TO WS-MESSAGE
+                END-IF
+                IF MON-PROCESSING-ERROR THEN
+                   MOVE 'Activity Monitor Abend!' TO WS-MESSAGE
+                END-IF
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+                MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
+      *         PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Getting Activity Monitor!' TO WS-MESSAGE
+      *         PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       4200-CALL-ACTIVITY-MONITOR.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4200-CALL-ACTIVITY-MONITOR' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
+           MOVE APP-VIEW-PROGRAM-NAME TO MON-LINKING-PROGRAM.
+           INITIALIZE MON-RESPONSE.
+
+           PERFORM 4300-PUT-MONITOR-CONTAINER.
+
+           EXEC CICS LINK
+                PROGRAM(APP-ACTMON-PROGRAM-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                TRANSID(EIBTRNID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Activity Monitor Program Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Linking to Activity Monitor!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       4300-PUT-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4300-PUT-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                FROM (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
       *-----------------------------------------------------------------
@@ -674,6 +806,13 @@
 
       *    DISPLAY TRANSACTION ID.
            MOVE EIBTRNID TO TRANIDO.
+
+      *    DISPLAY BROWSING ORDER.
+           IF DET-SEL-BY-EMPLOYEE-ID THEN
+              MOVE 'By Id  ' TO SELBYO
+           ELSE
+              MOVE 'By Name' TO SELBYO
+           END-IF.
 
       *    DISPLAY EMPLOYEE INFORMATION.
            MOVE EMP-EMPLOYEE-ID TO EMPLIDO.

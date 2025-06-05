@@ -159,9 +159,7 @@
            PERFORM 1100-INITIALIZE-VARIABLES.
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS NOT EQUAL TO APP-LIST-TRANSACTION-ID
-              PERFORM 4000-CHECK-USER-STATUS
-           END-IF.
+           PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
            PERFORM 1150-INITIALIZE-CONTAINER.
@@ -513,17 +511,15 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS NOT EQUAL TO APP-LIST-TRANSACTION-ID
-              PERFORM 4000-CHECK-USER-STATUS
-           END-IF.
-      *    >>> --------------------- <<<
-
            EXEC CICS RECEIVE
                 MAP(APP-LIST-MAP-NAME)
                 MAPSET(APP-LIST-MAPSET-NAME)
                 INTO (ELSTMI)
                 END-EXEC.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
 
            EVALUATE EIBAID
            WHEN DFHENTER
@@ -824,9 +820,7 @@
       *    <<<<<    PROGRAM EXECUTION RESUMES HERE   >>>>>
 
       *    >>> CALL ACTIVITY MONITOR <<<
-           IF EIBTRNID IS NOT EQUAL TO APP-LIST-TRANSACTION-ID
-              PERFORM 4000-CHECK-USER-STATUS
-           END-IF.
+           PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
            EVALUATE EIBAID
@@ -1202,7 +1196,6 @@
            SET MON-AC-APP-FUNCTION TO TRUE.
            PERFORM 4200-CALL-ACTIVITY-MONITOR.
 
-
        4100-GET-MONITOR-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
            MOVE '4100-GET-MONITOR-CONTAINER' TO WS-DEBUG-AID.
@@ -1220,12 +1213,13 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
-           WHEN DFHRESP(NOTFND)
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
                 MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
+      *         PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE 'Error Getting Activity Monitor!' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
+      *         PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        4200-CALL-ACTIVITY-MONITOR.

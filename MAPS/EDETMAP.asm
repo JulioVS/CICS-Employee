@@ -24,6 +24,8 @@ EDETM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1,COLOR=TURQUOISE
 TRANID   DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT)
          DFHMDF POS=(1,32),LENGTH=16,ATTRB=(ASKIP,BRT),                X
                INITIAL='Employee Details'
+SELBY    DFHMDF POS=(1,72),LENGTH=7,ATTRB=(ASKIP,NORM),                X
+               INITIAL='By Id  '
 *
 *  DETAIL SECTION.
 *
@@ -97,8 +99,8 @@ HLPPF7   DFHMDF POS=(24,20),LENGTH=9,ATTRB=(ASKIP,NORM),               X
                INITIAL='PF7 Prev '
 HLPPF8   DFHMDF POS=(24,30),LENGTH=9,ATTRB=(ASKIP,NORM),               X
                INITIAL='PF8 Next '
-         DFHMDF POS=(24,40),LENGTH=26,ATTRB=(ASKIP,NORM),              X
-               INITIAL='PF10 Sign Off  PF12 Cancel'
+         DFHMDF POS=(24,40),LENGTH=37,ATTRB=(ASKIP,NORM),              X
+               INITIAL='PF9 Order  PF10 Sign Off  PF12 Cancel'
 * ---------------------------------------------------------------------
 *  ENDING SECTION.
 * ---------------------------------------------------------------------

@@ -132,7 +132,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
-           WHEN DFHRESP(NOTFND)
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
                 MOVE 'Activity Mon Container Not Found!' TO MON-MESSAGE
                 SET MON-PROCESSING-ERROR TO TRUE
                 PERFORM 9000-RETURN-TO-CALLER
