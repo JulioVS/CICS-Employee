@@ -19,6 +19,7 @@
              10 DET-SELECT-KEY-VALUE    PIC X(30)  VALUE SPACES.
       *
           05 DET-EMPLOYEE-RECORD        PIC X(251).
+          05 DET-FILTERS                PIC X(112).
       *
           05 DET-FILE-FLAG              PIC X(1)   VALUE SPACES.
              88 DET-TOP-OF-FILE                    VALUE 'T'.
