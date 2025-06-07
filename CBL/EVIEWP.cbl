@@ -158,7 +158,6 @@
            INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE LIST-EMPLOYEE-CONTAINER.
            INITIALIZE WS-WORKING-VARS.
-           INITIALIZE WS-FILTER-FLAGS.
            INITIALIZE EDETMO.
 
        1200-INITIALIZE-CONTAINER.
@@ -197,20 +196,16 @@
            END-IF.
       *    >>> -------------- <<<
 Í
+           PERFORM 1320-READ-NEXT-RECORD
+              UNTIL WS-FILTERS-PASSED OR DET-END-OF-FILE.
+
+           IF WS-FILTERS-PASSED THEN
+              MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
+           END-IF.
+           
            IF NOT DET-END-OF-FILE THEN
-              PERFORM 1320-READ-NEXT-RECORD
               PERFORM 1330-END-BROWSING
            END-IF.
-
-      *    IF NO RECORD WAS FOUND, WE DISPLAY A MESSAGE.
-           IF DET-EMPLOYEE-RECORD IS EQUAL TO SPACES THEN
-              IF LST-FILTERS-SET THEN
-                 MOVE 'No Matching Records Found!' TO WS-MESSAGE
-              ELSE
-                 MOVE 'No Record Found!' TO WS-MESSAGE
-              END-IF
-           END-IF.
-
 
        1310-START-BROWSING.
       *    >>> DEBUGGING ONLY <<<
@@ -282,9 +277,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-                MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
                 PERFORM 3200-APPLY-FILTERS
-V          WHEN DFHRESP(NOTFND)
+           WHEN DFHRESP(NOTFND)
                 MOVE 'No Records Found!' TO WS-MESSAGE
                 SET DET-END-OF-FILE TO TRUE
            WHEN DFHRESP(ENDFILE)
@@ -347,8 +341,14 @@ V          WHEN DFHRESP(NOTFND)
            END-IF.
       *    <<< ----------------------------------------- >>>
 
+           PERFORM 1410-READ-PREV-RECORD
+              UNTIL WS-FILTERS-PASSED OR DET-TOP-OF-FILE.
+
+           IF WS-FILTERS-PASSED THEN 
+              MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
+           END-IF.
+               
            IF NOT DET-TOP-OF-FILE THEN
-              PERFORM 1410-READ-PREV-RECORD
               PERFORM 1330-END-BROWSING
            END-IF.
 
@@ -381,7 +381,6 @@ V          WHEN DFHRESP(NOTFND)
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-                MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
                 PERFORM 3200-APPLY-FILTERS
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Previous Records Found!' TO WS-MESSAGE
@@ -445,8 +444,6 @@ V          WHEN DFHRESP(NOTFND)
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           INITIALIZE WS-FILTER-FLAGS.
-
            EXEC CICS RECEIVE
                 MAP(APP-VIEW-MAP-NAME)
                 MAPSET(APP-VIEW-MAPSET-NAME)
@@ -464,10 +461,8 @@ V          WHEN DFHRESP(NOTFND)
                 CONTINUE
            WHEN DFHPF7
                 PERFORM 2300-PREV-BY-EMPLOYEE-KEY
-                   UNTIL WS-FILTERS-PASSED OR DET-TOP-OF-FILE
            WHEN DFHPF8
                 PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
-                   UNTIL WS-FILTERS-PASSED OR DET-END-OF-FILE
            WHEN DFHPF9
                 PERFORM 2700-SWITCH-DISPLAY-ORDER
            WHEN DFHPF10
