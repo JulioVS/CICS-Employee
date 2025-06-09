@@ -14,6 +14,7 @@
       *      - EMPLOYEE MASTER RECORD.
       *      - LIST CONTAINER.
       *      - ACTIVITY MONITOR CONTAINER.
+      *      - REGISTERED USERS.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
@@ -23,6 +24,7 @@
        COPY EMPMAST.
        COPY ELSTCTR.
        COPY EMONCTR.
+       COPY EREGUSR.
        COPY DFHAID.
        COPY DFHBMSCA.
       ******************************************************************
@@ -54,6 +56,7 @@
        01 WS-FILTER-FLAGS.
           03 WS-FILTERS-CHECK          PIC X(1)  VALUE SPACES.
              88 WS-FILTERS-PASSED                VALUE 'Y'.
+             88 WS-FILTERS-FAILED                VALUE 'N'.
           03 WS-KEY-FILTER-CHECK       PIC X(1)  VALUE SPACES.
              88 WS-KEY-FILTER-PASSED             VALUE 'Y'.
           03 WS-DEPT-FILTER-CHECK      PIC X(1)  VALUE SPACES.
@@ -133,6 +136,16 @@
       *    >>> CALL ACTIVITY MONITOR <<<
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
+
+      *    IF WE HAVE A LOGGED-IN USER:
+      *      - SAVE HIS DATA ON THE APPLICATION CONTAINER.
+      *      - FIND HIS OWN 'EMPLOYEE ID'.
+           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MON-USER-ID TO DET-USER-ID REG-USER-ID
+              MOVE MON-USER-CATEGORY TO DET-USER-CATEGORY
+
+              PERFORM 1600-LOOKUP-USER-ID
+           END-IF.
 
       *    CHECK IF WE ARE COMING FROM THE 'LIST EMPLOYEES' VIEW AND
       *    IF SO, RETRIEVE THE SELECTED RECORD FOR DISPLAY.
@@ -278,6 +291,7 @@
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Records Found!' TO WS-MESSAGE
                 SET DET-END-OF-FILE TO TRUE
@@ -382,6 +396,7 @@
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Previous Records Found!' TO WS-MESSAGE
                 SET DET-TOP-OF-FILE TO TRUE
@@ -422,8 +437,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-                MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
                 PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION                
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Record Found By That Key!' TO WS-MESSAGE
            WHEN DFHRESP(ENDFILE)
@@ -431,6 +446,31 @@
                 SET DET-END-OF-FILE TO TRUE
            WHEN OTHER
                 MOVE 'Error Reading Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       1600-LOOKUP-USER-ID.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1600-LOOKUP-USER-ID' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    LOOKUP THE USER ID IN VSAM FILE
+           EXEC CICS READ
+                FILE(APP-REG-USER-FILE-NAME)
+                INTO (REGISTERED-USER-RECORD)
+                RIDFLD(REG-USER-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE "User Found!" TO WS-MESSAGE
+                MOVE REG-EMPLOYEE-ID TO DET-USER-EMP-ID
+           WHEN DFHRESP(NOTFND)
+                MOVE "User Not Found!" TO WS-MESSAGE
+           WHEN OTHER
+                MOVE "Error Reading Users File!" TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -520,6 +560,12 @@
       *    >>> -------------- <<<
 
            PERFORM 1500-FIND-RECORD-BY-KEY.
+
+           IF WS-FILTERS-PASSED THEN
+              MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
+           ELSE
+              MOVE 'No Matching Record By That Key!' TO WS-MESSAGE
+           END-IF.
 
        2300-PREV-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
@@ -848,6 +894,23 @@
               END-IF
            END-IF.
 
+       3700-CHECK-DELETION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3700-CHECK-DELETION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    FILTER 'LOGICALLY DELETED' RECORDS *UNLESS* THE USER IS A 
+      *    SYSTEMS ADMINISTRATOR.
+      
+           IF DET-CT-ADMINISTRATOR THEN
+              EXIT PARAGRAPH
+           END-IF.
+           
+           IF EMP-DELETED THEN
+              SET WS-FILTERS-FAILED TO TRUE
+           END-IF.
+
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
       *-----------------------------------------------------------------
@@ -882,22 +945,12 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-      *         IF USER IS LOGGED IN, RETRIEVE ITS ID AND CATEGORY.
-                IF MON-NORMAL-END THEN
-                   MOVE MON-USER-ID TO DET-USER-ID
-                   MOVE MON-USER-CATEGORY TO DET-USER-CATEGORY
-                   MOVE 'Activity Monitor Data Found' TO WS-MESSAGE
-                END-IF
-                IF MON-PROCESSING-ERROR THEN
-                   MOVE 'Activity Monitor Abend!' TO WS-MESSAGE
-                END-IF
+                MOVE 'Activity Monitor Data Found' TO WS-MESSAGE
            WHEN DFHRESP(CHANNELERR)
            WHEN DFHRESP(CONTAINERERR)
                 MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
-      *         PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE 'Error Getting Activity Monitor!' TO WS-MESSAGE
-      *         PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        4200-CALL-ACTIVITY-MONITOR.
@@ -926,7 +979,6 @@
                 MOVE 'Activity Monitor Program Not Found!' TO WS-MESSAGE
            WHEN OTHER
                 MOVE 'Error Linking to Activity Monitor!' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        4300-PUT-MONITOR-CONTAINER.
@@ -948,7 +1000,6 @@
                 CONTINUE
            WHEN OTHER
                 MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
-                PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
       *-----------------------------------------------------------------
@@ -1002,7 +1053,7 @@
       *    >>> -------------- <<<
 
            INITIALIZE EDETMO.
-
+           
            MOVE DET-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
 
       *    DISPLAY TRANSACTION ID.
@@ -1032,7 +1083,11 @@
               MOVE '<Hidden>' TO DEPTIDO DEPTNMO
            END-IF.
 
-           IF DET-CT-MANAGER THEN
+      *    ONLY SHOW APPRAISAL AND DATES IF THE USER IS A MANAGER
+      *    OR THE CURRENT EMPLOYEE IS THE USER HIMSELF!
+           IF DET-CT-MANAGER OR
+              DET-USER-EMP-ID IS EQUAL TO EMP-EMPLOYEE-ID THEN
+
               MOVE EMP-START-DATE TO WS-INPUT-DATE
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
               MOVE WS-OUTPUT-DATE TO STDATEO
@@ -1079,6 +1134,11 @@
               MOVE '<Hidden>' TO DELDSCO DELDTO
            END-IF.
 
+      *    SPECIAL GREETING!
+           IF DET-USER-EMP-ID IS EQUAL TO EMP-EMPLOYEE-ID THEN
+              MOVE 'Hey! This Is Actually You!' TO WS-MESSAGE 
+           END-IF.
+              
       *    POPULATE THE ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
            MOVE DFHTURQ TO MESSC.
@@ -1090,6 +1150,7 @@
            WHEN WS-MESSAGE(1:3) IS EQUAL TO 'No '
                 MOVE DFHYELLO TO MESSC
            WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
+           WHEN WS-MESSAGE(1:4) IS EQUAL TO 'Hey!'
                 MOVE DFHPINK TO MESSC
            END-EVALUATE
 

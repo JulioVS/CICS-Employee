@@ -12,6 +12,8 @@
              88 DET-CT-ADMINISTRATOR               VALUE 'ADM'.
              88 DET-CT-NOT-SET                     VALUE SPACES.
       *
+          05 DET-USER-EMP-ID            PIC 9(8).
+      *
           05 DET-SELECT-KEY.
              10 DET-SELECT-KEY-TYPE     PIC X(1)   VALUE SPACES.
                 88 DET-SEL-BY-EMPLOYEE-ID          VALUE '1'.

@@ -60,6 +60,7 @@
        01 WS-FILTER-FLAGS.
           03 WS-FILTERS-CHECK          PIC X(1)  VALUE SPACES.
              88 WS-FILTERS-PASSED                VALUE 'Y'.
+             88 WS-FILTERS-FAILED                VALUE 'N'.
           03 WS-KEY-FILTER-CHECK       PIC X(1)  VALUE SPACES.
              88 WS-KEY-FILTER-PASSED             VALUE 'Y'.
           03 WS-DEPT-FILTER-CHECK      PIC X(1)  VALUE SPACES.
@@ -351,6 +352,7 @@
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION
 
                 IF WS-FILTERS-PASSED THEN
                    MOVE EMPLOYEE-MASTER-RECORD TO
@@ -484,6 +486,7 @@
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION
 
                 IF WS-FILTERS-PASSED THEN
                    MOVE EMPLOYEE-MASTER-RECORD TO
@@ -1178,6 +1181,22 @@
            MOVE WS-FILTERS-MSG-EF TO MESSFLO.
            MOVE DFHTURQ TO MESSFLC.
 
+       3700-CHECK-DELETION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3700-CHECK-DELETION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    FILTER 'LOGICALLY DELETED' RECORDS *UNLESS* THE USER IS A 
+      *    SYSTEMS ADMINISTRATOR.
+      
+           IF LST-CT-ADMINISTRATOR THEN
+              EXIT PARAGRAPH
+           END-IF.
+           
+           IF EMP-DELETED THEN
+              SET WS-FILTERS-FAILED TO TRUE
+           END-IF.
 
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
