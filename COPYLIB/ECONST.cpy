@@ -28,9 +28,9 @@
           05 APP-ACTMON-ITEM-NUM        PIC S9(4)
                 USAGE IS BINARY                   VALUE +1.
       *
-      * ---------------------------------------------------------------
       *      LANDING PAGE (ENTRY POINT)
-          05 APP-LANDING-PROGRAM-NAME   PIC X(8)  VALUE 'ELISTP'.
+      * ---------------------------------------------------------------
+          05 APP-LANDING-PROGRAM-NAME   PIC X(8)  VALUE 'EMENUP'.
       * ---------------------------------------------------------------
       *
       *      LIST EMPLOYEES

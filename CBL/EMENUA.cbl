@@ -164,6 +164,7 @@
 
            EXEC CICS XCTL
                 PROGRAM(APP-LIST-PROGRAM-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -186,6 +187,7 @@
 
            EXEC CICS XCTL
                 PROGRAM(APP-VIEW-PROGRAM-NAME)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -248,7 +250,7 @@
       *    >>> -------------- <<<
 
       *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
-           MOVE APP-LIST-PROGRAM-NAME TO MON-LINKING-PROGRAM.
+           MOVE APP-MENU-PROGRAM-NAME TO MON-LINKING-PROGRAM.
            INITIALIZE MON-RESPONSE.
 
            PERFORM 4300-PUT-MONITOR-CONTAINER.
