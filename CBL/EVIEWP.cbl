@@ -1066,6 +1066,13 @@
               MOVE 'By Name' TO SELBYO
            END-IF.
 
+      *    ALL USERS -> DISPLAY CURRENTLY LOGGED-IN USER.
+           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MON-USER-ID TO LOGDINO
+           ELSE 
+              MOVE '<Anonym>' TO LOGDINO
+           END-IF.
+
       *    ALL USERS -> DISPLAY ID AND ALT-KEY FIELDS.
            MOVE EMP-EMPLOYEE-ID TO EMPLIDO.
            MOVE EMP-PRIMARY-NAME TO PRNAMEO.

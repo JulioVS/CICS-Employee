@@ -30,6 +30,9 @@ TRANID   DFHMDF POS=(1,1),                                             X
                LENGTH=28,                                              X
                ATTRB=(ASKIP,NORM),                                     X
                INITIAL='Employee Application Sign On'
+*
+LOGDIN   DFHMDF POS=(2,69),LENGTH=8,ATTRB=(ASKIP,NORM)
+*
          DFHMDF POS=(3,1),                                             X
                LENGTH=66,                                              X
                ATTRB=(ASKIP,NORM),                                     X
@@ -62,7 +65,7 @@ PASSWD   DFHMDF POS=(5,53),                                            X
 *
 MESS     DFHMDF POS=(7,1),                                             X
                LENGTH=79,                                              X
-               ATTRB=(ASKIP,NORM)
+               ATTRB=(ASKIP,BRT)
 *
 *  AID KEY SECTION.
 *

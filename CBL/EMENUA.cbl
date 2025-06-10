@@ -100,9 +100,20 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
            INITIALIZE EMNUMO.           
 
            MOVE EIBTRNID TO TRANIDO.
+
+           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MON-USER-ID TO LOGDINO
+           ELSE 
+              MOVE '<Anonym>' TO LOGDINO
+           END-IF.
+
            MOVE WS-MESSAGE TO MESSO.
 
            EVALUATE TRUE
@@ -187,6 +198,96 @@
                 MOVE 'Details Page Program Not Found!' TO WS-MESSAGE
            WHEN OTHER
                 MOVE 'Error Transferring To Details Page!' TO WS-MESSAGE
+           END-EVALUATE.
+
+      *-----------------------------------------------------------------
+       ACTIVITY-MONITOR SECTION.
+      *-----------------------------------------------------------------
+
+       4000-CHECK-USER-STATUS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4000-CHECK-USER-STATUS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    CHECK IF THE USER IS ALREADY SIGNED ON TO THE ACTIVITY
+           PERFORM 4100-GET-MONITOR-CONTAINER.
+
+      *    IF THE USER IS SIGNED ON, CHECK IF SESSION IS STILL ACTIVE.
+           SET MON-AC-APP-FUNCTION TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+
+       4100-GET-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4100-GET-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS GET
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                INTO (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+                MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Getting Activity Monitor!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       4200-CALL-ACTIVITY-MONITOR.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4200-CALL-ACTIVITY-MONITOR' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
+           MOVE APP-LIST-PROGRAM-NAME TO MON-LINKING-PROGRAM.
+           INITIALIZE MON-RESPONSE.
+
+           PERFORM 4300-PUT-MONITOR-CONTAINER.
+
+           EXEC CICS LINK
+                PROGRAM(APP-ACTMON-PROGRAM-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                TRANSID(EIBTRNID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Activity Monitor Program Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Linking to Activity Monitor!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       4300-PUT-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4300-PUT-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                FROM (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
            END-EVALUATE.
 
       *-----------------------------------------------------------------

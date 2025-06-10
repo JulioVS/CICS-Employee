@@ -6,6 +6,12 @@
              03 TRANIDA    PICTURE X.
            02  FILLER   PICTURE X(1).
            02  TRANIDI  PIC X(4).
+           02  LOGDINL    COMP  PIC  S9(4).
+           02  LOGDINF    PICTURE X.
+           02  FILLER REDEFINES LOGDINF.
+             03 LOGDINA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  LOGDINI  PIC X(8).
            02  USERIDL    COMP  PIC  S9(4).
            02  USERIDF    PICTURE X.
            02  FILLER REDEFINES USERIDF.
@@ -29,6 +35,9 @@
            02  FILLER PICTURE X(3).
            02  TRANIDC    PICTURE X.
            02  TRANIDO  PIC X(4).
+           02  FILLER PICTURE X(3).
+           02  LOGDINC    PICTURE X.
+           02  LOGDINO  PIC X(8).
            02  FILLER PICTURE X(3).
            02  USERIDC    PICTURE X.
            02  USERIDO  PIC X(8).

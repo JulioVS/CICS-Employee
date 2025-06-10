@@ -27,8 +27,12 @@
           05 APP-ACTMON-QUEUE-PREFIX    PIC X(8)  VALUE 'EUSERACT'.
           05 APP-ACTMON-ITEM-NUM        PIC S9(4)
                 USAGE IS BINARY                   VALUE +1.
+      *
+      * ---------------------------------------------------------------
       *      LANDING PAGE (ENTRY POINT)
-          05 APP-LANDING-PROGRAM-NAME   PIC X(8)  VALUE 'EMENUP'.
+          05 APP-LANDING-PROGRAM-NAME   PIC X(8)  VALUE 'ELISTP'.
+      * ---------------------------------------------------------------
+      *
       *      LIST EMPLOYEES
           05 APP-LIST-TRANSACTION-ID    PIC X(4)  VALUE 'ELST'.
           05 APP-LIST-PROGRAM-NAME      PIC X(8)  VALUE 'ELISTP'.

@@ -29,6 +29,12 @@
              03 PAGENA     PICTURE X.
           02 FILLER        PICTURE X(1).
           02 PAGENI        PIC X(6).
+          02 LOGDINL COMP  PIC  S9(4).
+          02 LOGDINF       PICTURE X.
+          02 FILLER REDEFINES LOGDINF.
+             03 LOGDINA    PICTURE X.
+          02 FILLER        PICTURE X(1).
+          02 LOGDINI       PIC X(8).
           02 FLTRSL COMP   PIC  S9(4).
           02 FLTRSF        PICTURE X.
           02 FILLER REDEFINES FLTRSF.
@@ -113,6 +119,9 @@
           02 PAGENC        PICTURE X.
           02 PAGENO        PIC ZZZZZ9.
           02 FILLER        PICTURE X(3).
+          02 LOGDINC       PICTURE X.
+          02 LOGDINO       PIC X(8).
+          02 FILLER        PICTURE X(3).
           02 FLTRSC        PICTURE X.
           02 FLTRSO        PIC X(69).
       *
@@ -167,6 +176,12 @@
              03 TRANFLA    PICTURE X.
           02 FILLER        PICTURE X(1).
           02 TRANFLI       PIC X(4).
+          02 LOGDFLL COMP  PIC  S9(4).
+          02 LOGDFLF       PICTURE X.
+          02 FILLER REDEFINES LOGDFLF.
+             03 LOGDFLA    PICTURE X.
+          02 FILLER        PICTURE X(1).
+          02 LOGDFLI       PIC X(8).
           02 KEYSELL COMP  PIC  S9(4).
           02 KEYSELF       PICTURE X.
           02 FILLER REDEFINES KEYSELF.
@@ -217,6 +232,9 @@
           02 FILLER        PICTURE X(3).
           02 TRANFLC       PICTURE X.
           02 TRANFLO       PIC X(4).
+          02 FILLER        PICTURE X(3).
+          02 LOGDFLC       PICTURE X.
+          02 LOGDFLO       PIC X(8).
           02 FILLER        PICTURE X(3).
           02 KEYSELC       PICTURE X.
           02 KEYSELO       PIC X(1).

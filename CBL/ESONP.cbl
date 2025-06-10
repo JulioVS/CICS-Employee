@@ -110,10 +110,6 @@
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE ESONMO.
 
-      *    FOR THE FIRST INTERACTION, IT SENDS THE EMPY MAP WITH
-      *    JUST THE TRANSACTION ID ON IT (AN ECHO OF A KNOWN VALUE)
-           MOVE EIBTRNID TO TRANIDO.
-
       *-----------------------------------------------------------------
        USE-CASE SECTION.
       *-----------------------------------------------------------------
@@ -431,6 +427,18 @@
            MOVE '9100-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           INITIALIZE ESONMO.
+           
+      *    DISPLAY TRANSACTION ID.
+           MOVE EIBTRNID TO TRANIDO.
+
+      *    DISPLAY CURRENTLY LOGGED-IN USER, IF ANY.
+           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MON-USER-ID TO LOGDINO
+           ELSE 
+              MOVE '<Anonym>' TO LOGDINO
+           END-IF.
 
       *    CHANGE COLOR OF MESSAGE BASED ON TYPE/CONTENT.
            MOVE DFHTURQ TO MESSC.
