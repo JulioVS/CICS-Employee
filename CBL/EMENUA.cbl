@@ -23,31 +23,28 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE    PIC S9(8) USAGE IS BINARY.
-          05 WS-MESSAGE          PIC X(79) VALUE SPACES.
-       03 WS-MENU-ACTIONS        PIC X(1)  VALUE SPACES.
-          88 WS-ACTION-LIST                VALUE 'L'.
-          88 WS-ACTION-VIEW                VALUE 'V'.
-          88 WS-ACTION-EXIT                VALUE 'E'.
-          88 WS-ACTION-SIGN-OFF            VALUE 'S'.
-          88 WS-ACTION-INVALID             VALUE 'I'.
+          05 WS-CICS-RESPONSE      PIC S9(8) USAGE IS BINARY.
+          05 WS-MESSAGE            PIC X(79).
+          05 WS-MENU-ACTIONS       PIC X(1).
+             88 WS-ACTION-EXIT               VALUE 'E'.
+             88 WS-ACTION-INVALID            VALUE 'I'.
       *
-       01 WS-DEBUG-AID           PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID             PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER              PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT       PIC X(45) VALUE SPACES.
-          05 FILLER              PIC X(1)  VALUE '>'.
-          05 FILLER              PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP    PIC 9(8)  VALUE ZEROES.
-          05 FILLER              PIC X(1)  VALUE '>'.
-          05 FILLER              PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2   PIC 9(8)  VALUE ZEROES.
-          05 FILLER              PIC X(1)  VALUE '>'.
+          05 FILLER                PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT         PIC X(45) VALUE SPACES.
+          05 FILLER                PIC X(1)  VALUE '>'.
+          05 FILLER                PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP      PIC 9(8)  VALUE ZEROES.
+          05 FILLER                PIC X(1)  VALUE '>'.
+          05 FILLER                PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2     PIC 9(8)  VALUE ZEROES.
+          05 FILLER                PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE          PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING                VALUE 'Y'.
-          88 NOT-DEBUGGING                 VALUE 'N'.
+       01 WS-DEBUG-MODE            PIC X(1)  VALUE 'N'.
+          88 I-AM-DEBUGGING                  VALUE 'Y'.
+          88 NOT-DEBUGGING                   VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -60,10 +57,7 @@
       *    >>> -------------- <<<
 
            PERFORM 1000-FIRST-INTERACTION.
-
-           PERFORM 2000-DISPLAY-MENU-SCREEN
-              UNTIL WS-ACTION-EXIT OR WS-ACTION-SIGN-OFF.
-
+           PERFORM 2000-DISPLAY-MENU-SCREEN UNTIL WS-ACTION-EXIT.
            PERFORM 9200-RETURN-TO-CICS.
            
       *-----------------------------------------------------------------
@@ -138,19 +132,14 @@
 
            EVALUATE EIBAID
            WHEN DFHPF1
-                MOVE 'List Employees Request' TO WS-MESSAGE
-                SET WS-ACTION-LIST TO TRUE
                 PERFORM 2100-TRANSFER-TO-LIST-PAGE
            WHEN DFHPF2
-                MOVE 'View Employee Request' TO WS-MESSAGE
-                SET WS-ACTION-VIEW TO TRUE
                 PERFORM 2200-TRANSFER-TO-VIEW-PAGE
            WHEN DFHPF3
-                MOVE 'Menu Exit Request' TO WS-MESSAGE
                 SET WS-ACTION-EXIT TO TRUE
            WHEN DFHPF10
-                MOVE 'Sign Off Request' TO WS-MESSAGE
-                SET WS-ACTION-SIGN-OFF TO TRUE
+                PERFORM 2500-SIGN-USER-OFF
+                SET WS-ACTION-EXIT TO TRUE
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
                 SET WS-ACTION-INVALID TO TRUE
@@ -201,6 +190,17 @@
            WHEN OTHER
                 MOVE 'Error Transferring To Details Page!' TO WS-MESSAGE
            END-EVALUATE.
+
+       2500-SIGN-USER-OFF.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2500-SIGN-USER-OFF' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           SET MON-AC-SIGN-OFF TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+      *    >>> --------------------- <<<
 
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
