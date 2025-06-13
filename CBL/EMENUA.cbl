@@ -136,8 +136,8 @@
            WHEN DFHPF2
                 PERFORM 2200-TRANSFER-TO-VIEW-PAGE
            WHEN DFHPF3
-                SET WS-ACTION-EXIT TO TRUE
            WHEN DFHPF10
+           WHEN DFHPF12
                 PERFORM 2500-SIGN-USER-OFF
                 SET WS-ACTION-EXIT TO TRUE
            WHEN OTHER

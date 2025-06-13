@@ -528,6 +528,7 @@
            WHEN DFHENTER
                 PERFORM 2100-SHOW-DETAILS
            WHEN DFHPF3
+           WHEN DFHPF12
                 PERFORM 2200-SHOW-FILTERS
            WHEN DFHPF7
                 PERFORM 2300-PREV-BY-EMPLOYEE-KEY
@@ -535,8 +536,6 @@
                 PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
            WHEN DFHPF10
                 PERFORM 2500-SIGN-USER-OFF
-           WHEN DFHPF12
-                PERFORM 2600-CANCEL-ACTION
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
@@ -734,13 +733,13 @@
 
            PERFORM 9200-RETURN-TO-CICS.
 
-       2600-CANCEL-ACTION.
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2600-CANCEL-ACTION' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
+      *2600-CANCEL-ACTION.
+      **    >>> DEBUGGING ONLY <<<
+      *    MOVE '2600-CANCEL-ACTION' TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
+      **    >>> -------------- <<<
 
-           PERFORM 9200-RETURN-TO-CICS.
+      *    PERFORM 9200-RETURN-TO-CICS.
 
       *-----------------------------------------------------------------
        FILTERS SECTION.
@@ -841,7 +840,7 @@
            WHEN DFHPF3
                 MOVE 'Filter Criteria Cancelled' TO WS-MESSAGE
                 SET WS-ACTION-EXIT TO TRUE
-                PERFORM 2500-SIGN-USER-OFF
+                PERFORM 3050-TRANSFER-BACK-TO-MENU
            WHEN DFHPF10
                 MOVE 'Sign Off Requested' TO WS-MESSAGE
                 SET WS-ACTION-SIGN-OFF TO TRUE
@@ -860,6 +859,34 @@
       *    PROCEED INTO THE FILE ACCESS LOGIC.
            PERFORM 3100-SAVE-FILTER-CRITERIA.
 
+       3050-TRANSFER-BACK-TO-MENU.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3050-TRANSFER-BACK-TO-MENU' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+      
+           PERFORM 9150-PUT-LIST-CONTAINER.
+
+           EXEC CICS XCTL
+                PROGRAM(APP-MENU-PROGRAM-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Transferring Back To Menu' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Menu Program Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Transferring To Menu!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+           
        3100-SAVE-FILTER-CRITERIA.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3100-SAVE-FILTER-CRITERIA' TO WS-DEBUG-AID.
