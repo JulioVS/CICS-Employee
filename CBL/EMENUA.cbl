@@ -20,31 +20,38 @@
        COPY DFHAID.
        COPY DFHBMSCA.
       ******************************************************************
+      *   DEFINE MY SESSION STATE DATA FOR PASSING INTO COMM-AREA.
+      ******************************************************************
+       01 WS-SESSION-STATE      PIC X(16).
+      ******************************************************************
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE      PIC S9(8) USAGE IS BINARY.
-          05 WS-MESSAGE            PIC X(79).
-          05 WS-MENU-ACTIONS       PIC X(1).
-             88 WS-ACTION-EXIT               VALUE 'E'.
-             88 WS-ACTION-INVALID            VALUE 'I'.
+          05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
+          05 WS-MESSAGE         PIC X(79).
       *
-       01 WS-DEBUG-AID             PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER                PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT         PIC X(45) VALUE SPACES.
-          05 FILLER                PIC X(1)  VALUE '>'.
-          05 FILLER                PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP      PIC 9(8)  VALUE ZEROES.
-          05 FILLER                PIC X(1)  VALUE '>'.
-          05 FILLER                PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2     PIC 9(8)  VALUE ZEROES.
-          05 FILLER                PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE            PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING                  VALUE 'Y'.
-          88 NOT-DEBUGGING                   VALUE 'N'.
+       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'N'.
+          88 I-AM-DEBUGGING               VALUE 'Y'.
+          88 NOT-DEBUGGING                VALUE 'N'.
+
+      ******************************************************************
+      *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
+      ******************************************************************
+       LINKAGE SECTION.
+       01 DFHCOMMAREA           PIC X(16).
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -56,9 +63,17 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           PERFORM 1000-FIRST-INTERACTION.
-           PERFORM 2000-DISPLAY-MENU-SCREEN UNTIL WS-ACTION-EXIT.
-           PERFORM 9200-RETURN-TO-CICS.
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
+           IF EIBCALEN IS EQUAL TO ZERO THEN
+              PERFORM 1000-FIRST-INTERACTION
+           ELSE
+              PERFORM 2000-PROCESS-USER-INPUT
+           END-IF.
+
+           PERFORM 9100-SEND-MAP-AND-RETURN.
            
       *-----------------------------------------------------------------
        START-UP SECTION.
@@ -70,64 +85,35 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           PERFORM 1100-INITIALIZE-VARIABLES.
+           PERFORM 1100-INITIALIZE.
            MOVE 'Hey, Welcome to the Employee App!' TO WS-MESSAGE.
 
-       1100-INITIALIZE-VARIABLES.
+       1100-INITIALIZE.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1100-INITIALIZE-VARIABLES' TO WS-DEBUG-AID.
+           MOVE '1100-INITIALIZE' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    CLEAR ALL RECORDS AND VARIABLES.
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
+           INITIALIZE WS-SESSION-STATE.
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE EMNUMO.
 
       *-----------------------------------------------------------------
-       MENU SECTION.
+       USE-CASE SECTION.
       *-----------------------------------------------------------------
 
-       2000-DISPLAY-MENU-SCREEN.
+       2000-PROCESS-USER-INPUT.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-DISPLAY-MENU-SCREEN' TO WS-DEBUG-AID.
+           MOVE '2000-PROCESS-USER-INPUT' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    >>> CALL ACTIVITY MONITOR <<<
-           PERFORM 4000-CHECK-USER-STATUS.
-      *    >>> --------------------- <<<
-
-           INITIALIZE EMNUMO.           
-
-           MOVE EIBTRNID TO TRANIDO.
-
-           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
-              MOVE MON-USER-ID TO LOGDINO
-           ELSE 
-              MOVE '<Anonym>' TO LOGDINO
-           END-IF.
-
-           MOVE WS-MESSAGE TO MESSO.
-
-           EVALUATE TRUE
-           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
-                MOVE DFHYELLO TO MESSC
-           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
-                MOVE DFHRED TO MESSC
-           WHEN WS-MESSAGE(1:3) IS EQUAL TO 'Hey'
-                MOVE DFHPINK TO MESSC
-           END-EVALUATE.
-
-           EXEC CICS SEND
+           EXEC CICS RECEIVE
                 MAP(APP-MENU-MAP-NAME)
                 MAPSET(APP-MENU-MAPSET-NAME)
-                FROM (EMNUMO)
-                ERASE
-                END-EXEC.
-
-           EXEC CICS RECEIVE
-                LENGTH(LENGTH OF EIBAID)
+                INTO (EMNUMI)
                 END-EXEC.
 
            EVALUATE EIBAID
@@ -139,10 +125,8 @@
            WHEN DFHPF10
            WHEN DFHPF12
                 PERFORM 2500-SIGN-USER-OFF
-                SET WS-ACTION-EXIT TO TRUE
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
-                SET WS-ACTION-INVALID TO TRUE
            END-EVALUATE.
 
        2100-TRANSFER-TO-LIST-PAGE.
@@ -201,6 +185,8 @@
            SET MON-AC-SIGN-OFF TO TRUE.
            PERFORM 4200-CALL-ACTIVITY-MONITOR.
       *    >>> --------------------- <<<
+
+           PERFORM 9200-RETURN-TO-CICS.
 
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
@@ -295,6 +281,50 @@
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
+
+       9100-SEND-MAP-AND-RETURN.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2000-DISPLAY-MENU-SCREEN' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE EMNUMO.           
+
+           MOVE EIBTRNID TO TRANIDO.
+
+           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MON-USER-ID TO LOGDINO
+           ELSE 
+              MOVE '<Anonym>' TO LOGDINO
+           END-IF.
+
+           MOVE WS-MESSAGE TO MESSO.
+
+           EVALUATE TRUE
+           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
+                MOVE DFHYELLO TO MESSC
+           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
+                MOVE DFHRED TO MESSC
+           WHEN WS-MESSAGE(1:3) IS EQUAL TO 'Hey'
+                MOVE DFHPINK TO MESSC
+           END-EVALUATE.
+
+      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9' 
+      *    ABEND THAT HAPPENS WHEN WE ONLY RECEIVE AN AID-KEY FROM THE
+      *    MAP AND NO REAL DATA ALONG IT.
+           MOVE DFHBMFSE TO TRANIDA.
+
+           EXEC CICS SEND
+                MAP(APP-MENU-MAP-NAME)
+                MAPSET(APP-MENU-MAPSET-NAME)
+                FROM (EMNUMO)
+                ERASE
+                END-EXEC.
+
+           EXEC CICS RETURN
+                COMMAREA(WS-SESSION-STATE)
+                TRANSID(APP-MENU-TRANSACTION-ID)
+                END-EXEC.
 
        9200-RETURN-TO-CICS.
       *    >>> DEBUGGING ONLY <<<

@@ -185,6 +185,25 @@
            MOVE '1' TO DET-SELECT-KEY-TYPE.
            MOVE LOW-VALUE TO DET-SELECT-KEY-VALUE.
 
+      *    GET CALLING PROGRAM NAME FROM ITS TRANSACTION ID WHILE IT'S 
+      *    STILL AVAILABLE IN THE EXECUTION INTERFACE BLOCK.
+      *
+      *    WE WILL USE THIS TO RETURN TO THE CALLING PROGRAM WHEN
+      *    THE USER EXISTS OR CANCELS THE VIEW.
+      *
+      *    AS OF NOW, IT WILL EITHER BE 'ELISTP' (LIST EMPLOYEES) OR
+      *    'EMENUP' (MAIN MENU).-
+
+           EXEC CICS INQUIRE
+                TRANSACTION(EIBTRNID)
+                PROGRAM(DET-CALLING-PROGRAM)
+                END-EXEC.
+
+      *    >>> ---IMPORTANT!--- <<<
+      *    THE USE OF 'CICS INQUIRE' REQUIRED ADDING THE 'SP' OPTION
+      *    IN THE TRANSLATOR OPTIONS OF THE COMPILING JCL!
+      *    >>> ---------------- <<<
+
        1300-READ-EMPLOYEE-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
            IF DET-SEL-BY-EMPLOYEE-ID THEN
@@ -498,7 +517,8 @@
            WHEN DFHENTER
                 PERFORM 2100-FIND-BY-EMPLOYEE-KEY
            WHEN DFHPF3
-                CONTINUE
+           WHEN DFHPF12
+                PERFORM 2200-TRANSFER-BACK-TO-CALLER
            WHEN DFHPF7
                 PERFORM 2300-PREV-BY-EMPLOYEE-KEY
            WHEN DFHPF8
@@ -507,8 +527,6 @@
                 PERFORM 2700-SWITCH-DISPLAY-ORDER
            WHEN DFHPF10
                 PERFORM 2500-SIGN-USER-OFF
-           WHEN DFHPF12
-                PERFORM 2600-CANCEL-ACTION
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
@@ -567,6 +585,34 @@
               MOVE 'No Matching Record By That Key!' TO WS-MESSAGE
            END-IF.
 
+       2200-TRANSFER-BACK-TO-CALLER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2200-TRANSFER-BACK-TO-CALLER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 9150-PUT-VIEW-CONTAINER.
+
+           EXEC CICS XCTL
+                PROGRAM(DET-CALLING-PROGRAM)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Transferring Back To Caller' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Caller Program Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Transferring To Caller!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.          
+      
        2300-PREV-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
            IF DET-SEL-BY-EMPLOYEE-ID THEN
@@ -636,13 +682,13 @@
 
            PERFORM 9200-RETURN-TO-CICS.
 
-       2600-CANCEL-ACTION.
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2600-CANCEL-ACTION' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
+      *2600-CANCEL-ACTION.
+      **    >>> DEBUGGING ONLY <<<
+      *    MOVE '2600-CANCEL-ACTION' TO WS-DEBUG-AID.
+      *    PERFORM 9300-DEBUG-AID.
+      **    >>> -------------- <<<
 
-           PERFORM 9200-RETURN-TO-CICS.
+      *    PERFORM 9200-RETURN-TO-CICS.
 
        2700-SWITCH-DISPLAY-ORDER.
       *    >>> DEBUGGING ONLY <<<
@@ -1018,20 +1064,7 @@
       *      - RETURN TO CICS.
 
            PERFORM 9100-POPULATE-MAP.
-
-           EXEC CICS PUT
-                CONTAINER(APP-VIEW-CONTAINER-NAME)
-                CHANNEL(APP-VIEW-CHANNEL-NAME)
-                FROM (EMPLOYEE-DETAILS-CONTAINER)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
-
-           EVALUATE WS-CICS-RESPONSE
-           WHEN DFHRESP(NORMAL)
-                CONTINUE
-           WHEN OTHER
-                MOVE 'Error Putting View Container!' TO WS-MESSAGE
-           END-EVALUATE.
+           PERFORM 9150-PUT-VIEW-CONTAINER.
 
            EXEC CICS SEND
                 MAP(APP-VIEW-MAP-NAME)
@@ -1177,6 +1210,26 @@
            IF NOT DET-END-OF-FILE THEN
               MOVE WS-PF8-LABEL TO HLPPF8O
            END-IF.
+
+       9150-PUT-VIEW-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9150-PUT-VIEW-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+      
+           EXEC CICS PUT
+                CONTAINER(APP-VIEW-CONTAINER-NAME)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                FROM (EMPLOYEE-DETAILS-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting View Container!' TO WS-MESSAGE
+           END-EVALUATE.
 
        9200-RETURN-TO-CICS.
       *    >>> DEBUGGING ONLY <<<
