@@ -63,10 +63,6 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    >>> CALL ACTIVITY MONITOR <<<
-           PERFORM 4000-CHECK-USER-STATUS.
-      *    >>> --------------------- <<<
-
            IF EIBCALEN IS EQUAL TO ZERO THEN
               PERFORM 1000-FIRST-INTERACTION
            ELSE
@@ -86,7 +82,13 @@
       *    >>> -------------- <<<
 
            PERFORM 1100-INITIALIZE.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
            MOVE 'Hey, Welcome to the Employee App!' TO WS-MESSAGE.
+
 
        1100-INITIALIZE.
       *    >>> DEBUGGING ONLY <<<
@@ -115,6 +117,10 @@
                 MAPSET(APP-MENU-MAPSET-NAME)
                 INTO (EMNUMI)
                 END-EXEC.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
 
            EVALUATE EIBAID
            WHEN DFHPF1
