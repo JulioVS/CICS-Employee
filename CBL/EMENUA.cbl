@@ -148,6 +148,10 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
+           PERFORM 2300-DELETE-MENU-CONTAINER.
+
+      *    TRANSFER LOGIC TO EMPLOYEES LISTING PAGE.
            EXEC CICS XCTL
                 PROGRAM(APP-LIST-PROGRAM-NAME)
                 CHANNEL(APP-LIST-CHANNEL-NAME)
@@ -171,6 +175,10 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
+           PERFORM 2300-DELETE-MENU-CONTAINER.
+
+      *    TRANSFER LOGIC TO VIEW EMPLOYEE DETAILS PAGE.
            EXEC CICS XCTL
                 PROGRAM(APP-VIEW-PROGRAM-NAME)
                 CHANNEL(APP-VIEW-CHANNEL-NAME)
@@ -186,6 +194,27 @@
                 MOVE 'Details Page Program Not Found!' TO WS-MESSAGE
            WHEN OTHER
                 MOVE 'Error Transferring To Details Page!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       2300-DELETE-MENU-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2300-DELETE-MENU-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS DELETE
+                CONTAINER(APP-MENU-CONTAINER-NAME)
+                CHANNEL(APP-MENU-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'Menu Container Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Deleting Menu Container!' TO WS-MESSAGE
            END-EVALUATE.
 
        2500-SIGN-USER-OFF.

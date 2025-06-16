@@ -185,7 +185,7 @@
            MOVE '1' TO DET-SELECT-KEY-TYPE.
            MOVE LOW-VALUE TO DET-SELECT-KEY-VALUE.
 
-      *    GET CALLING PROGRAM NAME FROM ITS TRANSACTION ID WHILE IT'S 
+      *    GET CALLING PROGRAM NAME FROM ITS TRANSACTION ID WHILE IT'S
       *    STILL AVAILABLE IN THE EXECUTION INTERFACE BLOCK.
       *
       *    WE WILL USE THIS TO RETURN TO THE CALLING PROGRAM WHEN
@@ -234,7 +234,7 @@
            IF WS-FILTERS-PASSED THEN
               MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
            END-IF.
-           
+
            IF NOT DET-END-OF-FILE THEN
               PERFORM 1330-END-BROWSING
            END-IF.
@@ -377,10 +377,10 @@
            PERFORM 1410-READ-PREV-RECORD
               UNTIL WS-FILTERS-PASSED OR DET-TOP-OF-FILE.
 
-           IF WS-FILTERS-PASSED THEN 
+           IF WS-FILTERS-PASSED THEN
               MOVE EMPLOYEE-MASTER-RECORD TO DET-EMPLOYEE-RECORD
            END-IF.
-               
+
            IF NOT DET-TOP-OF-FILE THEN
               PERFORM 1330-END-BROWSING
            END-IF.
@@ -457,7 +457,7 @@
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
-                PERFORM 3700-CHECK-DELETION                
+                PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Record Found By That Key!' TO WS-MESSAGE
            WHEN DFHRESP(ENDFILE)
@@ -538,7 +538,7 @@
       *       --- BY ID ---
               SET DET-SEL-BY-EMPLOYEE-ID TO TRUE
 
-      **       MY OWN CODE FOR FORMATTING THE ENTERED ID VALUE. 
+      **       MY OWN CODE FOR FORMATTING THE ENTERED ID VALUE.
       *       MOVE FUNCTION TRIM(EMPLIDI) TO WS-EMPLOYEE-ID
       *       INSPECT WS-EMPLOYEE-ID REPLACING LEADING SPACES BY ZEROES
       *       MOVE WS-EMPLOYEE-ID TO EMP-EMPLOYEE-ID
@@ -549,7 +549,7 @@
                    LENGTH(8)
                    END-EXEC
 
-              MOVE EMPLIDI TO EMP-EMPLOYEE-ID 
+              MOVE EMPLIDI TO EMP-EMPLOYEE-ID
            END-IF.
 
       *    IF PRIMARY NAME WAS ENTERED, THEN FIND BY NAME.
@@ -608,11 +608,13 @@
 
       *    OTHERWISE, WE TRANSFER BACK TO THE CALLING PROGRAM.
       *    I.E. 'ELISTP' (LIST EMPLOYEES) OR 'EMENUP' (MENU).
-           PERFORM 9150-PUT-VIEW-CONTAINER.
+
+      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
+           PERFORM 2250-DELETE-VIEW-CONTAINER.
 
            EXEC CICS XCTL
                 PROGRAM(DET-CALLING-PROGRAM)
-                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -628,8 +630,29 @@
            WHEN OTHER
                 MOVE 'Error Transferring To Caller!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
-           END-EVALUATE.          
-      
+           END-EVALUATE.
+
+       2250-DELETE-VIEW-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2250-DELETE-VIEW-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS DELETE
+                CONTAINER(APP-VIEW-CONTAINER-NAME)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'View Container Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Deleting View Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
        2300-PREV-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
            IF DET-SEL-BY-EMPLOYEE-ID THEN
@@ -754,9 +777,33 @@
                 MOVE LST-CURRENT-RECORD(LST-SELECT-LINE-NUMBER)
                    TO DET-EMPLOYEE-RECORD
                 MOVE LST-SELECT-KEY-TYPE TO DET-SELECT-KEY-TYPE
-                MOVE LST-FILTERS TO DET-FILTERS 
+                MOVE LST-FILTERS TO DET-FILTERS
+
+      *         ALSO UPDATE LIST CONTAINER WITH THIS PROGRAM'S NAME.
+                MOVE APP-VIEW-PROGRAM-NAME TO LST-PROGRAM-NAME
+                PERFORM 3100-PUT-LIST-CONTAINER
            WHEN OTHER
                 MOVE 'Error Retrieving List Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       3100-PUT-LIST-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3100-PUT-LIST-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-LIST-CONTAINER-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                FROM (LIST-EMPLOYEE-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting List Container!' TO WS-MESSAGE
            END-EVALUATE.
 
        3200-APPLY-FILTERS.
@@ -965,11 +1012,11 @@
 
       *    FILTER 'LOGICALLY DELETED' RECORDS FROM STANDARD USERS, BUT
       *    ALLOW MANAGERS AND ADMINISTRATORS TO SEE THEM.
-      
+
            IF DET-CT-MANAGER OR DET-CT-ADMINISTRATOR THEN
               EXIT PARAGRAPH
            END-IF.
-           
+
            IF EMP-DELETED THEN
               SET WS-FILTERS-FAILED TO TRUE
            END-IF.
@@ -1103,7 +1150,7 @@
       *    >>> -------------- <<<
 
            INITIALIZE EDETMO.
-           
+
            MOVE DET-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
 
       *    ALL USERS -> DISPLAY TRANSACTION ID.
@@ -1119,7 +1166,7 @@
       *    ALL USERS -> DISPLAY CURRENTLY LOGGED-IN USER.
            IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
               MOVE MON-USER-ID TO LOGDINO
-           ELSE 
+           ELSE
               MOVE '<Anonym>' TO LOGDINO
            END-IF.
 
@@ -1145,9 +1192,9 @@
               MOVE EMP-END-DATE TO WS-INPUT-DATE
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
               MOVE WS-OUTPUT-DATE TO ENDATEO
-           ELSE 
-              MOVE '<Hidden>' TO JBTITLO DEPTIDO DEPTNMO 
-              MOVE '<Hidden>' TO STDATEO ENDATEO 
+           ELSE
+              MOVE '<Hidden>' TO JBTITLO DEPTIDO DEPTNMO
+              MOVE '<Hidden>' TO STDATEO ENDATEO
            END-IF.
 
       *    USER HIMSELF & MANAGERS -> DISPLAY APPRAISAL DATA.
@@ -1159,17 +1206,17 @@
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
               MOVE WS-OUTPUT-DATE TO APPRDTO
 
-              EVALUATE TRUE 
+              EVALUATE TRUE
               WHEN EMP-EXCEEDS-EXPECTATIONS
                    MOVE 'Exceeds Expectations' TO APPRRSO
               WHEN EMP-MEETS-EXPECTATIONS
                    MOVE 'Meets Expectations' TO APPRRSO
               WHEN EMP-UH-OH
                    MOVE 'You Are Truly Fucked' TO APPRRSO
-              WHEN OTHER 
+              WHEN OTHER
                    MOVE 'Undefined' TO APPRRSO
               END-EVALUATE
-           ELSE 
+           ELSE
               MOVE '<Hidden>' TO APPRDTO APPRRSO
            END-IF.
 
@@ -1189,16 +1236,16 @@
               MOVE EMP-DELETE-DATE TO WS-INPUT-DATE
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
               MOVE WS-OUTPUT-DATE TO DELDTO
-           ELSE 
+           ELSE
               MOVE '-' TO DELFLGO
               MOVE '<Hidden>' TO DELDSCO DELDTO
            END-IF.
 
       *    USER HIMSELF -> SPECIAL GREETING!
            IF DET-USER-EMP-ID IS EQUAL TO EMP-EMPLOYEE-ID THEN
-              MOVE 'Hey! This Is Actually You!' TO WS-MESSAGE 
+              MOVE 'Hey! This Is Actually You!' TO WS-MESSAGE
            END-IF.
-              
+
       *    ALL USERS -> DISPLAY ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
            MOVE DFHTURQ TO MESSC.
@@ -1233,7 +1280,7 @@
            MOVE '9150-PUT-VIEW-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
-      
+
            EXEC CICS PUT
                 CONTAINER(APP-VIEW-CONTAINER-NAME)
                 CHANNEL(APP-VIEW-CHANNEL-NAME)

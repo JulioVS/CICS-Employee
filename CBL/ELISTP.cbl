@@ -140,7 +140,14 @@
                 PERFORM 1000-FIRST-INTERACTION
            WHEN DFHRESP(NORMAL)
       *         NEXT INTERACTIONS -> CONTAINER FOUND (CONTINUE)
-                PERFORM 2000-PROCESS-USER-INPUT
+                IF LST-PROGRAM-NAME IS EQUAL TO APP-LIST-PROGRAM-NAME 
+                   PERFORM 2000-PROCESS-USER-INPUT
+                   EXIT
+                END-IF 
+      *         IF BOUNCING BACK FROM 'VIEW' PAGE, RESTART CONVERSATION
+                IF LST-PROGRAM-NAME IS EQUAL TO APP-VIEW-PROGRAM-NAME 
+                   PERFORM 1000-FIRST-INTERACTION
+                END-IF 
            WHEN OTHER
                 MOVE 'Error Retrieving List Container!' TO WS-MESSAGE
            END-EVALUATE.
@@ -868,11 +875,12 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
       
-           PERFORM 9150-PUT-LIST-CONTAINER.
+      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
+           PERFORM 3070-DELETE-LIST-CONTAINER.
 
            EXEC CICS XCTL
                 PROGRAM(APP-MENU-PROGRAM-NAME)
-                CHANNEL(APP-LIST-CHANNEL-NAME)
+                CHANNEL(APP-MENU-CHANNEL-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -890,6 +898,27 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
            
+       3070-DELETE-LIST-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3070-DELETE-LIST-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS DELETE
+                CONTAINER(APP-LIST-CONTAINER-NAME)
+                CHANNEL(APP-LIST-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+     
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'List Container Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Deleting List Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
        3100-SAVE-FILTER-CRITERIA.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3100-SAVE-FILTER-CRITERIA' TO WS-DEBUG-AID.
