@@ -54,8 +54,11 @@
           05 APP-VIEW-CONTAINER-NAME    PIC X(16) VALUE 'DETContainer'.
           05 APP-VIEW-CHANNEL-NAME      PIC X(16) VALUE 'DHFTRANSACTION'
            .
-      *      MENU DETAILS
+      *      MAIN MENU 
           05 APP-MENU-TRANSACTION-ID    PIC X(4)  VALUE 'EMNU'.
           05 APP-MENU-PROGRAM-NAME      PIC X(8)  VALUE 'EMENUP'.
           05 APP-MENU-MAPSET-NAME       PIC X(7)  VALUE 'EMNUMAP'.
           05 APP-MENU-MAP-NAME          PIC X(7)  VALUE 'EMNUM'.
+          05 APP-MENU-CONTAINER-NAME    PIC X(16) VALUE 'MNUContainer'.
+          05 APP-MENU-CHANNEL-NAME      PIC X(16) VALUE 'DHFTRANSACTION'
+           .

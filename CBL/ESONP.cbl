@@ -33,6 +33,7 @@
        01 WS-WORKING-VARS.
           05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
           05 WS-CURRENT-DATE      PIC X(14).
+          05 WS-MSG               PIC X(79).
       *
           05 WS-USER-LOOKUP       PIC X(1)  VALUE SPACES.
              88 WS-USER-FOUND               VALUE 'Y'.
@@ -110,6 +111,8 @@
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE ESONMO.
 
+           MOVE 'Welcome to the Employee App!' TO WS-MSG.
+
       *-----------------------------------------------------------------
        USE-CASE SECTION.
       *-----------------------------------------------------------------
@@ -144,12 +147,12 @@
                    USERIDI IS EQUAL TO SPACES OR
                    PASSWDI IS EQUAL TO LOW-VALUES OR
                    PASSWDI IS EQUAL TO SPACES THEN
-                   MOVE "Invalid Credentials!" TO MESSO
+                   MOVE "Invalid Credentials!" TO WS-MSG
                 ELSE
                    PERFORM 3000-SIGN-ON-USER
                 END-IF
            WHEN OTHER
-                MOVE "Invalid Key!" TO MESSO
+                MOVE "Invalid Key!" TO WS-MSG
            END-EVALUATE.
 
            PERFORM 9100-SEND-MAP-AND-RETURN.
@@ -226,11 +229,11 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 SET WS-USER-FOUND TO TRUE
-                MOVE "User Found!" TO MESSO
+                MOVE "User Found!" TO WS-MSG
            WHEN DFHRESP(NOTFND)
-                MOVE "User Not Found!" TO MESSO
+                MOVE "User Not Found!" TO WS-MSG
            WHEN OTHER
-                MOVE "Error Reading Users File!" TO MESSO
+                MOVE "Error Reading Users File!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -271,10 +274,10 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN DFHRESP(PGMIDERR)
-                MOVE "Activity Monitor Program Not Found!" TO MESSO
+                MOVE "Activity Monitor Program Not Found!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN OTHER
-                MOVE "Error Linking To Activity Monitor!" TO MESSO
+                MOVE "Error Linking To Activity Monitor!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -296,7 +299,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE "Error Writing Activity Monitor!" TO MESSO
+                MOVE "Error Writing Activity Monitor!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -320,15 +323,15 @@
                 CONTINUE
            WHEN DFHRESP(CHANNELERR)
            WHEN DFHRESP(CONTAINERERR)
-                MOVE "No Activity Monitor Data Found!" TO MESSO
+                MOVE "No Activity Monitor Data Found!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN OTHER
-                MOVE "Error Reading Activity Monitor!" TO MESSO
+                MOVE "Error Reading Activity Monitor!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
       *    RELAY ACTIVITY MONITOR RESPONSE MESSAGE TO USER TERMINAL
-           MOVE MON-MESSAGE TO MESSO.
+           MOVE MON-MESSAGE TO WS-MSG.
 
       *    SEE IF IT RESULTED IN SUCCESS, FAIL, NEUTRAL OR ERROR.
            EVALUATE TRUE
@@ -344,7 +347,7 @@
       *         ON NEUTRAL, CONTINUE TO CHECK USER CREDENTIALS
                 CONTINUE
            WHEN OTHER
-                MOVE "Unknown Response From Activity Monitor!" TO MESSO
+                MOVE "Unknown Response From Activity Monitor!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -365,15 +368,15 @@
       *             ALL CONDITIONS MET
       *             SUCCESFUL SIGN ON!
                     SET WS-LOGIN-SUCCESS TO TRUE
-                    MOVE "User Is Active!" TO MESSO
+                    MOVE "User Is Active!" TO WS-MSG
                  ELSE
-                    MOVE "User Is Not Yet Active!" TO MESSO
+                    MOVE "User Is Not Yet Active!" TO WS-MSG
                  END-IF
               ELSE
-                 MOVE "User Is Inactive!" TO MESSO
+                 MOVE "User Is Inactive!" TO WS-MSG
               END-IF
            ELSE
-              MOVE "Invalid Password!" TO MESSO
+              MOVE "Invalid Password!" TO WS-MSG
            END-IF.
 
        3500-NOTIFY-ACTIVITY-MONITOR.
@@ -410,15 +413,15 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Transferring To Landing Page' TO MESSO
+                MOVE 'Transferring To Landing Page' TO WS-MSG
            WHEN DFHRESP(INVREQ)
-                MOVE 'Invalid Request!' TO MESSO
+                MOVE 'Invalid Request!' TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN DFHRESP(PGMIDERR)
-                MOVE "Landing Page Program Not Found!" TO MESSO
+                MOVE "Landing Page Program Not Found!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            WHEN OTHER
-                MOVE "Error Linking To Landing Page!" TO MESSO
+                MOVE "Error Linking To Landing Page!" TO WS-MSG
                 PERFORM 9100-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -440,9 +443,11 @@
               MOVE '<Anonym>' TO LOGDINO
            END-IF.
 
-      *    CHANGE COLOR OF MESSAGE BASED ON TYPE/CONTENT.
+      *    DISPLAY MESSAGE TO USER. 
+           MOVE WS-MSG TO MESSO.
            MOVE DFHTURQ TO MESSC.
 
+      *    CHANGE COLOR OF MESSAGE BASED ON TYPE/CONTENT.
            EVALUATE TRUE
            WHEN MESSO(1:5) IS EQUAL TO 'Error'
            WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
@@ -475,7 +480,7 @@
               INITIALIZE WS-DEBUG-MESSAGE
 
               MOVE WS-DEBUG-AID TO WS-DEBUG-TEXT
-              MOVE MESSO TO WS-MESSAGE
+              MOVE WS-MSG TO WS-MESSAGE
               MOVE EIBRESP TO WS-DEBUG-EIBRESP
               MOVE EIBRESP2 TO WS-DEBUG-EIBRESP2
 

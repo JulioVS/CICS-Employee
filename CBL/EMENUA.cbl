@@ -9,20 +9,18 @@
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
+      *      - MENU CONTAINER.
       *      - MENU MAPSET.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
+       COPY EMNUCTR.
        COPY EMNUMAP.
        COPY EMONCTR.
        COPY DFHAID.
        COPY DFHBMSCA.
-      ******************************************************************
-      *   DEFINE MY SESSION STATE DATA FOR PASSING INTO COMM-AREA.
-      ******************************************************************
-       01 WS-SESSION-STATE      PIC X(16).
       ******************************************************************
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
@@ -47,12 +45,6 @@
           88 I-AM-DEBUGGING               VALUE 'Y'.
           88 NOT-DEBUGGING                VALUE 'N'.
 
-      ******************************************************************
-      *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
-      ******************************************************************
-       LINKAGE SECTION.
-       01 DFHCOMMAREA           PIC X(16).
-
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
        MAIN-LOGIC SECTION.
@@ -63,14 +55,28 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           IF EIBCALEN IS EQUAL TO ZERO THEN
-              PERFORM 1000-FIRST-INTERACTION
-           ELSE
-              PERFORM 2000-PROCESS-USER-INPUT
-           END-IF.
-
-           PERFORM 9100-SEND-MAP-AND-RETURN.
            
+           EXEC CICS GET
+                CONTAINER(APP-MENU-CONTAINER-NAME)
+                CHANNEL(APP-MENU-CHANNEL-NAME)
+                INTO (MAIN-MENU-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+      *         1ST INTERACTION -> NO CONTAINER YET (CREATE IT)
+                PERFORM 1000-FIRST-INTERACTION
+           WHEN DFHRESP(NORMAL)
+      *         NEXT INTERACTIONS -> CONTAINER FOUND (CONTINUE)
+                PERFORM 2000-PROCESS-USER-INPUT
+           WHEN OTHER
+                MOVE 'Error Retrieving Menu Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
+           PERFORM 9000-SEND-MAP-AND-RETURN.
+
       *-----------------------------------------------------------------
        START-UP SECTION.
       *-----------------------------------------------------------------
@@ -87,8 +93,7 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
-           MOVE 'Hey, Welcome to the Employee App!' TO WS-MESSAGE.
-
+           MOVE MON-USER-ID TO MNU-USER-ID.
 
        1100-INITIALIZE.
       *    >>> DEBUGGING ONLY <<<
@@ -98,9 +103,11 @@
 
       *    CLEAR ALL RECORDS AND VARIABLES.
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
-           INITIALIZE WS-SESSION-STATE.
+           INITIALIZE MAIN-MENU-CONTAINER.
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE EMNUMO.
+
+           MOVE 'Welcome to the Employee App!' TO WS-MESSAGE.
 
       *-----------------------------------------------------------------
        USE-CASE SECTION.
@@ -288,37 +295,14 @@
        EXIT-ROUTE SECTION.
       *-----------------------------------------------------------------
 
-       9100-SEND-MAP-AND-RETURN.
+       9000-SEND-MAP-AND-RETURN.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2000-DISPLAY-MENU-SCREEN' TO WS-DEBUG-AID.
+           MOVE '9000-SEND-MAP-AND-RETURN' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           INITIALIZE EMNUMO.           
-
-           MOVE EIBTRNID TO TRANIDO.
-
-           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
-              MOVE MON-USER-ID TO LOGDINO
-           ELSE 
-              MOVE '<Anonym>' TO LOGDINO
-           END-IF.
-
-           MOVE WS-MESSAGE TO MESSO.
-
-           EVALUATE TRUE
-           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
-                MOVE DFHYELLO TO MESSC
-           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
-                MOVE DFHRED TO MESSC
-           WHEN WS-MESSAGE(1:3) IS EQUAL TO 'Hey'
-                MOVE DFHPINK TO MESSC
-           END-EVALUATE.
-
-      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9' 
-      *    ABEND THAT HAPPENS WHEN WE ONLY RECEIVE AN AID-KEY FROM THE
-      *    MAP AND NO REAL DATA ALONG IT.
-           MOVE DFHBMFSE TO TRANIDA.
+           PERFORM 9100-POPULATE-MAP.
+           PERFORM 9150-PUT-MENU-CONTAINER.
 
            EXEC CICS SEND
                 MAP(APP-MENU-MAP-NAME)
@@ -328,9 +312,61 @@
                 END-EXEC.
 
            EXEC CICS RETURN
-                COMMAREA(WS-SESSION-STATE)
+                CHANNEL(APP-MENU-CHANNEL-NAME)
                 TRANSID(APP-MENU-TRANSACTION-ID)
                 END-EXEC.
+
+       9100-POPULATE-MAP.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9100-POPULATE-MAP' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE EMNUMO.           
+
+           MOVE EIBTRNID TO TRANIDO.
+
+           IF MNU-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MNU-USER-ID TO LOGDINO
+           ELSE 
+              MOVE '<Anonym>' TO LOGDINO
+           END-IF.
+
+           MOVE WS-MESSAGE TO MESSO.
+
+           EVALUATE TRUE
+           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Welcome'
+                MOVE DFHPINK TO MESSC
+           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
+                MOVE DFHYELLO TO MESSC
+           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
+                MOVE DFHRED TO MESSC
+           END-EVALUATE.
+
+      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9' 
+      *    ABEND THAT HAPPENS WHEN WE ONLY RECEIVE AN AID-KEY FROM THE
+      *    MAP AND NO REAL DATA ALONG IT.
+           MOVE DFHBMFSE TO TRANIDA.
+
+       9150-PUT-MENU-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9150-PUT-LIST-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-MENU-CONTAINER-NAME)
+                CHANNEL(APP-MENU-CHANNEL-NAME)
+                FROM (MAIN-MENU-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting Menu Container!' TO WS-MESSAGE
+           END-EVALUATE.
 
        9200-RETURN-TO-CICS.
       *    >>> DEBUGGING ONLY <<<
