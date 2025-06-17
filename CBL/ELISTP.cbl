@@ -36,66 +36,71 @@
           05 WS-DEPT-KEY               PIC X(8).
       *
        01 WS-DISPLAY-MESSAGES.
-          05 WS-MESSAGE                PIC X(79) VALUE SPACES.
-          05 WS-PF7-LABEL              PIC X(9)  VALUE 'PF7 Prev '.
-          05 WS-PF8-LABEL              PIC X(9)  VALUE 'PF8 Next '.
+          05 WS-MESSAGE                PIC X(79)  VALUE SPACES.
+          05 WS-PF7-LABEL              PIC X(9)   VALUE 'PF7 Prev '.
+          05 WS-PF8-LABEL              PIC X(9)   VALUE 'PF8 Next '.
           05 WS-FILTERS-MSG-SF         PIC X(79)
              VALUE 'Set Filter Criteria And Press ENTER Or Leave Blank F
       -            'or Full Listing.'.
           05 WS-FILTERS-MSG-EF         PIC X(79)
-                                                 VALUE
+                                                  VALUE
                 'Edit Filter Criteria And Press ENTER To Continue.'.
           05 WS-FILTERS-BANNER.
-             10 WS-FIL-KEY-TYPE        PIC X(3)  VALUE SPACES.
-             10 WS-FIL-KEY-VALUE       PIC X(10) VALUE SPACES.
-             10 FILLER                 PIC X(4)  VALUE ' IN:'.
-             10 WS-FIL-INCLUDE         PIC X(10) VALUE SPACES.
-             10 FILLER                 PIC X(4)  VALUE ' EX:'.
-             10 WS-FIL-EXCLUDE         PIC X(10) VALUE SPACES.
-             10 FILLER                 PIC X(4)  VALUE ' AF:'.
-             10 WS-FIL-AFTER           PIC X(8)  VALUE SPACES.
-             10 FILLER                 PIC X(4)  VALUE ' BF:'.
-             10 WS-FIL-BEFORE          PIC X(8)  VALUE SPACES.
+             10 WS-FIL-KEY-TYPE        PIC X(3)   VALUE SPACES.
+             10 WS-FIL-KEY-VALUE       PIC X(10)  VALUE SPACES.
+             10 FILLER                 PIC X(4)   VALUE ' IN:'.
+             10 WS-FIL-INCLUDE         PIC X(10)  VALUE SPACES.
+             10 FILLER                 PIC X(4)   VALUE ' EX:'.
+             10 WS-FIL-EXCLUDE         PIC X(10)  VALUE SPACES.
+             10 FILLER                 PIC X(4)   VALUE ' AF:'.
+             10 WS-FIL-AFTER           PIC X(8)   VALUE SPACES.
+             10 FILLER                 PIC X(4)   VALUE ' BF:'.
+             10 WS-FIL-BEFORE          PIC X(8)   VALUE SPACES.
       *
        01 WS-FILTER-FLAGS.
-          03 WS-FILTERS-CHECK          PIC X(1)  VALUE SPACES.
-             88 WS-FILTERS-PASSED                VALUE 'Y'.
-             88 WS-FILTERS-FAILED                VALUE 'N'.
-          03 WS-KEY-FILTER-CHECK       PIC X(1)  VALUE SPACES.
-             88 WS-KEY-FILTER-PASSED             VALUE 'Y'.
-          03 WS-DEPT-FILTER-CHECK      PIC X(1)  VALUE SPACES.
-             88 WS-DEPT-FILTER-PASSED            VALUE 'Y'.
-             88 WS-DEPT-FILTER-FAILED            VALUE 'N'.
-          03 WS-DATE-FILTER-CHECK      PIC X(1)  VALUE SPACES.
-             88 WS-DATE-FILTER-PASSED            VALUE 'Y'.
-          03 WS-FILTER-ACTIONS         PIC X(1)  VALUE SPACES.
-             88 WS-ACTION-DISPLAY                VALUE 'D'.
-             88 WS-ACTION-EXIT                   VALUE 'E'.
-             88 WS-ACTION-SIGN-OFF               VALUE 'S'.
-             88 WS-ACTION-CLEAR                  VALUE 'C'.
-             88 WS-ACTION-INVALID                VALUE 'I'.
-             88 WS-ACTION-NOT-SET                VALUE SPACES.
+          03 WS-FILTERS-CHECK          PIC X(1)   VALUE SPACES.
+             88 WS-FILTERS-PASSED                 VALUE 'Y'.
+             88 WS-FILTERS-FAILED                 VALUE 'N'.
+          03 WS-KEY-FILTER-CHECK       PIC X(1)   VALUE SPACES.
+             88 WS-KEY-FILTER-PASSED              VALUE 'Y'.
+          03 WS-DEPT-FILTER-CHECK      PIC X(1)   VALUE SPACES.
+             88 WS-DEPT-FILTER-PASSED             VALUE 'Y'.
+             88 WS-DEPT-FILTER-FAILED             VALUE 'N'.
+          03 WS-DATE-FILTER-CHECK      PIC X(1)   VALUE SPACES.
+             88 WS-DATE-FILTER-PASSED             VALUE 'Y'.
+          03 WS-FILTER-ACTIONS         PIC X(1)   VALUE SPACES.
+             88 WS-ACTION-DISPLAY                 VALUE 'D'.
+             88 WS-ACTION-EXIT                    VALUE 'E'.
+             88 WS-ACTION-SIGN-OFF                VALUE 'S'.
+             88 WS-ACTION-CLEAR                   VALUE 'C'.
+             88 WS-ACTION-INVALID                 VALUE 'I'.
+             88 WS-ACTION-NOT-SET                 VALUE SPACES.
       *
-       01 WS-MAX-ID-VALUE              PIC 9(8)  VALUE 99999999.
+       01 WS-MAX-ID-VALUE              PIC 9(8)   VALUE 99999999.
        01 WS-LINES-PER-PAGE            PIC S9(4) USAGE IS BINARY
-                                                 VALUE +16.
+                                                  VALUE +16.
       *
-       01 WS-DEBUG-AID                 PIC X(45) VALUE SPACES.
+       01 WS-RE-ENTRY-AID.
+          05 WS-RE-ENTRY-FILTERS       PIC X(112) VALUE SPACES.
+          05 WS-RE-ENTRY-FLAG          PIC X(1)   VALUE SPACES.
+             88 WS-RE-ENTRY-FROM-VIEW             VALUE 'Y'.
+      *
+       01 WS-DEBUG-AID                 PIC X(45)  VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER                    PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT             PIC X(45) VALUE SPACES.
-          05 FILLER                    PIC X(1)  VALUE '>'.
-          05 FILLER                    PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP          PIC 9(8)  VALUE ZEROES.
-          05 FILLER                    PIC X(1)  VALUE '>'.
-          05 FILLER                    PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2         PIC 9(8)  VALUE ZEROES.
-          05 FILLER                    PIC X(1)  VALUE '>'.
+          05 FILLER                    PIC X(5)   VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT             PIC X(45)  VALUE SPACES.
+          05 FILLER                    PIC X(1)   VALUE '>'.
+          05 FILLER                    PIC X(5)   VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP          PIC 9(8)   VALUE ZEROES.
+          05 FILLER                    PIC X(1)   VALUE '>'.
+          05 FILLER                    PIC X(5)   VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2         PIC 9(8)   VALUE ZEROES.
+          05 FILLER                    PIC X(1)   VALUE '>'.
       *
-       01 WS-DEBUG-MODE                PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING                      VALUE 'Y'.
-          88 NOT-DEBUGGING                       VALUE 'N'.
+       01 WS-DEBUG-MODE                PIC X(1)   VALUE 'N'.
+          88 I-AM-DEBUGGING                       VALUE 'Y'.
+          88 NOT-DEBUGGING                        VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -146,7 +151,7 @@
                 END-IF
       *         IF BOUNCING BACK FROM 'VIEW' PAGE, RESTART CONVERSATION
                 IF LST-PROGRAM-NAME IS EQUAL TO APP-VIEW-PROGRAM-NAME
-                   PERFORM 1000-FIRST-INTERACTION
+                   PERFORM 5000-RE-ENTRY-FROM-VIEW
                 END-IF
            WHEN OTHER
                 MOVE 'Error Retrieving List Container!' TO WS-MESSAGE
@@ -198,6 +203,10 @@
            MOVE APP-LIST-PROGRAM-NAME TO LST-PROGRAM-NAME.
            MOVE 1 TO LST-CURRENT-PAGE-NUMBER.
            MOVE '1' TO LST-SELECT-KEY-TYPE.
+
+           IF WS-RE-ENTRY-FROM-VIEW THEN
+              MOVE WS-RE-ENTRY-FILTERS TO LST-FILTERS
+           END-IF.
 
        1200-GET-INITIAL-FILTERS.
       *    >>> DEBUGGING ONLY <<<
@@ -1368,6 +1377,21 @@
                 MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
+
+      *-----------------------------------------------------------------
+       RE-ENTRY SECTION.
+      *-----------------------------------------------------------------
+
+       5000-RE-ENTRY-FROM-VIEW.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5000-RE-ENTRY-FROM-VIEW' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE LST-FILTERS TO WS-RE-ENTRY-FILTERS.
+           SET WS-RE-ENTRY-FROM-VIEW TO TRUE.
+
+           PERFORM 1000-FIRST-INTERACTION.
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
