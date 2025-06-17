@@ -1,8 +1,8 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. EMENUA.
+       PROGRAM-ID. EMENUC.
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP'.
-      *      - 'MENU A' (AID-KEY VERSION) PROGRAM.
+      *      - 'MENU C' (CURSOR POSITION VERSION) PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
@@ -10,14 +10,14 @@
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
       *      - MENU CONTAINER.
-      *      - MENU MAPSET (AID-KEY VERSION).
+      *      - MENU MAPSET (CURSOR POSITION VERSION).
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
        COPY EMNUCTR.
-       COPY EMNAMAP.
+       COPY EMNCMAP.
        COPY EMONCTR.
        COPY DFHAID.
        COPY DFHBMSCA.
@@ -25,25 +25,28 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
-          05 WS-MESSAGE         PIC X(79).
+          05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
+          05 WS-MESSAGE           PIC X(79).
+          05 WS-SELECT-FLAG       PIC X(1).
+             88 WS-LIST-SELECTED            VALUE 'L'.
+             88 WS-VIEW-SELECTED            VALUE 'V'.
       *
-       01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID            PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER             PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
-          05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
-          05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
-          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT        PIC X(45) VALUE SPACES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP     PIC 9(8)  VALUE ZEROES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2    PIC 9(8)  VALUE ZEROES.
+          05 FILLER               PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING               VALUE 'Y'.
-          88 NOT-DEBUGGING                VALUE 'N'.
+       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'N'.
+          88 I-AM-DEBUGGING                 VALUE 'Y'.
+          88 NOT-DEBUGGING                  VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -55,7 +58,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           
+
            EXEC CICS GET
                 CONTAINER(APP-MENU-CONTAINER-NAME)
                 CHANNEL(APP-MENU-CHANNEL-NAME)
@@ -130,10 +133,17 @@
       *    >>> --------------------- <<<
 
            EVALUATE EIBAID
-           WHEN DFHPF1
-                PERFORM 2100-TRANSFER-TO-LIST-PAGE
-           WHEN DFHPF2
-                PERFORM 2200-TRANSFER-TO-VIEW-PAGE
+           WHEN DFHENTER
+                PERFORM 2050-CHECK-SELECTION
+
+                EVALUATE TRUE
+                WHEN WS-LIST-SELECTED
+                     PERFORM 2100-TRANSFER-TO-LIST-PAGE
+                WHEN WS-VIEW-SELECTED
+                     PERFORM 2200-TRANSFER-TO-VIEW-PAGE
+                WHEN OTHER
+                     MOVE 'Invalid Selection!' TO WS-MESSAGE
+                END-EVALUATE
            WHEN DFHPF3
            WHEN DFHPF10
            WHEN DFHPF12
@@ -141,6 +151,23 @@
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
+
+       2050-CHECK-SELECTION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2050-CHECK-SELECTION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE SEL1F TO DFHBMFLG.
+           IF DFHCURSR THEN
+              SET WS-LIST-SELECTED TO TRUE
+              EXIT PARAGRAPH
+           END-IF.
+
+           MOVE SEL2F TO DFHBMFLG.
+           IF DFHCURSR THEN
+              SET WS-VIEW-SELECTED TO TRUE
+           END-IF.
 
        2100-TRANSFER-TO-LIST-PAGE.
       *    >>> DEBUGGING ONLY <<<
@@ -351,13 +378,13 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           INITIALIZE EMNUMO.           
+           INITIALIZE EMNUMO.
 
            MOVE EIBTRNID TO TRANIDO.
 
            IF MNU-USER-ID IS NOT EQUAL TO SPACES THEN
               MOVE MNU-USER-ID TO LOGDINO
-           ELSE 
+           ELSE
               MOVE '<Anonym>' TO LOGDINO
            END-IF.
 
@@ -372,7 +399,7 @@
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 
-      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9' 
+      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9'
       *    ABEND THAT HAPPENS WHEN WE ONLY RECEIVE AN AID-KEY FROM THE
       *    MAP AND NO REAL DATA ALONG IT.
            MOVE DFHBMFSE TO TRANIDA.

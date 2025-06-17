@@ -1,7 +1,7 @@
 * ---------------------------------------------------------------------
 *  CICS PLURALSIGHT 'EMPLOYEE APP'.
-*    - MENU 'A' MAPSET.
-*    - AID KEY VERSION.
+*    - MENU 'C' MAPSET.
+*    - CURSOR POSITION VERSION.
 * ---------------------------------------------------------------------
 * ---------------------------------------------------------------------
 *  GLOBAL SETTINGS.
@@ -31,17 +31,17 @@ LOGDIN   DFHMDF POS=(2,69),LENGTH=8,ATTRB=(ASKIP,NORM)
 *  DETAIL SECTION.
 *
          DFHMDF POS=(3,1),LENGTH=79,ATTRB=(ASKIP,NORM),                X
-               INITIAL='Press the PF Key Corresponding to Your SelectioX
-               n'
+               INITIAL='Position the Cursor Next to Your Selection and X
+               Press Enter'
 *
-         DFHMDF POS=(5,8),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
-               INITIAL='PF1 '
-         DFHMDF POS=(5,13),LENGTH=50,ATTRB=(ASKIP,NORM),               X
+SEL1     DFHMDF POS=(5,8),LENGTH=1,ATTRB=(UNPROT,BRT,IC),              X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(5,10),LENGTH=50,ATTRB=(ASKIP,NORM),               X
                INITIAL='List Employees'
 *
-         DFHMDF POS=(6,8),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
-               INITIAL='PF2 '
-         DFHMDF POS=(6,13),LENGTH=50,ATTRB=(ASKIP,NORM),               X
+SEL2     DFHMDF POS=(6,8),LENGTH=1,ATTRB=(UNPROT,BRT),                 X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(6,10),LENGTH=50,ATTRB=(ASKIP,NORM),               X
                INITIAL='View Employee Details'
 *
 *  MESSAGE SECTION.
