@@ -58,7 +58,6 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-
            EXEC CICS GET
                 CONTAINER(APP-MENU-CONTAINER-NAME)
                 CHANNEL(APP-MENU-CHANNEL-NAME)

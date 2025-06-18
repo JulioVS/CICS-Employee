@@ -1,8 +1,8 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. EMENUA.
+       PROGRAM-ID. EMENUS.
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP'.
-      *      - 'MENU A' (AID-KEY VERSION) PROGRAM.
+      *      - 'MENU S' (SELECTION VERSION) PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
@@ -10,14 +10,14 @@
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
       *      - MENU CONTAINER.
-      *      - MENU MAPSET (AID-KEY VERSION).
+      *      - MENU MAPSET (SELECTION VERSION).
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
        COPY EMNUCTR.
-       COPY EMNAMAP.
+       COPY EMNSMAP.
        COPY EMONCTR.
        COPY DFHAID.
        COPY DFHBMSCA.
@@ -129,10 +129,15 @@
       *    >>> --------------------- <<<
 
            EVALUATE EIBAID
-           WHEN DFHPF1
-                PERFORM 2100-TRANSFER-TO-LIST-PAGE
-           WHEN DFHPF2
-                PERFORM 2200-TRANSFER-TO-VIEW-PAGE
+           WHEN DFHENTER 
+                EVALUATE SELECTI  
+                WHEN '1'
+                     PERFORM 2100-TRANSFER-TO-LIST-PAGE
+                WHEN '2'
+                     PERFORM 2200-TRANSFER-TO-VIEW-PAGE
+                WHEN OTHER
+                     MOVE 'Invalid Selection!' TO WS-MESSAGE
+                END-EVALUATE
            WHEN DFHPF3
            WHEN DFHPF10
            WHEN DFHPF12
