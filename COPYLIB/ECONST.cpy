@@ -62,3 +62,11 @@
           05 APP-MENU-CONTAINER-NAME    PIC X(16) VALUE 'MNUContainer'.
           05 APP-MENU-CHANNEL-NAME      PIC X(16) VALUE 'DHFTRANSACTION'
            .
+      *      ADD EMPLOYEE 
+          05 APP-ADD-TRANSACTION-ID     PIC X(4)  VALUE 'EADD'.
+          05 APP-ADD-PROGRAM-NAME       PIC X(8)  VALUE 'EADDP'.
+          05 APP-ADD-MAPSET-NAME        PIC X(7)  VALUE 'EADDMAP'.
+          05 APP-ADD-MAP-NAME           PIC X(7)  VALUE 'EADDM'.
+          05 APP-ADD-CONTAINER-NAME     PIC X(16) VALUE 'ADDContainer'.
+          05 APP-ADD-CHANNEL-NAME       PIC X(16) VALUE 'DHFTRANSACTION'
+           .
