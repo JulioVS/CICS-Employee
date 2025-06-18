@@ -1,23 +1,23 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. EMENUS.
+       PROGRAM-ID. EADDP.
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP'.
-      *      - 'MENU S' (SELECTION VERSION) PROGRAM.
+      *      - 'ADD EMPLOYEE' PROGRAM.
       ******************************************************************
        DATA DIVISION.
        WORKING-STORAGE SECTION.
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
-      *      - MENU CONTAINER.
-      *      - MENU MAPSET (SELECTION VERSION).
+      *      - ADD CONTAINER.
+      *      - ADD MAPSET.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
-       COPY EMNUCTR.
-       COPY EMNSMAP.
+       COPY EADDCTR.
+       COPY EADDMAP.
        COPY EMONCTR.
        COPY DFHAID.
        COPY DFHBMSCA.
@@ -54,11 +54,11 @@
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
-           
+
            EXEC CICS GET
-                CONTAINER(APP-MENU-CONTAINER-NAME)
-                CHANNEL(APP-MENU-CHANNEL-NAME)
-                INTO (MAIN-MENU-CONTAINER)
+                CONTAINER(APP-ADD-CONTAINER-NAME)
+                CHANNEL(APP-ADD-CHANNEL-NAME)
+                INTO (ADD-EMPLOYEE-CONTAINER)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -71,7 +71,7 @@
       *         NEXT INTERACTIONS -> CONTAINER FOUND (CONTINUE)
                 PERFORM 2000-PROCESS-USER-INPUT
            WHEN OTHER
-                MOVE 'Error Retrieving Menu Container!' TO WS-MESSAGE
+                MOVE 'Error Retrieving Add Container!' TO WS-MESSAGE
            END-EVALUATE.
 
            PERFORM 9000-SEND-MAP-AND-RETURN.
@@ -92,7 +92,7 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
-           MOVE MON-USER-ID TO MNU-USER-ID.
+           MOVE MON-USER-ID TO ADD-USER-ID.
 
        1100-INITIALIZE.
       *    >>> DEBUGGING ONLY <<<
@@ -102,9 +102,9 @@
 
       *    CLEAR ALL RECORDS AND VARIABLES.
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
-           INITIALIZE MAIN-MENU-CONTAINER.
+           INITIALIZE ADD-EMPLOYEE-CONTAINER.
            INITIALIZE WS-WORKING-VARS.
-           INITIALIZE EMNUMO.
+           INITIALIZE EADDMO.
 
            MOVE 'Welcome to the Employee App!' TO WS-MESSAGE.
 
@@ -119,9 +119,9 @@
       *    >>> -------------- <<<
 
            EXEC CICS RECEIVE
-                MAP(APP-MENU-MAP-NAME)
-                MAPSET(APP-MENU-MAPSET-NAME)
-                INTO (EMNUMI)
+                MAP(APP-ADD-MAP-NAME)
+                MAPSET(APP-ADD-MAPSET-NAME)
+                INTO (EADDMI)
                 END-EXEC.
 
       *    >>> CALL ACTIVITY MONITOR <<<
@@ -129,61 +129,58 @@
       *    >>> --------------------- <<<
 
            EVALUATE EIBAID
-           WHEN DFHENTER 
-                EVALUATE SELECTI  
-                WHEN '1'
-                     PERFORM 2100-TRANSFER-TO-LIST-PAGE
-                WHEN '2'
-                     PERFORM 2200-TRANSFER-TO-VIEW-PAGE
-                WHEN '3'
-                     PERFORM 2300-TRANSFER-TO-ADD-PAGE
-                WHEN OTHER
-                     MOVE 'Invalid Selection!' TO WS-MESSAGE
-                END-EVALUATE
+           WHEN DFHENTER
+                CONTINUE
            WHEN DFHPF3
+                PERFORM 2100-TRANSFER-BACK-TO-MENU
+           WHEN DFHPF4
+                CONTINUE 
            WHEN DFHPF10
-           WHEN DFHPF12
                 PERFORM 2500-SIGN-USER-OFF
+           WHEN DFHPF12
+                PERFORM 2100-TRANSFER-BACK-TO-MENU
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
 
-       2100-TRANSFER-TO-LIST-PAGE.
+       2100-TRANSFER-BACK-TO-MENU.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2100-TRANSFER-TO-LIST-PAGE' TO WS-DEBUG-AID.
+           MOVE '2100-TRANSFER-BACK-TO-MENU' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
-           PERFORM 2150-DELETE-MENU-CONTAINER.
+           PERFORM 2150-DELETE-ADD-CONTAINER.
 
-      *    TRANSFER LOGIC TO EMPLOYEES LISTING PAGE.
            EXEC CICS XCTL
-                PROGRAM(APP-LIST-PROGRAM-NAME)
-                CHANNEL(APP-LIST-CHANNEL-NAME)
+                PROGRAM(APP-MENU-PROGRAM-NAME)
+                CHANNEL(APP-MENU-CHANNEL-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Transferring To Listing Page' TO WS-MESSAGE
+                MOVE 'Transferring Back To Menu' TO WS-MESSAGE
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalid Request!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN DFHRESP(PGMIDERR)
-                MOVE "Listing Page Program Not Found!" TO WS-MESSAGE
+                MOVE 'Menu Program Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
-                MOVE "Error Linking To Listing Page!" TO WS-MESSAGE
+                MOVE 'Error Transferring To Menu!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       2150-DELETE-MENU-CONTAINER.
+       2150-DELETE-ADD-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2150-DELETE-MENU-CONTAINER' TO WS-DEBUG-AID.
+           MOVE '2150-DELETE-ADD-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
            EXEC CICS DELETE
-                CONTAINER(APP-MENU-CONTAINER-NAME)
-                CHANNEL(APP-MENU-CHANNEL-NAME)
+                CONTAINER(APP-ADD-CONTAINER-NAME)
+                CHANNEL(APP-ADD-CHANNEL-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -191,63 +188,9 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN DFHRESP(NOTFND)
-                MOVE 'Menu Container Not Found!' TO WS-MESSAGE
+                MOVE 'Add Container Not Found!' TO WS-MESSAGE
            WHEN OTHER
-                MOVE 'Error Deleting Menu Container!' TO WS-MESSAGE
-           END-EVALUATE.
-
-       2200-TRANSFER-TO-VIEW-PAGE.
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2200-TRANSFER-TO-VIEW-PAGE' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-
-      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
-           PERFORM 2150-DELETE-MENU-CONTAINER.
-
-      *    TRANSFER LOGIC TO VIEW EMPLOYEE DETAILS PAGE.
-           EXEC CICS XCTL
-                PROGRAM(APP-VIEW-PROGRAM-NAME)
-                CHANNEL(APP-VIEW-CHANNEL-NAME)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
-
-           EVALUATE WS-CICS-RESPONSE
-           WHEN DFHRESP(NORMAL)
-                MOVE 'Transferring To Details Page' TO WS-MESSAGE
-           WHEN DFHRESP(INVREQ)
-                MOVE 'Invalid Request!' TO WS-MESSAGE
-           WHEN DFHRESP(PGMIDERR)
-                MOVE 'Details Page Program Not Found!' TO WS-MESSAGE
-           WHEN OTHER
-                MOVE 'Error Transferring To Details Page!' TO WS-MESSAGE
-           END-EVALUATE.
-
-       2300-TRANSFER-TO-ADD-PAGE.
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2300-TRANSFER-TO-ADD-PAGE' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-
-      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
-           PERFORM 2150-DELETE-MENU-CONTAINER.
-
-      *    TRANSFER LOGIC TO ADD EMPLOYEE PAGE.
-           EXEC CICS XCTL
-                PROGRAM(APP-ADD-PROGRAM-NAME)
-                CHANNEL(APP-ADD-CHANNEL-NAME)
-                RESP(WS-CICS-RESPONSE)
-                END-EXEC.
-
-           EVALUATE WS-CICS-RESPONSE
-           WHEN DFHRESP(NORMAL)
-                MOVE 'Transferring To Add Page' TO WS-MESSAGE
-           WHEN DFHRESP(INVREQ)
-                MOVE 'Invalid Request!' TO WS-MESSAGE
-           WHEN DFHRESP(PGMIDERR)
-                MOVE 'Add Page Program Not Found!' TO WS-MESSAGE
-           WHEN OTHER
-                MOVE 'Error Transferring To Add Page!' TO WS-MESSAGE
+                MOVE 'Error Deleting Add Container!' TO WS-MESSAGE
            END-EVALUATE.
 
        2500-SIGN-USER-OFF.
@@ -311,7 +254,7 @@
       *    >>> -------------- <<<
 
       *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
-           MOVE APP-MENU-PROGRAM-NAME TO MON-LINKING-PROGRAM.
+           MOVE APP-ADD-PROGRAM-NAME TO MON-LINKING-PROGRAM.
            INITIALIZE MON-RESPONSE.
 
            PERFORM 4300-PUT-MONITOR-CONTAINER.
@@ -364,18 +307,18 @@
       *    >>> -------------- <<<
 
            PERFORM 9100-POPULATE-MAP.
-           PERFORM 9150-PUT-MENU-CONTAINER.
+           PERFORM 9150-PUT-ADD-CONTAINER.
 
            EXEC CICS SEND
-                MAP(APP-MENU-MAP-NAME)
-                MAPSET(APP-MENU-MAPSET-NAME)
-                FROM (EMNUMO)
+                MAP(APP-ADD-MAP-NAME)
+                MAPSET(APP-ADD-MAPSET-NAME)
+                FROM (EADDMO)
                 ERASE
                 END-EXEC.
 
            EXEC CICS RETURN
-                CHANNEL(APP-MENU-CHANNEL-NAME)
-                TRANSID(APP-MENU-TRANSACTION-ID)
+                CHANNEL(APP-ADD-CHANNEL-NAME)
+                TRANSID(APP-ADD-TRANSACTION-ID)
                 END-EXEC.
 
        9100-POPULATE-MAP.
@@ -384,13 +327,13 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           INITIALIZE EMNUMO.           
+           INITIALIZE EADDMO.
 
            MOVE EIBTRNID TO TRANIDO.
 
-           IF MNU-USER-ID IS NOT EQUAL TO SPACES THEN
-              MOVE MNU-USER-ID TO LOGDINO
-           ELSE 
+           IF ADD-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE ADD-USER-ID TO LOGDINO
+           ELSE
               MOVE '<Anonym>' TO LOGDINO
            END-IF.
 
@@ -405,21 +348,21 @@
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 
-      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9' 
+      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9'
       *    ABEND THAT HAPPENS WHEN WE ONLY RECEIVE AN AID-KEY FROM THE
       *    MAP AND NO REAL DATA ALONG IT.
            MOVE DFHBMFSE TO TRANIDA.
 
-       9150-PUT-MENU-CONTAINER.
+       9150-PUT-ADD-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
            MOVE '9150-PUT-LIST-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
            EXEC CICS PUT
-                CONTAINER(APP-MENU-CONTAINER-NAME)
-                CHANNEL(APP-MENU-CHANNEL-NAME)
-                FROM (MAIN-MENU-CONTAINER)
+                CONTAINER(APP-ADD-CONTAINER-NAME)
+                CHANNEL(APP-ADD-CHANNEL-NAME)
+                FROM (ADD-EMPLOYEE-CONTAINER)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -427,7 +370,7 @@
            WHEN DFHRESP(NORMAL)
                 CONTINUE
            WHEN OTHER
-                MOVE 'Error Putting Menu Container!' TO WS-MESSAGE
+                MOVE 'Error Putting Add Container!' TO WS-MESSAGE
            END-EVALUATE.
 
        9200-RETURN-TO-CICS.
