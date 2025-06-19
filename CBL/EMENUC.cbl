@@ -121,6 +121,8 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+           MOVE 'So Far, So Good...' TO WS-MESSAGE.
+
            EXEC CICS RECEIVE
                 MAP(APP-MENU-MAP-NAME)
                 MAPSET(APP-MENU-MAPSET-NAME)
@@ -390,11 +392,11 @@
            MOVE WS-MESSAGE TO MESSO.
 
            EVALUATE TRUE
-           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Welcome'
+           WHEN MESSO(1:7) IS EQUAL TO 'Welcome'
                 MOVE DFHPINK TO MESSC
-           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
+           WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
                 MOVE DFHYELLO TO MESSC
-           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
+           WHEN MESSO(1:5) IS EQUAL TO 'Error'
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 

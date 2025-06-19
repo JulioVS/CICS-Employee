@@ -18,6 +18,7 @@
        COPY ECONST.
        COPY EADDCTR.
        COPY EADDMAP.
+       COPY EMPMAST.
        COPY EMONCTR.
        COPY DFHAID.
        COPY DFHBMSCA.
@@ -27,6 +28,18 @@
        01 WS-WORKING-VARS.
           05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
           05 WS-MESSAGE         PIC X(79).
+      *
+       01 WS-DATE-FORMATTING.
+          05 WS-INPUT-DATE.
+             10 WS-YYYY         PIC X(4)  VALUE SPACES.
+             10 WS-MM           PIC X(2)  VALUE SPACES.
+             10 WS-DD           PIC X(2)  VALUE SPACES.
+          05 WS-OUTPUT-DATE.
+             10 WS-DD           PIC X(2)  VALUE SPACES.
+             10 FILLER          PIC X(1)  VALUE '-'.
+             10 WS-MM           PIC X(2)  VALUE SPACES.
+             10 FILLER          PIC X(1)  VALUE '-'.
+             10 WS-YYYY         PIC X(4)  VALUE SPACES.
       *
        01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
       *
@@ -103,6 +116,7 @@
       *    CLEAR ALL RECORDS AND VARIABLES.
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
            INITIALIZE ADD-EMPLOYEE-CONTAINER.
+           INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE EADDMO.
 
@@ -118,6 +132,8 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+           MOVE 'So Far, So Good...' TO WS-MESSAGE.
+           
            EXEC CICS RECEIVE
                 MAP(APP-ADD-MAP-NAME)
                 MAPSET(APP-ADD-MAPSET-NAME)
@@ -130,27 +146,86 @@
 
            EVALUATE EIBAID
            WHEN DFHENTER
-                CONTINUE
+                PERFORM 2100-VALIDATE-USER-INPUT
            WHEN DFHPF3
-                PERFORM 2100-TRANSFER-BACK-TO-MENU
+                PERFORM 2200-ADD-EMPLOYEE-RECORD
+                PERFORM 2300-TRANSFER-BACK-TO-MENU
            WHEN DFHPF4
-                CONTINUE 
+                PERFORM 2200-ADD-EMPLOYEE-RECORD
            WHEN DFHPF10
                 PERFORM 2500-SIGN-USER-OFF
            WHEN DFHPF12
-                PERFORM 2100-TRANSFER-BACK-TO-MENU
+                PERFORM 2300-TRANSFER-BACK-TO-MENU
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
 
-       2100-TRANSFER-BACK-TO-MENU.
+       2100-VALIDATE-USER-INPUT.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2100-TRANSFER-BACK-TO-MENU' TO WS-DEBUG-AID.
+           MOVE '2100-VALIDATE-USER-INPUT' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    RESTORE LAST SAVED AND VAILDATED DATA FROM CONTAINER.
+           MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+
+      *    GET NEWLY ENTERED FIELDS AND UPDATE THE RECORD.
+           IF PRNAMEL IS GREATER THAN ZERO THEN
+              MOVE PRNAMEI TO EMP-PRIMARY-NAME
+           END-IF.
+           IF HONORL IS GREATER THAN ZERO THEN
+              MOVE HONORI TO EMP-HONORIFIC
+           END-IF.
+           IF SHNAMEL IS GREATER THAN ZERO THEN
+              MOVE SHNAMEI TO EMP-SHORT-NAME
+           END-IF.
+           IF FLNAMEL IS GREATER THAN ZERO THEN
+              MOVE FLNAMEI TO EMP-FULL-NAME
+           END-IF.
+           IF JBTITLL IS GREATER THAN ZERO THEN
+              MOVE JBTITLI TO EMP-JOB-TITLE
+           END-IF.
+           IF DEPTIDL IS GREATER THAN ZERO THEN
+              EXEC CICS BIF DEEDIT
+                   FIELD(DEPTIDI)
+                   LENGTH(LENGTH OF DEPTIDI)
+                   END-EXEC
+              MOVE DEPTIDI TO EMP-DEPARTMENT-ID
+           END-IF.
+           IF STDATEL IS GREATER THAN ZERO THEN
+              EXEC CICS BIF DEEDIT
+                   FIELD(STDATEI)
+                   LENGTH(LENGTH OF STDATEI)
+                   END-EXEC
+              MOVE STDATEI TO EMP-START-DATE
+           END-IF.
+
+      *    SAVE UPDATED RECORD BACK TO THE CONTAINER.
+           MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
+
+      *    VALIDATE THE FIELDS.
+           IF EMP-START-DATE IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Start Date is required!'
+                 TO WS-MESSAGE
+              EXIT PARAGRAPH 
+           END-IF.
+
+       2200-ADD-EMPLOYEE-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2200-ADD-EMPLOYEE-RECORD' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           CONTINUE.
+
+       2300-TRANSFER-BACK-TO-MENU.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2300-TRANSFER-BACK-TO-MENU' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
-           PERFORM 2150-DELETE-ADD-CONTAINER.
+           PERFORM 2400-DELETE-ADD-CONTAINER.
 
            EXEC CICS XCTL
                 PROGRAM(APP-MENU-PROGRAM-NAME)
@@ -172,9 +247,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       2150-DELETE-ADD-CONTAINER.
+       2400-DELETE-ADD-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2150-DELETE-ADD-CONTAINER' TO WS-DEBUG-AID.
+           MOVE '2400-DELETE-ADD-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -337,14 +412,34 @@
               MOVE '<Anonym>' TO LOGDINO
            END-IF.
 
+           IF ADD-EMPLOYEE-RECORD IS NOT EQUAL TO SPACES THEN
+              MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD 
+
+              MOVE '00090125' TO EMPLIDO
+
+              MOVE EMP-PRIMARY-NAME TO PRNAMEO
+              MOVE EMP-HONORIFIC TO HONORO
+              MOVE EMP-SHORT-NAME TO SHNAMEO
+              MOVE EMP-FULL-NAME TO FLNAMEO
+
+              MOVE EMP-JOB-TITLE TO JBTITLO
+              MOVE '00005150' TO DEPTIDO
+              MOVE 'World Domination HQ' TO DEPTNMO
+
+              MOVE EMP-START-DATE TO WS-INPUT-DATE
+              MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
+              MOVE WS-OUTPUT-DATE TO STDATEO           
+           END-IF.
+
            MOVE WS-MESSAGE TO MESSO.
 
            EVALUATE TRUE
-           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Welcome'
+           WHEN MESSO(1:7) IS EQUAL TO 'Welcome'
                 MOVE DFHPINK TO MESSC
-           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
+           WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
                 MOVE DFHYELLO TO MESSC
-           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
+           WHEN MESSO(01:5) IS EQUAL TO 'Error'
+           WHEN MESSO(12:5) IS EQUAL TO 'Error'
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 

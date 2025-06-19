@@ -503,6 +503,8 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+           MOVE 'So Far, So Good...' TO WS-MESSAGE.
+
            EXEC CICS RECEIVE
                 MAP(APP-VIEW-MAP-NAME)
                 MAPSET(APP-VIEW-MAPSET-NAME)
@@ -1252,12 +1254,12 @@
 
       *    ALL USERS -> COLOR MESSAGE ACCORDING TO TYPE/CONTENT.
            EVALUATE TRUE
-           WHEN WS-MESSAGE(1:5) IS EQUAL TO 'Error'
+           WHEN MESSO(1:5) IS EQUAL TO 'Error'
                 MOVE DFHRED TO MESSC
-           WHEN WS-MESSAGE(1:3) IS EQUAL TO 'No '
+           WHEN MESSO(1:3) IS EQUAL TO 'No '
                 MOVE DFHYELLO TO MESSC
-           WHEN WS-MESSAGE(1:7) IS EQUAL TO 'Invalid'
-           WHEN WS-MESSAGE(1:4) IS EQUAL TO 'Hey!'
+           WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
+           WHEN MESSO(1:4) IS EQUAL TO 'Hey!'
                 MOVE DFHPINK TO MESSC
            END-EVALUATE.
 
