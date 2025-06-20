@@ -35,11 +35,11 @@
              10 WS-MM           PIC X(2)  VALUE SPACES.
              10 WS-DD           PIC X(2)  VALUE SPACES.
           05 WS-OUTPUT-DATE.
-             10 WS-DD           PIC X(2)  VALUE SPACES.
+             10 WS-YYYY         PIC X(4)  VALUE SPACES.
              10 FILLER          PIC X(1)  VALUE '-'.
              10 WS-MM           PIC X(2)  VALUE SPACES.
              10 FILLER          PIC X(1)  VALUE '-'.
-             10 WS-YYYY         PIC X(4)  VALUE SPACES.
+             10 WS-DD           PIC X(2)  VALUE SPACES.
       *
        01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
       *
@@ -185,6 +185,7 @@
            IF JBTITLL IS GREATER THAN ZERO THEN
               MOVE JBTITLI TO EMP-JOB-TITLE
            END-IF.
+
            IF DEPTIDL IS GREATER THAN ZERO THEN
               EXEC CICS BIF DEEDIT
                    FIELD(DEPTIDI)
@@ -192,23 +193,44 @@
                    END-EXEC
               MOVE DEPTIDI TO EMP-DEPARTMENT-ID
            END-IF.
+           
            IF STDATEL IS GREATER THAN ZERO THEN
               EXEC CICS BIF DEEDIT
                    FIELD(STDATEI)
                    LENGTH(LENGTH OF STDATEI)
                    END-EXEC
-              MOVE STDATEI TO EMP-START-DATE
+              MOVE STDATEI(3:8) TO EMP-START-DATE
            END-IF.
 
       *    SAVE UPDATED RECORD BACK TO THE CONTAINER.
            MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
 
-      *    VALIDATE THE FIELDS.
-           IF EMP-START-DATE IS EQUAL TO SPACES THEN
-              MOVE 'Validation Error: Start Date is required!'
-                 TO WS-MESSAGE
-              EXIT PARAGRAPH 
-           END-IF.
+      *    VALIDATE FIELDS.
+           EVALUATE TRUE
+           WHEN EMP-PRIMARY-NAME IS EQUAL TO SPACES
+                MOVE 'Validation Error: Primary Name is required!'
+                   TO WS-MESSAGE
+                MOVE -1 TO PRNAMEL
+                EXIT
+           WHEN EMP-FULL-NAME IS EQUAL TO SPACES
+                MOVE 'Validation Error: Full Name is required!'
+                   TO WS-MESSAGE
+                MOVE -1 TO FLNAMEL
+                EXIT
+           WHEN EMP-JOB-TITLE IS EQUAL TO SPACES
+                MOVE 'Validation Error: Job Title is required!'
+                   TO WS-MESSAGE
+                MOVE -1 TO JBTITLL
+                EXIT
+           WHEN EMP-START-DATE IS EQUAL TO SPACES
+                MOVE 'Validation Error: Start Date is required!'
+                   TO WS-MESSAGE
+                MOVE -1 TO STDATEL
+                EXIT
+           WHEN OTHER
+                MOVE 'Employee Record Validated Successfully!'
+                   TO WS-MESSAGE 
+           END-EVALUATE.
 
        2200-ADD-EMPLOYEE-RECORD.
       *    >>> DEBUGGING ONLY <<<
@@ -389,6 +411,7 @@
                 MAPSET(APP-ADD-MAPSET-NAME)
                 FROM (EADDMO)
                 ERASE
+                CURSOR 
                 END-EXEC.
 
            EXEC CICS RETURN
@@ -402,7 +425,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           INITIALIZE EADDMO.
+      *    INITIALIZE EADDMO.
 
            MOVE EIBTRNID TO TRANIDO.
 
@@ -426,9 +449,9 @@
               MOVE '00005150' TO DEPTIDO
               MOVE 'World Domination HQ' TO DEPTNMO
 
-              MOVE EMP-START-DATE TO WS-INPUT-DATE
+              MOVE EMP-START-DATE TO WS-INPUT-DATE 
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
-              MOVE WS-OUTPUT-DATE TO STDATEO           
+              MOVE WS-OUTPUT-DATE TO STDATEO   
            END-IF.
 
            MOVE WS-MESSAGE TO MESSO.
