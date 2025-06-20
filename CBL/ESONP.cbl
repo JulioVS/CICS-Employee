@@ -25,46 +25,46 @@
       *   DEFINE MY SESSION STATE DATA FOR PASSING INTO COMM-AREA.
       ******************************************************************
        01 WS-SESSION-STATE.
-          05 WS-USER-ID           PIC X(8).
-          05 WS-USER-PASSWORD     PIC X(8).
+          05 WS-USER-ID         PIC X(8).
+          05 WS-USER-PASSWORD   PIC X(8).
       ******************************************************************
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
-          05 WS-CURRENT-DATE      PIC X(14).
-          05 WS-MSG               PIC X(79).
+          05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
+          05 WS-CURRENT-DATE    PIC X(14).
+          05 WS-MSG             PIC X(79).
       *
-          05 WS-USER-LOOKUP       PIC X(1)  VALUE SPACES.
-             88 WS-USER-FOUND               VALUE 'Y'.
-          05 WS-LOGIN-OUTCOME     PIC X(1)  VALUE SPACES.
-             88 WS-LOGIN-SUCCESS            VALUE 'Y'.
+          05 WS-USER-LOOKUP     PIC X(1)  VALUE SPACES.
+             88 USER-FOUND                VALUE 'Y'.
+          05 WS-LOGIN-OUTCOME   PIC X(1)  VALUE SPACES.
+             88 LOGIN-SUCCESS             VALUE 'Y'.
       *
-       01 WS-DEBUG-AID            PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER               PIC X(5)  VALUE '<DBG:'.
-          05 WS-DEBUG-TEXT        PIC X(30) VALUE SPACES.
-          05 FILLER               PIC X(1)  VALUE '>'.
-          05 FILLER               PIC X(5)  VALUE '<MSG:'.
-          05 WS-MESSAGE           PIC X(9)  VALUE SPACES.
-          05 FILLER               PIC X(1)  VALUE '>'.
-          05 FILLER               PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP     PIC 9(8)  VALUE ZEROES.
-          05 FILLER               PIC X(1)  VALUE '>'.
-          05 FILLER               PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2    PIC 9(8)  VALUE ZEROES.
-          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<DBG:'.
+          05 WS-DEBUG-TEXT      PIC X(30) VALUE SPACES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<MSG:'.
+          05 WS-MESSAGE         PIC X(9)  VALUE SPACES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING                 VALUE 'Y'.
-          88 NOT-DEBUGGING                  VALUE 'N'.
+       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'N'.
+          88 I-AM-DEBUGGING               VALUE 'Y'.
+          88 NOT-DEBUGGING                VALUE 'N'.
 
       ******************************************************************
       *   EXPLICITLY DEFINE THE COMM-AREA FOR THE TRASACTION.
       ******************************************************************
        LINKAGE SECTION.
-       01 DFHCOMMAREA             PIC X(16).
+       01 DFHCOMMAREA           PIC X(16).
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -185,14 +185,14 @@
            PERFORM 3100-UPDATE-STATE.
            PERFORM 3200-LOOKUP-USER-ID.
 
-           IF WS-USER-FOUND THEN
+           IF USER-FOUND THEN
               PERFORM 3300-CHECK-USER-STATUS
               PERFORM 3400-CHECK-USER-CREDENTIALS
            ELSE
               EXIT
            END-IF.
 
-           IF WS-LOGIN-SUCCESS THEN
+           IF LOGIN-SUCCESS THEN
               PERFORM 3500-NOTIFY-ACTIVITY-MONITOR
               PERFORM 9000-TRANSFER-TO-LANDING-PAGE
            END-IF.
@@ -229,7 +229,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                SET WS-USER-FOUND TO TRUE
+                SET USER-FOUND TO TRUE
                 MOVE "User Found!" TO WS-MSG
            WHEN DFHRESP(NOTFND)
                 MOVE "User Not Found!" TO WS-MSG
@@ -368,7 +368,7 @@
                  IF WS-CURRENT-DATE >= REG-LAST-EFFECTIVE-DATE THEN
       *             ALL CONDITIONS MET
       *             SUCCESFUL SIGN ON!
-                    SET WS-LOGIN-SUCCESS TO TRUE
+                    SET LOGIN-SUCCESS TO TRUE
                     MOVE "User Is Active!" TO WS-MSG
                  ELSE
                     MOVE "User Is Not Yet Active!" TO WS-MSG

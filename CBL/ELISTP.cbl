@@ -27,80 +27,80 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE          PIC S9(8) USAGE IS BINARY.
-          05 WS-READ-COUNTER           PIC 9(2).
-          05 WS-LINE-COUNTER           PIC S9(2) USAGE IS BINARY.
-          05 WS-LINE-DISPLAY           PIC 9(2).
-          05 WS-INSP-COUNTER           PIC S9(2) USAGE IS BINARY.
-          05 WS-INDEX                  PIC S9(2) USAGE IS BINARY.
-          05 WS-DEPT-KEY               PIC X(8).
+          05 WS-CICS-RESPONSE       PIC S9(8) USAGE IS BINARY.
+          05 WS-READ-COUNTER        PIC 9(2).
+          05 WS-LINE-COUNTER        PIC S9(2) USAGE IS BINARY.
+          05 WS-LINE-DISPLAY        PIC 9(2).
+          05 WS-INSP-COUNTER        PIC S9(2) USAGE IS BINARY.
+          05 WS-INDEX               PIC S9(2) USAGE IS BINARY.
+          05 WS-DEPT-KEY            PIC X(8).
       *
        01 WS-DISPLAY-MESSAGES.
-          05 WS-MESSAGE                PIC X(79)  VALUE SPACES.
-          05 WS-PF7-LABEL              PIC X(9)   VALUE 'PF7 Prev '.
-          05 WS-PF8-LABEL              PIC X(9)   VALUE 'PF8 Next '.
+          05 WS-MESSAGE             PIC X(79)  VALUE SPACES.
+          05 WS-PF7-LABEL           PIC X(9)   VALUE 'PF7 Prev '.
+          05 WS-PF8-LABEL           PIC X(9)   VALUE 'PF8 Next '.
           05 WS-FILTERS-MSG-SF         PIC X(79)
              VALUE 'Set Filter Criteria And Press ENTER Or Leave Blank F
       -            'or Full Listing.'.
-          05 WS-FILTERS-MSG-EF         PIC X(79)
-                                                  VALUE
+          05 WS-FILTERS-MSG-EF      PIC X(79)
+                                               VALUE
                 'Edit Filter Criteria And Press ENTER To Continue.'.
           05 WS-FILTERS-BANNER.
-             10 WS-FIL-KEY-TYPE        PIC X(3)   VALUE SPACES.
-             10 WS-FIL-KEY-VALUE       PIC X(10)  VALUE SPACES.
-             10 FILLER                 PIC X(4)   VALUE ' IN:'.
-             10 WS-FIL-INCLUDE         PIC X(10)  VALUE SPACES.
-             10 FILLER                 PIC X(4)   VALUE ' EX:'.
-             10 WS-FIL-EXCLUDE         PIC X(10)  VALUE SPACES.
-             10 FILLER                 PIC X(4)   VALUE ' AF:'.
-             10 WS-FIL-AFTER           PIC X(8)   VALUE SPACES.
-             10 FILLER                 PIC X(4)   VALUE ' BF:'.
-             10 WS-FIL-BEFORE          PIC X(8)   VALUE SPACES.
+             10 WS-FIL-KEY-TYPE     PIC X(3)   VALUE SPACES.
+             10 WS-FIL-KEY-VALUE    PIC X(10)  VALUE SPACES.
+             10 FILLER              PIC X(4)   VALUE ' IN:'.
+             10 WS-FIL-INCLUDE      PIC X(10)  VALUE SPACES.
+             10 FILLER              PIC X(4)   VALUE ' EX:'.
+             10 WS-FIL-EXCLUDE      PIC X(10)  VALUE SPACES.
+             10 FILLER              PIC X(4)   VALUE ' AF:'.
+             10 WS-FIL-AFTER        PIC X(8)   VALUE SPACES.
+             10 FILLER              PIC X(4)   VALUE ' BF:'.
+             10 WS-FIL-BEFORE       PIC X(8)   VALUE SPACES.
       *
        01 WS-FILTER-FLAGS.
-          03 WS-FILTERS-CHECK          PIC X(1)   VALUE SPACES.
-             88 WS-FILTERS-PASSED                 VALUE 'Y'.
-             88 WS-FILTERS-FAILED                 VALUE 'N'.
-          03 WS-KEY-FILTER-CHECK       PIC X(1)   VALUE SPACES.
-             88 WS-KEY-FILTER-PASSED              VALUE 'Y'.
-          03 WS-DEPT-FILTER-CHECK      PIC X(1)   VALUE SPACES.
-             88 WS-DEPT-FILTER-PASSED             VALUE 'Y'.
-             88 WS-DEPT-FILTER-FAILED             VALUE 'N'.
-          03 WS-DATE-FILTER-CHECK      PIC X(1)   VALUE SPACES.
-             88 WS-DATE-FILTER-PASSED             VALUE 'Y'.
-          03 WS-FILTER-ACTIONS         PIC X(1)   VALUE SPACES.
-             88 WS-ACTION-DISPLAY                 VALUE 'D'.
-             88 WS-ACTION-EXIT                    VALUE 'E'.
-             88 WS-ACTION-SIGN-OFF                VALUE 'S'.
-             88 WS-ACTION-CLEAR                   VALUE 'C'.
-             88 WS-ACTION-INVALID                 VALUE 'I'.
-             88 WS-ACTION-NOT-SET                 VALUE SPACES.
+          03 WS-FILTERS-CHECK       PIC X(1)   VALUE SPACES.
+             88 FILTERS-PASSED                 VALUE 'Y'.
+             88 FILTERS-FAILED                 VALUE 'N'.
+          03 WS-KEY-FILTER-CHECK    PIC X(1)   VALUE SPACES.
+             88 KEY-FILTER-PASSED              VALUE 'Y'.
+          03 WS-DEPT-FILTER-CHECK   PIC X(1)   VALUE SPACES.
+             88 DEPT-FILTER-PASSED             VALUE 'Y'.
+             88 DEPT-FILTER-FAILED             VALUE 'N'.
+          03 WS-DATE-FILTER-CHECK   PIC X(1)   VALUE SPACES.
+             88 DATE-FILTER-PASSED             VALUE 'Y'.
+          03 WS-FILTER-ACTIONS      PIC X(1)   VALUE SPACES.
+             88 ACTION-DISPLAY                 VALUE 'D'.
+             88 ACTION-EXIT                    VALUE 'E'.
+             88 ACTION-SIGN-OFF                VALUE 'S'.
+             88 ACTION-CLEAR                   VALUE 'C'.
+             88 ACTION-INVALID                 VALUE 'I'.
+             88 ACTION-NOT-SET                 VALUE SPACES.
       *
-       01 WS-MAX-ID-VALUE              PIC 9(8)   VALUE 99999999.
-       01 WS-LINES-PER-PAGE            PIC S9(4) USAGE IS BINARY
-                                                  VALUE +16.
+       01 WS-MAX-ID-VALUE           PIC 9(8)   VALUE 99999999.
+       01 WS-LINES-PER-PAGE         PIC S9(4) USAGE IS BINARY
+                                               VALUE +16.
       *
        01 WS-RE-ENTRY-AID.
-          05 WS-RE-ENTRY-FILTERS       PIC X(112) VALUE SPACES.
-          05 WS-RE-ENTRY-FLAG          PIC X(1)   VALUE SPACES.
-             88 WS-RE-ENTRY-FROM-VIEW             VALUE 'Y'.
+          05 WS-RE-ENTRY-FILTERS    PIC X(112) VALUE SPACES.
+          05 WS-RE-ENTRY-FLAG       PIC X(1)   VALUE SPACES.
+             88 RE-ENTRY-FROM-VIEW             VALUE 'Y'.
       *
-       01 WS-DEBUG-AID                 PIC X(45)  VALUE SPACES.
+       01 WS-DEBUG-AID              PIC X(45)  VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER                    PIC X(5)   VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT             PIC X(45)  VALUE SPACES.
-          05 FILLER                    PIC X(1)   VALUE '>'.
-          05 FILLER                    PIC X(5)   VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP          PIC 9(8)   VALUE ZEROES.
-          05 FILLER                    PIC X(1)   VALUE '>'.
-          05 FILLER                    PIC X(5)   VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2         PIC 9(8)   VALUE ZEROES.
-          05 FILLER                    PIC X(1)   VALUE '>'.
+          05 FILLER                 PIC X(5)   VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT          PIC X(45)  VALUE SPACES.
+          05 FILLER                 PIC X(1)   VALUE '>'.
+          05 FILLER                 PIC X(5)   VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP       PIC 9(8)   VALUE ZEROES.
+          05 FILLER                 PIC X(1)   VALUE '>'.
+          05 FILLER                 PIC X(5)   VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2      PIC 9(8)   VALUE ZEROES.
+          05 FILLER                 PIC X(1)   VALUE '>'.
       *
-       01 WS-DEBUG-MODE                PIC X(1)   VALUE 'N'.
-          88 I-AM-DEBUGGING                       VALUE 'Y'.
-          88 NOT-DEBUGGING                        VALUE 'N'.
+       01 WS-DEBUG-MODE             PIC X(1)   VALUE 'N'.
+          88 I-AM-DEBUGGING                    VALUE 'Y'.
+          88 NOT-DEBUGGING                     VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -205,7 +205,7 @@
            MOVE '1' TO LST-SELECT-KEY-TYPE.
 
       *    IF BOUNCING BACK FROM 'VIEW DETAILS' PAGE, RESTORE FILTERS.
-           IF WS-RE-ENTRY-FROM-VIEW THEN
+           IF RE-ENTRY-FROM-VIEW THEN
               MOVE WS-RE-ENTRY-FILTERS TO LST-FILTERS
            END-IF.
 
@@ -227,9 +227,9 @@
            INITIALIZE WS-FILTER-ACTIONS.
 
            PERFORM 3000-DISPLAY-FILTERS-SCREEN
-              UNTIL WS-ACTION-DISPLAY
-              OR WS-ACTION-EXIT
-              OR WS-ACTION-SIGN-OFF.
+              UNTIL ACTION-DISPLAY
+              OR ACTION-EXIT
+              OR ACTION-SIGN-OFF.
 
        1300-READ-EMPLOYEES-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
@@ -371,7 +371,7 @@
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
 
-                IF WS-FILTERS-PASSED THEN
+                IF FILTERS-PASSED THEN
                    MOVE EMPLOYEE-MASTER-RECORD TO
                       LST-CURRENT-RECORD(LST-RECORD-INDEX)
                    SET LST-RECORD-INDEX UP BY 1
@@ -505,7 +505,7 @@
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
 
-                IF WS-FILTERS-PASSED THEN
+                IF FILTERS-PASSED THEN
                    MOVE EMPLOYEE-MASTER-RECORD TO
                       LST-CURRENT-RECORD(LST-RECORD-INDEX)
                    SET LST-RECORD-INDEX DOWN BY 1
@@ -625,9 +625,9 @@
            INITIALIZE WS-FILTER-ACTIONS.
 
            PERFORM 3000-DISPLAY-FILTERS-SCREEN
-              UNTIL WS-ACTION-DISPLAY
-              OR WS-ACTION-EXIT
-              OR WS-ACTION-SIGN-OFF.
+              UNTIL ACTION-DISPLAY
+              OR ACTION-EXIT
+              OR ACTION-SIGN-OFF.
 
            PERFORM 2210-RESET-BROWSING-VALUES.
            PERFORM 1300-READ-EMPLOYEES-BY-KEY.
@@ -821,7 +821,7 @@
 
       *    IF AN INVALID KEY WAS PRESEED ON THE PREVOUS MAP DISPLAY,
       *    WE ISSUE A WARNING MESSAGE ON NEXT RENDER.
-           IF WS-ACTION-INVALID THEN
+           IF ACTION-INVALID THEN
               MOVE WS-MESSAGE TO MESSFLO
               MOVE DFHPINK TO MESSFLC
            END-IF.
@@ -858,23 +858,23 @@
            EVALUATE EIBAID
            WHEN DFHENTER
                 MOVE 'Filter Criteria Entered' TO WS-MESSAGE
-                SET WS-ACTION-DISPLAY TO TRUE
+                SET ACTION-DISPLAY TO TRUE
            WHEN DFHPF3
                 MOVE 'Filter Criteria Cancelled' TO WS-MESSAGE
-                SET WS-ACTION-EXIT TO TRUE
+                SET ACTION-EXIT TO TRUE
                 PERFORM 3050-TRANSFER-BACK-TO-MENU
            WHEN DFHPF10
                 MOVE 'Sign Off Requested' TO WS-MESSAGE
-                SET WS-ACTION-SIGN-OFF TO TRUE
+                SET ACTION-SIGN-OFF TO TRUE
                 PERFORM 2500-SIGN-USER-OFF
            WHEN DFHPF12
                 MOVE 'Clear Criteria Requested' TO WS-MESSAGE
-                SET WS-ACTION-CLEAR TO TRUE
+                SET ACTION-CLEAR TO TRUE
                 INITIALIZE LST-FILTERS
                 MOVE '1' TO LST-SELECT-KEY-TYPE
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
-                SET WS-ACTION-INVALID TO TRUE
+                SET ACTION-INVALID TO TRUE
            END-EVALUATE.
 
       *    WITH FILTER CRITERIA ENTERED AND RECEIVED INTO THE MAP'S
@@ -1036,7 +1036,7 @@
 
       *    IF NO FILTERS WERE SET, THEN WE JUST 'OK' THE RECORD.
            IF LST-NO-FILTERS-SET THEN
-              SET WS-FILTERS-PASSED TO TRUE
+              SET FILTERS-PASSED TO TRUE
               EXIT PARAGRAPH
            END-IF.
 
@@ -1046,10 +1046,10 @@
            PERFORM 3500-APPLY-DATE-FILTERS.
 
       *    IF *ALL* FILTERS WERE MET, THEN WE SET THE 'PASSED' FLAG.
-           IF WS-KEY-FILTER-PASSED AND
-              WS-DEPT-FILTER-PASSED AND
-              WS-DATE-FILTER-PASSED THEN
-              SET WS-FILTERS-PASSED TO TRUE
+           IF KEY-FILTER-PASSED AND
+              DEPT-FILTER-PASSED AND
+              DATE-FILTER-PASSED THEN
+              SET FILTERS-PASSED TO TRUE
            END-IF.
 
        3300-APPLY-KEY-FILTERS.
@@ -1060,7 +1060,7 @@
 
       *    IF 'VALUE' WAS OMITTED, WE IGNORE THE FILTER.
            IF LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
-              SET WS-KEY-FILTER-PASSED TO TRUE
+              SET KEY-FILTER-PASSED TO TRUE
               EXIT PARAGRAPH
            END-IF.
 
@@ -1086,7 +1086,7 @@
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
 
               IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
-                 SET WS-KEY-FILTER-PASSED TO TRUE
+                 SET KEY-FILTER-PASSED TO TRUE
               END-IF
            END-IF.
 
@@ -1099,7 +1099,7 @@
                  FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
 
               IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
-                 SET WS-KEY-FILTER-PASSED TO TRUE
+                 SET KEY-FILTER-PASSED TO TRUE
               END-IF
            END-IF.
 
@@ -1112,7 +1112,7 @@
       *    IF NO DEPARTMENT FILTERS WERE SET, WE JUST 'OK' IT.
            IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES AND
               LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
-              SET WS-DEPT-FILTER-PASSED TO TRUE
+              SET DEPT-FILTER-PASSED TO TRUE
               EXIT PARAGRAPH
            END-IF.
 
@@ -1122,13 +1122,13 @@
       *    FIRST, THE 'POSITIVE' DEPARTMENT INCLUSION FILTERS.
            IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
       *       NO 'INCLUDE' FILTERS, SO *ALL* DEPARTMENTS ARE FINE.
-              SET WS-DEPT-FILTER-PASSED TO TRUE
+              SET DEPT-FILTER-PASSED TO TRUE
            ELSE
       *       WE NEED TO MATCH A 'WHITE-LISTED' DEPARTMENT TO PASS.
               PERFORM VARYING LST-IN-DEPT-INDEX
                  FROM 1 BY 1
                  UNTIL LST-IN-DEPT-INDEX IS GREATER THAN 4
-                 OR WS-DEPT-FILTER-PASSED
+                 OR DEPT-FILTER-PASSED
                       IF LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
                          IS NOT EQUAL TO SPACES THEN
 
@@ -1141,7 +1141,7 @@
 
                          IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
       *                     SUCCESS! IT PASSES THE FILTER.
-                            SET WS-DEPT-FILTER-PASSED TO TRUE
+                            SET DEPT-FILTER-PASSED TO TRUE
                          END-IF
                       END-IF
               END-PERFORM
@@ -1157,7 +1157,7 @@
               PERFORM VARYING LST-EX-DEPT-INDEX
                  FROM 1 BY 1
                  UNTIL LST-EX-DEPT-INDEX IS GREATER THAN 4
-                 OR WS-DEPT-FILTER-FAILED
+                 OR DEPT-FILTER-FAILED
                       IF LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX)
                          IS NOT EQUAL TO SPACES THEN
 
@@ -1170,7 +1170,7 @@
 
                          IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
       *                     BLACKLISTED! IT DOESN'T MAKE THE CUT.
-                            SET WS-DEPT-FILTER-FAILED TO TRUE
+                            SET DEPT-FILTER-FAILED TO TRUE
                          END-IF
                       END-IF
               END-PERFORM
@@ -1184,7 +1184,7 @@
 
       *    IF NO DATE FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
            IF LST-EMPLOYMENT-DATE-FILTERS IS EQUAL TO SPACES THEN
-              SET WS-DATE-FILTER-PASSED TO TRUE
+              SET DATE-FILTER-PASSED TO TRUE
               EXIT PARAGRAPH
            END-IF.
 
@@ -1197,7 +1197,7 @@
               IF EMP-START-DATE IS GREATER THAN LST-EMPL-DATE-AFTER AND
                  EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
       *          SUCCESS!
-                 SET WS-DATE-FILTER-PASSED TO TRUE
+                 SET DATE-FILTER-PASSED TO TRUE
                  EXIT PARAGRAPH
               END-IF
            END-IF.
@@ -1206,7 +1206,7 @@
            IF LST-EMPL-DATE-AFTER IS EQUAL TO SPACES THEN
               IF EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
       *          SUCCESS!
-                 SET WS-DATE-FILTER-PASSED TO TRUE
+                 SET DATE-FILTER-PASSED TO TRUE
                  EXIT PARAGRAPH
               END-IF
            END-IF.
@@ -1215,7 +1215,7 @@
            IF LST-EMPL-DATE-BEFORE IS EQUAL TO SPACES THEN
               IF EMP-START-DATE IS GREATER THAN LST-EMPL-DATE-AFTER THEN
       *          SUCCESS!
-                 SET WS-DATE-FILTER-PASSED TO TRUE
+                 SET DATE-FILTER-PASSED TO TRUE
                  EXIT PARAGRAPH
               END-IF
            END-IF.
@@ -1284,7 +1284,7 @@
            END-IF.
 
            IF EMP-DELETED THEN
-              SET WS-FILTERS-FAILED TO TRUE
+              SET FILTERS-FAILED TO TRUE
            END-IF.
 
       *-----------------------------------------------------------------
@@ -1395,7 +1395,7 @@
       *    THE RE-ENTRY FLAG SO THEY WILL BE RECALLED ON THE NEXT 
       *    RENDERING OF THE FILTERS PAGE.
            MOVE LST-FILTERS TO WS-RE-ENTRY-FILTERS.
-           SET WS-RE-ENTRY-FROM-VIEW TO TRUE.
+           SET RE-ENTRY-FROM-VIEW TO TRUE.
 
       *    OTHERWISE, WE JUST RESTART THE LISTING CONVERSATION.
            PERFORM 1000-FIRST-INTERACTION.

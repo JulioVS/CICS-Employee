@@ -25,28 +25,28 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
-          05 WS-MESSAGE           PIC X(79).
-          05 WS-SELECT-FLAG       PIC X(1).
-             88 WS-LIST-SELECTED            VALUE 'L'.
-             88 WS-VIEW-SELECTED            VALUE 'V'.
+          05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
+          05 WS-MESSAGE         PIC X(79).
+          05 WS-SELECT-FLAG     PIC X(1).
+             88 LIST-SELECTED             VALUE 'L'.
+             88 VIEW-SELECTED             VALUE 'V'.
       *
-       01 WS-DEBUG-AID            PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER               PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT        PIC X(45) VALUE SPACES.
-          05 FILLER               PIC X(1)  VALUE '>'.
-          05 FILLER               PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP     PIC 9(8)  VALUE ZEROES.
-          05 FILLER               PIC X(1)  VALUE '>'.
-          05 FILLER               PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2    PIC 9(8)  VALUE ZEROES.
-          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER             PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
+          05 FILLER             PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING                 VALUE 'Y'.
-          88 NOT-DEBUGGING                  VALUE 'N'.
+       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'N'.
+          88 I-AM-DEBUGGING               VALUE 'Y'.
+          88 NOT-DEBUGGING                VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -138,9 +138,9 @@
                 PERFORM 2050-CHECK-SELECTION
 
                 EVALUATE TRUE
-                WHEN WS-LIST-SELECTED
+                WHEN LIST-SELECTED
                      PERFORM 2100-TRANSFER-TO-LIST-PAGE
-                WHEN WS-VIEW-SELECTED
+                WHEN VIEW-SELECTED
                      PERFORM 2200-TRANSFER-TO-VIEW-PAGE
                 WHEN OTHER
                      MOVE 'Invalid Selection!' TO WS-MESSAGE
@@ -161,13 +161,13 @@
 
            MOVE SEL1F TO DFHBMFLG.
            IF DFHCURSR THEN
-              SET WS-LIST-SELECTED TO TRUE
+              SET LIST-SELECTED TO TRUE
               EXIT PARAGRAPH
            END-IF.
 
            MOVE SEL2F TO DFHBMFLG.
            IF DFHCURSR THEN
-              SET WS-VIEW-SELECTED TO TRUE
+              SET VIEW-SELECTED TO TRUE
            END-IF.
 
        2100-TRANSFER-TO-LIST-PAGE.

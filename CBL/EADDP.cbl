@@ -199,6 +199,10 @@
                    FIELD(STDATEI)
                    LENGTH(LENGTH OF STDATEI)
                    END-EXEC
+      *       SINCE WE HAVE A 10-CHAR DATE FIELD ON THE MAP, THE DEEDIT
+      *       COMMAND WILL PAD THE FIELD WITH LEFTMOST ZEROES AS IN
+      *       '00YYYYMMDD' SO WE NEED TO TRIM IT DOWN TO 'YYYYMMDD'
+      *       TO FIT ON THE MASTER FILE'S 8-CHAR DATE FIELD.
               MOVE STDATEI(3:8) TO EMP-START-DATE
            END-IF.
 
@@ -206,6 +210,12 @@
            MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
 
       *    VALIDATE FIELDS.
+      *      - TO SET THE CURSOR POSITION ON THE MAP, WE MOVE -1 TO
+      *        THE LENGTH OF THE FIELD THAT IS INVALID *AND* WE ADD
+      *        THE "CURSOR" OPTION ON THE 'CICS SEND MAP' COMMAND.
+      *      - IF ALL IS WELL, WE POSITION IT AT THE FIRST EDITABLE 
+      *        FIELD, WHICH IS 'PRIMARY NAME', TO PREVENT THE CURSOR TO 
+      *        SHOW UP AT "0,0" POSITION ON THE SCREEN.
            EVALUATE TRUE
            WHEN EMP-PRIMARY-NAME IS EQUAL TO SPACES
                 MOVE 'Validation Error: Primary Name is required!'
@@ -230,6 +240,7 @@
            WHEN OTHER
                 MOVE 'Employee Record Validated Successfully!'
                    TO WS-MESSAGE 
+                MOVE -1 TO PRNAMEL
            END-EVALUATE.
 
        2200-ADD-EMPLOYEE-RECORD.
