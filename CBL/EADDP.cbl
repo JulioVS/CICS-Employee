@@ -26,37 +26,47 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE   PIC S9(8) USAGE IS BINARY.
-          05 WS-MESSAGE         PIC X(79).
+          05 WS-CICS-RESPONSE    PIC S9(8) USAGE IS BINARY.
+          05 WS-MESSAGE          PIC X(79).
+          05 WS-NEW-EMPLOYEE-ID  PIC 9(8).
+      *
+       01 WS-VALIDATION-FLAG     PIC X(1)  VALUE SPACES.
+          88 VALIDATION-PASSED             VALUE 'Y'.
+          88 VALIDATION-FAILED             VALUE SPACES.
+      *
+       01 WS-FILE-FLAG           PIC X(1)  VALUE SPACES.
+          88 END-OF-FILE                   VALUE 'E'.
+          88 TOP-OF-FILE                   VALUE 'T'.
+          88 RECORD-FOUND                  VALUE 'R'.
       *
        01 WS-DATE-FORMATTING.
           05 WS-INPUT-DATE.
-             10 WS-YYYY         PIC X(4)  VALUE SPACES.
-             10 WS-MM           PIC X(2)  VALUE SPACES.
-             10 WS-DD           PIC X(2)  VALUE SPACES.
+             10 WS-YYYY          PIC X(4)  VALUE SPACES.
+             10 WS-MM            PIC X(2)  VALUE SPACES.
+             10 WS-DD            PIC X(2)  VALUE SPACES.
           05 WS-OUTPUT-DATE.
-             10 WS-YYYY         PIC X(4)  VALUE SPACES.
-             10 FILLER          PIC X(1)  VALUE '-'.
-             10 WS-MM           PIC X(2)  VALUE SPACES.
-             10 FILLER          PIC X(1)  VALUE '-'.
-             10 WS-DD           PIC X(2)  VALUE SPACES.
+             10 WS-YYYY          PIC X(4)  VALUE SPACES.
+             10 FILLER           PIC X(1)  VALUE '-'.
+             10 WS-MM            PIC X(2)  VALUE SPACES.
+             10 FILLER           PIC X(1)  VALUE '-'.
+             10 WS-DD            PIC X(2)  VALUE SPACES.
       *
-       01 WS-DEBUG-AID          PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID           PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER             PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT      PIC X(45) VALUE SPACES.
-          05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP   PIC 9(8)  VALUE ZEROES.
-          05 FILLER             PIC X(1)  VALUE '>'.
-          05 FILLER             PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2  PIC 9(8)  VALUE ZEROES.
-          05 FILLER             PIC X(1)  VALUE '>'.
+          05 FILLER              PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT       PIC X(45) VALUE SPACES.
+          05 FILLER              PIC X(1)  VALUE '>'.
+          05 FILLER              PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP    PIC 9(8)  VALUE ZEROES.
+          05 FILLER              PIC X(1)  VALUE '>'.
+          05 FILLER              PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2   PIC 9(8)  VALUE ZEROES.
+          05 FILLER              PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE         PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING               VALUE 'Y'.
-          88 NOT-DEBUGGING                VALUE 'N'.
+       01 WS-DEBUG-MODE          PIC X(1)  VALUE 'N'.
+          88 I-AM-DEBUGGING                VALUE 'Y'.
+          88 NOT-DEBUGGING                 VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -120,7 +130,8 @@
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE EADDMO.
 
-           MOVE 'Welcome to the Employee App!' TO WS-MESSAGE.
+           MOVE 'Welcome to the Add New Record page!' TO WS-MESSAGE.
+           MOVE -1 TO PRNAMEL. 
 
       *-----------------------------------------------------------------
        USE-CASE SECTION.
@@ -152,6 +163,9 @@
                 PERFORM 2300-TRANSFER-BACK-TO-MENU
            WHEN DFHPF4
                 PERFORM 2200-ADD-EMPLOYEE-RECORD
+                PERFORM 2600-CLEAR-SCREEN
+           WHEN DFHPF9
+                PERFORM 2600-CLEAR-SCREEN
            WHEN DFHPF10
                 PERFORM 2500-SIGN-USER-OFF
            WHEN DFHPF12
@@ -216,6 +230,9 @@
       *      - IF ALL IS WELL, WE POSITION IT AT THE FIRST EDITABLE 
       *        FIELD, WHICH IS 'PRIMARY NAME', TO PREVENT THE CURSOR TO 
       *        SHOW UP AT "0,0" POSITION ON THE SCREEN.
+
+           INITIALIZE WS-VALIDATION-FLAG.
+
            EVALUATE TRUE
            WHEN EMP-PRIMARY-NAME IS EQUAL TO SPACES
                 MOVE 'Validation Error: Primary Name is required!'
@@ -241,6 +258,7 @@
                 MOVE 'Employee Record Validated Successfully!'
                    TO WS-MESSAGE 
                 MOVE -1 TO PRNAMEL
+                SET VALIDATION-PASSED TO TRUE
            END-EVALUATE.
 
        2200-ADD-EMPLOYEE-RECORD.
@@ -249,7 +267,12 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           CONTINUE.
+           PERFORM 2100-VALIDATE-USER-INPUT.
+
+           IF VALIDATION-PASSED THEN
+              MOVE 'Adding New Employee Record...' TO WS-MESSAGE
+              PERFORM 3000-WRITE-NEW-RECORD
+           END-IF.
 
        2300-TRANSFER-BACK-TO-MENU.
       *    >>> DEBUGGING ONLY <<<
@@ -314,6 +337,146 @@
 
            PERFORM 9200-RETURN-TO-CICS.
 
+       2600-CLEAR-SCREEN.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2600-CLEAR-SCREEN' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE ADD-EMPLOYEE-RECORD.
+           INITIALIZE EMPLOYEE-MASTER-RECORD.
+           INITIALIZE EADDMO.
+           MOVE -1 TO PRNAMEL. 
+
+      *-----------------------------------------------------------------
+       WRITING SECTION.
+      *-----------------------------------------------------------------
+
+       3000-WRITE-NEW-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3000-WRITE-NEW-RECORD' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 3100-GET-NEW-EMPLOYEE-ID.
+
+       3100-GET-NEW-EMPLOYEE-ID.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3100-GET-NEW-EMPLOYEE-ID' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 3110-START-BROWSING.
+
+           IF END-OF-FILE THEN
+              MOVE 1 TO WS-NEW-EMPLOYEE-ID
+           END-IF.
+
+           IF NOT END-OF-FILE THEN 
+              PERFORM 3120-READ-PREV-RECORD
+              PERFORM 3130-END-BROWSING
+           END-IF.
+
+           IF RECORD-FOUND THEN
+              ADD 1 TO EMP-EMPLOYEE-ID 
+              MOVE EMP-EMPLOYEE-ID TO WS-NEW-EMPLOYEE-ID
+           ELSE
+              MOVE 1 TO WS-NEW-EMPLOYEE-ID
+           END-IF.
+
+      *    >>> DEBUGGING ONLY <<<
+           SET I-AM-DEBUGGING TO TRUE.
+           MOVE WS-NEW-EMPLOYEE-ID TO WS-DEBUG-AID. 
+           PERFORM 9300-DEBUG-AID.
+           SET NOT-DEBUGGING TO TRUE.
+      *    >>> -------------- <<<
+               
+       3110-START-BROWSING.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3110-START-BROWSING' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE HIGH-VALUES TO EMP-KEY.
+           INITIALIZE WS-FILE-FLAG.
+
+           EXEC CICS STARTBR
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Records Found!' TO WS-MESSAGE
+                SET END-OF-FILE TO TRUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Starting Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       3120-READ-PREV-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3120-READ-PREV-RECORD' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE WS-FILE-FLAG.
+
+           EXEC CICS READPREV
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                INTO (EMPLOYEE-MASTER-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                SET RECORD-FOUND TO TRUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Previous Records Found!' TO WS-MESSAGE
+                SET TOP-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'Start of Employee Master File' TO WS-MESSAGE
+                SET TOP-OF-FILE TO TRUE
+           WHEN OTHER
+                MOVE 'Error Reading Previous Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       3130-END-BROWSING.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3130-END-BROWSING' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS ENDBR
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+\
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (End Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Ending Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+             
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
       *-----------------------------------------------------------------

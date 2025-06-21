@@ -81,7 +81,8 @@ MESS     DFHMDF POS=(23,1),LENGTH=79,ATTRB=(ASKIP,BRT)
 *  AID KEY SECTION.
 *
          DFHMDF POS=(24,1),LENGTH=79,ATTRB=(ASKIP,NORM),               X
-               INITIAL='PF3 Exit  PF4 Save  PF10 Sign Off  PF12 Cancel'
+               INITIAL='PF3 Exit  PF4 Save  PF9 Clear  PF10 Sign Off  PX
+               F12 Cancel'
 * ---------------------------------------------------------------------
 *  ENDING SECTION.
 * ---------------------------------------------------------------------

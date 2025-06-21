@@ -76,7 +76,6 @@
              88 ACTION-INVALID                 VALUE 'I'.
              88 ACTION-NOT-SET                 VALUE SPACES.
       *
-       01 WS-MAX-ID-VALUE           PIC 9(8)   VALUE 99999999.
        01 WS-LINES-PER-PAGE         PIC S9(4) USAGE IS BINARY
                                                VALUE +16.
       *
@@ -310,7 +309,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Browsing Employee Master File' TO WS-MESSAGE
+                CONTINUE
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Records Found!' TO WS-MESSAGE
                 SET LST-END-OF-FILE TO TRUE
@@ -367,7 +366,6 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
 
@@ -411,7 +409,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'End of Browsing Master File' TO WS-MESSAGE
+                CONTINUE
            WHEN OTHER
                 MOVE 'Error Ending Browse!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -501,7 +499,6 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
 
@@ -690,7 +687,7 @@
       *          IN ORDER TO GO BACKWARDS, WE JUST SET THE EMPLOYEE ID
       *          TO A FICTIONAL 'MAXIMUM VALUE'.
                  IF LST-SEL-BY-EMPLOYEE-ID THEN
-                    MOVE WS-MAX-ID-VALUE TO EMP-EMPLOYEE-ID
+                    MOVE HIGH-VALUES TO EMP-KEY
                  ELSE
                     MOVE HIGH-VALUES TO EMP-PRIMARY-NAME
                  END-IF

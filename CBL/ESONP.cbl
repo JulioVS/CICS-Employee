@@ -141,6 +141,7 @@
       *    AND CHECK PRESSED KEY
            EVALUATE EIBAID
            WHEN DFHPF3
+           WHEN DFHPF10
            WHEN DFHPF12
                 PERFORM 2100-CANCEL-SIGN-ON
            WHEN DFHENTER
