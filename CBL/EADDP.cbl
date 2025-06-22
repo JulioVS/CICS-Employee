@@ -166,7 +166,6 @@
                 PERFORM 2300-TRANSFER-BACK-TO-MENU
            WHEN DFHPF4
                 PERFORM 2200-ADD-EMPLOYEE-RECORD
-                PERFORM 2600-CLEAR-SCREEN
            WHEN DFHPF9
                 PERFORM 2600-CLEAR-SCREEN
            WHEN DFHPF10
@@ -293,10 +292,6 @@
 
       *    CONVERT THE PRIMARY NAME TO TITLE CASE TO BEST MATCH THE
       *    KEY VALUES PRESENT IN THE EMPLOYEE MASTER FILE.
-      *
-      *    - NOTE: THIS IS NOT A PERFECT SOLUTION, BUT IT'S THE BEST 
-      *            WE CAN MANAGE FOR NOW.
-
            MOVE FUNCTION LOWER-CASE(EMP-PRIMARY-NAME)
               TO EMP-PRIMARY-NAME.
            MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
@@ -305,7 +300,6 @@
       *    TRY TO SEE IF THE CHOSEN PRIMARY NAME ALREADY EXISTS IN THE
       *    EMPLOYEE MASTER FILE BY BROWSING FOR *EQUALITY* ON ITS 
       *    ALTERNATE 'NAME' PATH.
-
            PERFORM 2120-START-BROWSING-NM.
 
            IF NOT END-OF-FILE THEN
@@ -477,6 +471,8 @@
       *    >>> -------------- <<<
 
            PERFORM 3100-GET-NEW-EMPLOYEE-ID.
+           PERFORM 3200-LOCK-NEW-IDS.
+           PERFORM 3900-RELEASE-LOCKS.
 
        3100-GET-NEW-EMPLOYEE-ID.
       *    >>> DEBUGGING ONLY <<<
@@ -486,21 +482,31 @@
 
            PERFORM 3110-START-BROWSING-ID.
 
+      *    EMPTY FILE! START AFRESH WITH EMPLOYEE ID = 1.
            IF END-OF-FILE THEN
               MOVE 1 TO WS-NEW-EMPLOYEE-ID
            END-IF.
 
+      *    SEEK LAST EMPLOYEE RECORD AND GET ITS ID.
            IF NOT END-OF-FILE THEN 
               PERFORM 3120-READ-PREV-RECORD-ID
               PERFORM 3130-END-BROWSING-ID
            END-IF.
 
+      *    IF WE FOUND A PREVIOUS RECORD (WE SHOULD!) INCREMENT ITS 
+      *    ID BY 1 TO GET THE NEW VALUE. IF, WEIRDLY, WE DIDN'T, THEN 
+      *    START AFRESH WITH ID = 1.
            IF RECORD-FOUND THEN
-              ADD 1 TO EMP-EMPLOYEE-ID 
               MOVE EMP-EMPLOYEE-ID TO WS-NEW-EMPLOYEE-ID
+              ADD 1 TO WS-NEW-EMPLOYEE-ID 
            ELSE
               MOVE 1 TO WS-NEW-EMPLOYEE-ID
            END-IF.
+
+      *    IF THE BROWSE AND BACKWARDS READ WERE SUCCESSFUL, THEN
+      *.   THE EMPLOYEE RECORD NOW HAS THE LAST EMPLOYEE'S DATA, SO
+      *    WE RESTORE IT TO THE USER'S INPUT PLUS WE SET THE NEW ID.
+           PERFORM 3140-RESTORE-RECORD.
 
       *    >>> DEBUGGING ONLY <<<
            SET I-AM-DEBUGGING TO TRUE.
@@ -594,7 +600,90 @@
                 MOVE 'Error Ending Browse!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
-             
+
+       3140-RESTORE-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3140-RESTORE-RECORD' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID. 
+      *    >>> -------------- <<<
+
+      *    WE RESTORE THE EMPLOYEE RECORD TO THE USER'S INPUT VALUES, 
+      *    THEN WE SET ITS NEW ID AND FINALLY WE UPDATE IT BACK INTO 
+      *    THE APP CONTAINER.
+           MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.       
+           MOVE WS-NEW-EMPLOYEE-ID TO EMP-EMPLOYEE-ID.
+           MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
+
+       3200-LOCK-NEW-IDS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3200-LOCK-NEW-IDS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS ENQ
+                RESOURCE(EMP-EMPLOYEE-ID)
+                LENGTH(LENGTH OF EMP-EMPLOYEE-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(ENQBUSY)
+                MOVE 'Employee ID Lock Busy!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+           EXEC CICS ENQ
+                RESOURCE(EMP-PRIMARY-NAME)
+                LENGTH(LENGTH OF EMP-PRIMARY-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(ENQBUSY)
+                MOVE 'Primary Name Lock Busy!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       3900-RELEASE-LOCKS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3900-RELEASE-LOCKS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS DEQ
+                RESOURCE(EMP-EMPLOYEE-ID)
+                LENGTH(LENGTH OF EMP-EMPLOYEE-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+     
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'Employee ID Lock Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Releasing Employee ID Lock!' TO WS-MESSAGE
+           END-EVALUATE.
+     
+           EXEC CICS DEQ
+                RESOURCE(EMP-PRIMARY-NAME)
+                LENGTH(LENGTH OF EMP-PRIMARY-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+     
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'Primary Name Lock Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Releasing Primary Name Lock!' TO WS-MESSAGE
+           END-EVALUATE.
+
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
       *-----------------------------------------------------------------
@@ -730,15 +819,14 @@
            IF ADD-EMPLOYEE-RECORD IS NOT EQUAL TO SPACES THEN
               MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD 
 
-              MOVE '00090125' TO EMPLIDO
-
+              MOVE EMP-EMPLOYEE-ID TO EMPLIDO
               MOVE EMP-PRIMARY-NAME TO PRNAMEO
               MOVE EMP-HONORIFIC TO HONORO
               MOVE EMP-SHORT-NAME TO SHNAMEO
               MOVE EMP-FULL-NAME TO FLNAMEO
 
               MOVE EMP-JOB-TITLE TO JBTITLO
-              MOVE '00005150' TO DEPTIDO
+              MOVE '00090125' TO DEPTIDO
               MOVE 'World Domination HQ' TO DEPTNMO
 
               MOVE EMP-START-DATE TO WS-INPUT-DATE 
