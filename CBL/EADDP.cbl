@@ -26,47 +26,50 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE    PIC S9(8) USAGE IS BINARY.
-          05 WS-MESSAGE          PIC X(79).
-          05 WS-NEW-EMPLOYEE-ID  PIC 9(8).
+          05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
+          05 WS-MESSAGE           PIC X(79).
+          05 WS-NEW-EMPLOYEE-ID   PIC 9(8).
       *
-       01 WS-VALIDATION-FLAG     PIC X(1)  VALUE SPACES.
-          88 VALIDATION-PASSED             VALUE 'Y'.
-          88 VALIDATION-FAILED             VALUE SPACES.
+       01 WS-VALIDATION-FLAG      PIC X(1)  VALUE SPACES.
+          88 VALIDATION-PASSED              VALUE 'Y'.
+          88 VALIDATION-FAILED              VALUE SPACES.
+       01 WS-PRIMARY-NAME-FLAG    PIC X(1)  VALUE SPACES.
+          88 PRIMARY-NAME-VALID             VALUE 'Y'.
+          88 PRIMARY-NAME-EXISTS            VALUE SPACES.
       *
-       01 WS-FILE-FLAG           PIC X(1)  VALUE SPACES.
-          88 END-OF-FILE                   VALUE 'E'.
-          88 TOP-OF-FILE                   VALUE 'T'.
-          88 RECORD-FOUND                  VALUE 'R'.
+       01 WS-FILE-FLAG            PIC X(1)  VALUE SPACES.
+          88 END-OF-FILE                    VALUE 'E'.
+          88 TOP-OF-FILE                    VALUE 'T'.
+          88 RECORD-FOUND                   VALUE 'R'.
       *
        01 WS-DATE-FORMATTING.
           05 WS-INPUT-DATE.
-             10 WS-YYYY          PIC X(4)  VALUE SPACES.
-             10 WS-MM            PIC X(2)  VALUE SPACES.
-             10 WS-DD            PIC X(2)  VALUE SPACES.
+             10 WS-YYYY           PIC X(4)  VALUE SPACES.
+             10 WS-MM             PIC X(2)  VALUE SPACES.
+             10 WS-DD             PIC X(2)  VALUE SPACES.
           05 WS-OUTPUT-DATE.
-             10 WS-YYYY          PIC X(4)  VALUE SPACES.
-             10 FILLER           PIC X(1)  VALUE '-'.
-             10 WS-MM            PIC X(2)  VALUE SPACES.
-             10 FILLER           PIC X(1)  VALUE '-'.
-             10 WS-DD            PIC X(2)  VALUE SPACES.
+             10 WS-YYYY           PIC X(4)  VALUE SPACES.
+             10 FILLER            PIC X(1)  VALUE '-'.
+             10 WS-MM             PIC X(2)  VALUE SPACES.
+             10 FILLER            PIC X(1)  VALUE '-'.
+             10 WS-DD             PIC X(2)  VALUE SPACES.
       *
-       01 WS-DEBUG-AID           PIC X(45) VALUE SPACES.
+       01 WS-DEBUG-AID            PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER              PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT       PIC X(45) VALUE SPACES.
-          05 FILLER              PIC X(1)  VALUE '>'.
-          05 FILLER              PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP    PIC 9(8)  VALUE ZEROES.
-          05 FILLER              PIC X(1)  VALUE '>'.
-          05 FILLER              PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2   PIC 9(8)  VALUE ZEROES.
-          05 FILLER              PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT        PIC X(45) VALUE SPACES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP     PIC 9(8)  VALUE ZEROES.
+          05 FILLER               PIC X(1)  VALUE '>'.
+          05 FILLER               PIC X(5)  VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2    PIC 9(8)  VALUE ZEROES.
+          05 FILLER               PIC X(1)  VALUE '>'.
       *
-       01 WS-DEBUG-MODE          PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING                VALUE 'Y'.
-          88 NOT-DEBUGGING                 VALUE 'N'.
+       01 WS-DEBUG-MODE           PIC X(1)  VALUE 'N'.
+          88 I-AM-DEBUGGING                 VALUE 'Y'.
+          88 NOT-DEBUGGING                  VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -185,19 +188,19 @@
 
       *    GET NEWLY ENTERED FIELDS AND UPDATE THE RECORD.
            IF PRNAMEL IS GREATER THAN ZERO THEN
-              MOVE PRNAMEI TO EMP-PRIMARY-NAME
+              MOVE FUNCTION TRIM(PRNAMEI) TO EMP-PRIMARY-NAME
            END-IF.
            IF HONORL IS GREATER THAN ZERO THEN
-              MOVE HONORI TO EMP-HONORIFIC
+              MOVE FUNCTION TRIM(HONORI) TO EMP-HONORIFIC
            END-IF.
            IF SHNAMEL IS GREATER THAN ZERO THEN
-              MOVE SHNAMEI TO EMP-SHORT-NAME
+              MOVE FUNCTION TRIM(SHNAMEI) TO EMP-SHORT-NAME
            END-IF.
            IF FLNAMEL IS GREATER THAN ZERO THEN
-              MOVE FLNAMEI TO EMP-FULL-NAME
+              MOVE FUNCTION TRIM(FLNAMEI) TO EMP-FULL-NAME
            END-IF.
            IF JBTITLL IS GREATER THAN ZERO THEN
-              MOVE JBTITLI TO EMP-JOB-TITLE
+              MOVE FUNCTION TRIM(JBTITLI) TO EMP-JOB-TITLE
            END-IF.
 
            IF DEPTIDL IS GREATER THAN ZERO THEN
@@ -232,33 +235,148 @@
       *        SHOW UP AT "0,0" POSITION ON THE SCREEN.
 
            INITIALIZE WS-VALIDATION-FLAG.
+           INITIALIZE WS-PRIMARY-NAME-FLAG.
 
-           EVALUATE TRUE
-           WHEN EMP-PRIMARY-NAME IS EQUAL TO SPACES
-                MOVE 'Validation Error: Primary Name is required!'
+      *    PERFORM VALIDATIONS ON EACH FIELD.
+           IF EMP-PRIMARY-NAME IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Primary Name is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO PRNAMEL
+              EXIT PARAGRAPH 
+           END-IF.
+
+           IF EMP-PRIMARY-NAME IS NOT EQUAL TO SPACES THEN
+              PERFORM 2110-CHECK-PRIMARY-NAME
+              IF PRIMARY-NAME-EXISTS THEN
+                 MOVE 'Validation Error: Primary Name already exists!'
+                    TO WS-MESSAGE
+                 MOVE -1 TO PRNAMEL
+                 EXIT PARAGRAPH 
+              END-IF
+           END-IF.
+
+           IF EMP-FULL-NAME IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Full Name is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO FLNAMEL
+              EXIT PARAGRAPH 
+           END-IF.
+
+           IF EMP-JOB-TITLE IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Job Title is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO JBTITLL
+              EXIT PARAGRAPH 
+           END-IF.
+
+           IF EMP-START-DATE IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Start Date is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO STDATEL
+              EXIT PARAGRAPH 
+           END-IF.
+
+      *    IF WE GET THIS FAR, THEN ALL FIELDS ARE VALIDATED!
+           MOVE 'Employee Record Validated Successfully!'
+              TO WS-MESSAGE. 
+           MOVE -1 TO PRNAMEL.
+           
+           SET VALIDATION-PASSED TO TRUE.
+
+       2110-CHECK-PRIMARY-NAME.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2110-CHECK-PRIMARY-NAME' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE WS-FILE-FLAG.
+
+      *    CONVERT THE PRIMARY NAME TO TITLE CASE TO BEST MATCH THE
+      *    KEY VALUES PRESENT IN THE EMPLOYEE MASTER FILE.
+      *
+      *    - NOTE: THIS IS NOT A PERFECT SOLUTION, BUT IT'S THE BEST 
+      *            WE CAN MANAGE FOR NOW.
+
+           MOVE FUNCTION LOWER-CASE(EMP-PRIMARY-NAME)
+              TO EMP-PRIMARY-NAME.
+           MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
+              TO EMP-PRIMARY-NAME(1:1).
+
+      *    TRY TO SEE IF THE CHOSEN PRIMARY NAME ALREADY EXISTS IN THE
+      *    EMPLOYEE MASTER FILE BY BROWSING FOR *EQUALITY* ON ITS 
+      *    ALTERNATE 'NAME' PATH.
+
+           PERFORM 2120-START-BROWSING-NM.
+
+           IF NOT END-OF-FILE THEN
+              PERFORM 2130-END-BROWSING-NM
+           END-IF.
+
+       2120-START-BROWSING-NM.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2120-START-BROWSING-NM' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS STARTBR
+                FILE(APP-EMP-MASTER-PATH-NAME)
+                RIDFLD(EMP-PRIMARY-NAME)
+                EQUAL
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+      *         IF THERE'S A MATCH, THE 'PRIMARY NAME' RECEIVED FROM
+      *         THE SCREEN IS ALREADY IN USE AND THEREFORE IT DOES NOT
+      *         PASS THE VALIDATION.
+                MOVE 'Validation Error: Primary Name already exists!'
                    TO WS-MESSAGE
-                MOVE -1 TO PRNAMEL
-                EXIT
-           WHEN EMP-FULL-NAME IS EQUAL TO SPACES
-                MOVE 'Validation Error: Full Name is required!'
-                   TO WS-MESSAGE
-                MOVE -1 TO FLNAMEL
-                EXIT
-           WHEN EMP-JOB-TITLE IS EQUAL TO SPACES
-                MOVE 'Validation Error: Job Title is required!'
-                   TO WS-MESSAGE
-                MOVE -1 TO JBTITLL
-                EXIT
-           WHEN EMP-START-DATE IS EQUAL TO SPACES
-                MOVE 'Validation Error: Start Date is required!'
-                   TO WS-MESSAGE
-                MOVE -1 TO STDATEL
-                EXIT
+                SET PRIMARY-NAME-EXISTS TO TRUE
+           WHEN DFHRESP(NOTFND)
+      *         IF THERE'S NO MATCH, WE CAN USE THIS PRIMARY NAME
+      *         VALUE FOR A NEW EMPLOYEE RECORD!
+                MOVE 'Primary Name is available!' TO WS-MESSAGE
+                SET PRIMARY-NAME-VALID TO TRUE
+                SET END-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'No Records Found!' TO WS-MESSAGE
+                SET END-OF-FILE TO TRUE
+                SET PRIMARY-NAME-VALID TO TRUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
-                MOVE 'Employee Record Validated Successfully!'
-                   TO WS-MESSAGE 
-                MOVE -1 TO PRNAMEL
-                SET VALIDATION-PASSED TO TRUE
+                MOVE 'Error Starting Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       2130-END-BROWSING-NM.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2130-END-BROWSING-NM' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS ENDBR
+                FILE(APP-EMP-MASTER-PATH-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (End Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Name Path Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Ending Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
        2200-ADD-EMPLOYEE-RECORD.
@@ -366,15 +484,15 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           PERFORM 3110-START-BROWSING.
+           PERFORM 3110-START-BROWSING-ID.
 
            IF END-OF-FILE THEN
               MOVE 1 TO WS-NEW-EMPLOYEE-ID
            END-IF.
 
            IF NOT END-OF-FILE THEN 
-              PERFORM 3120-READ-PREV-RECORD
-              PERFORM 3130-END-BROWSING
+              PERFORM 3120-READ-PREV-RECORD-ID
+              PERFORM 3130-END-BROWSING-ID
            END-IF.
 
            IF RECORD-FOUND THEN
@@ -391,9 +509,9 @@
            SET NOT-DEBUGGING TO TRUE.
       *    >>> -------------- <<<
                
-       3110-START-BROWSING.
+       3110-START-BROWSING-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '3110-START-BROWSING' TO WS-DEBUG-AID.
+           MOVE '3110-START-BROWSING-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -423,9 +541,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       3120-READ-PREV-RECORD.
+       3120-READ-PREV-RECORD-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '3120-READ-PREV-RECORD' TO WS-DEBUG-AID.
+           MOVE '3120-READ-PREV-RECORD-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -452,9 +570,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       3130-END-BROWSING.
+       3130-END-BROWSING-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '3130-END-BROWSING' TO WS-DEBUG-AID.
+           MOVE '3130-END-BROWSING-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
