@@ -29,6 +29,7 @@
           05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
           05 WS-MESSAGE           PIC X(79).
           05 WS-NEW-EMPLOYEE-ID   PIC 9(8).
+          05 WS-NEW-PRIMARY-NAME  PIC X(30).
       *
        01 WS-VALIDATION-FLAG      PIC X(1)  VALUE SPACES.
           88 VALIDATION-PASSED              VALUE 'Y'.
@@ -296,6 +297,8 @@
               TO EMP-PRIMARY-NAME.
            MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
               TO EMP-PRIMARY-NAME(1:1).
+      *    SAVE THIS ALTERED VERSION FOR LATER USE.
+           MOVE EMP-PRIMARY-NAME TO WS-NEW-PRIMARY-NAME.
 
       *    TRY TO SEE IF THE CHOSEN PRIMARY NAME ALREADY EXISTS IN THE
       *    EMPLOYEE MASTER FILE BY BROWSING FOR *EQUALITY* ON ITS 
@@ -383,7 +386,7 @@
 
            IF VALIDATION-PASSED THEN
               MOVE 'Adding New Employee Record...' TO WS-MESSAGE
-              PERFORM 3000-WRITE-NEW-RECORD
+              PERFORM 3000-ADD-NEW-RECORD
            END-IF.
 
        2300-TRANSFER-BACK-TO-MENU.
@@ -464,14 +467,15 @@
        WRITING SECTION.
       *-----------------------------------------------------------------
 
-       3000-WRITE-NEW-RECORD.
+       3000-ADD-NEW-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '3000-WRITE-NEW-RECORD' TO WS-DEBUG-AID.
+           MOVE '3000-ADD-NEW-RECORD' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
            PERFORM 3100-GET-NEW-EMPLOYEE-ID.
            PERFORM 3200-LOCK-NEW-IDS.
+           PERFORM 3300-WRITE-NEW-RECORD.
            PERFORM 3900-RELEASE-LOCKS.
 
        3100-GET-NEW-EMPLOYEE-ID.
@@ -503,10 +507,7 @@
               MOVE 1 TO WS-NEW-EMPLOYEE-ID
            END-IF.
 
-      *    IF THE BROWSE AND BACKWARDS READ WERE SUCCESSFUL, THEN
-      *.   THE EMPLOYEE RECORD NOW HAS THE LAST EMPLOYEE'S DATA, SO
-      *    WE RESTORE IT TO THE USER'S INPUT PLUS WE SET THE NEW ID.
-           PERFORM 3140-RESTORE-RECORD.
+           PERFORM 3140-RESTORE-AND-UPDATE.
 
       *    >>> DEBUGGING ONLY <<<
            SET I-AM-DEBUGGING TO TRUE.
@@ -601,18 +602,51 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       3140-RESTORE-RECORD.
+       3140-RESTORE-AND-UPDATE.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '3140-RESTORE-RECORD' TO WS-DEBUG-AID.
+           MOVE '3140-RESTORE-AND-UPDATE' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID. 
       *    >>> -------------- <<<
 
-      *    WE RESTORE THE EMPLOYEE RECORD TO THE USER'S INPUT VALUES, 
-      *    THEN WE SET ITS NEW ID AND FINALLY WE UPDATE IT BACK INTO 
-      *    THE APP CONTAINER.
-           MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.       
+      *    RESTORE VALIDATED INPUT VALUES.
+           MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+
+      *    UPDATE EMPLOYEE MASTER RECORD WITH NEW VALUES.
            MOVE WS-NEW-EMPLOYEE-ID TO EMP-EMPLOYEE-ID.
+           MOVE WS-NEW-PRIMARY-NAME TO EMP-PRIMARY-NAME.
+           MOVE 90125000 TO EMP-DEPARTMENT-ID.
+           SET EMP-ACTIVE TO TRUE.
+
+           PERFORM 3150-CHANGE-LETTER-CASE.
+
+      *    UPDATE IN TURN THE APP CONTAINER FOR NEXT RENDERING.
            MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
+
+       3150-CHANGE-LETTER-CASE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3150-CHANGE-LETTER-CASE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE FUNCTION LOWER-CASE(EMP-FULL-NAME)
+              TO EMP-FULL-NAME.
+           MOVE FUNCTION UPPER-CASE(EMP-FULL-NAME(1:1))
+              TO EMP-FULL-NAME(1:1).
+
+           MOVE FUNCTION LOWER-CASE(EMP-HONORIFIC)
+              TO EMP-HONORIFIC.
+           MOVE FUNCTION UPPER-CASE(EMP-HONORIFIC(1:1))
+              TO EMP-HONORIFIC(1:1).
+
+           MOVE FUNCTION LOWER-CASE(EMP-SHORT-NAME)
+              TO EMP-SHORT-NAME.
+           MOVE FUNCTION UPPER-CASE(EMP-SHORT-NAME(1:1))
+              TO EMP-SHORT-NAME(1:1).
+
+           MOVE FUNCTION LOWER-CASE(EMP-JOB-TITLE)
+              TO EMP-JOB-TITLE.
+           MOVE FUNCTION UPPER-CASE(EMP-JOB-TITLE(1:1))
+              TO EMP-JOB-TITLE(1:1).
 
        3200-LOCK-NEW-IDS.
       *    >>> DEBUGGING ONLY <<<
@@ -645,6 +679,38 @@
                 CONTINUE
            WHEN DFHRESP(ENQBUSY)
                 MOVE 'Primary Name Lock Busy!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       3300-WRITE-NEW-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3300-WRITE-NEW-RECORD' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID. 
+      *    >>> -------------- <<<
+
+           EXEC CICS WRITE
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                FROM (EMPLOYEE-MASTER-RECORD)
+                LENGTH(LENGTH OF EMPLOYEE-MASTER-RECORD)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+     
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'New Record Added Successfully!' TO WS-MESSAGE
+           WHEN DFHRESP(DUPREC)
+                MOVE 'Duplicate Employee ID or Primary Name Found!'
+                   TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Write)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Writing New Employee Record!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -824,9 +890,8 @@
               MOVE EMP-HONORIFIC TO HONORO
               MOVE EMP-SHORT-NAME TO SHNAMEO
               MOVE EMP-FULL-NAME TO FLNAMEO
-
-              MOVE EMP-JOB-TITLE TO JBTITLO
-              MOVE '00090125' TO DEPTIDO
+              MOVE EMP-JOB-TITLE TO JBTITLO              
+              MOVE EMP-DEPARTMENT-ID TO DEPTIDO
               MOVE 'World Domination HQ' TO DEPTNMO
 
               MOVE EMP-START-DATE TO WS-INPUT-DATE 
@@ -838,11 +903,14 @@
 
            EVALUATE TRUE
            WHEN MESSO(1:7) IS EQUAL TO 'Welcome'
+           WHEN MESSO(1:3) IS EQUAL TO 'New'
                 MOVE DFHPINK TO MESSC
            WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
+           WHEN MESSO(1:3) IS EQUAL TO 'No '
                 MOVE DFHYELLO TO MESSC
            WHEN MESSO(01:5) IS EQUAL TO 'Error'
            WHEN MESSO(12:5) IS EQUAL TO 'Error'
+           WHEN MESSO(01:9) IS EQUAL TO 'Duplicate'
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 

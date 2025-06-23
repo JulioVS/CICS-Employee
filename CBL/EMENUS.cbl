@@ -54,7 +54,7 @@
            MOVE 'MAIN-LOGIC' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
-           
+
            EXEC CICS GET
                 CONTAINER(APP-MENU-CONTAINER-NAME)
                 CHANNEL(APP-MENU-CHANNEL-NAME)
@@ -131,8 +131,8 @@
       *    >>> --------------------- <<<
 
            EVALUATE EIBAID
-           WHEN DFHENTER 
-                EVALUATE SELECTI  
+           WHEN DFHENTER
+                EVALUATE SELECTI
                 WHEN '1'
                      PERFORM 2100-TRANSFER-TO-LIST-PAGE
                 WHEN '2'
@@ -386,15 +386,19 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           INITIALIZE EMNUMO.           
+           INITIALIZE EMNUMO.
 
            MOVE EIBTRNID TO TRANIDO.
 
            IF MNU-USER-ID IS NOT EQUAL TO SPACES THEN
               MOVE MNU-USER-ID TO LOGDINO
-           ELSE 
+           ELSE
               MOVE '<Anonym>' TO LOGDINO
            END-IF.
+
+      *    PRESELECT OPTION '1' (LIST EMPLOYEES) AS DEFAULT.
+           MOVE '1' TO SELECTO.
+           MOVE DFHBMFSE TO SELECTF.
 
            MOVE WS-MESSAGE TO MESSO.
 
@@ -407,7 +411,7 @@
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 
-      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9' 
+      *    SET ANY MODIFIED DATA TAG (MDT) 'ON' TO AVOID THE 'AEI9'
       *    ABEND THAT HAPPENS WHEN WE ONLY RECEIVE AN AID-KEY FROM THE
       *    MAP AND NO REAL DATA ALONG IT.
            MOVE DFHBMFSE TO TRANIDA.
