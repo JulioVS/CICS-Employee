@@ -569,14 +569,10 @@
       *
       *       - NOTE: THIS WILL *NOT* WORK IF THE PRIMARY NAME ON THE
       *               EMPLOYEES MASTER FILE USES MORE UPPER-CASE
-      *               LETTERS THAN JUST THE FIRST ONE.
+      *               LETTERS THAN THE FIRST ONE IN EACH WORD.
       *
-              MOVE FUNCTION TRIM(PRNAMEI)
-                 TO EMP-PRIMARY-NAME
-              MOVE FUNCTION LOWER-CASE(EMP-PRIMARY-NAME)
-                 TO EMP-PRIMARY-NAME
-              MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
-                 TO EMP-PRIMARY-NAME(1:1)
+              MOVE FUNCTION TRIM(PRNAMEI) TO EMP-PRIMARY-NAME
+              PERFORM 2150-CONVERT-TO-TITLE-CASE
            END-IF.
 
       *    >>> DEBUGGING ONLY <<<
@@ -595,6 +591,55 @@
            ELSE
               MOVE 'No Matching Record By That Key!' TO WS-MESSAGE
            END-IF.
+
+       2150-CONVERT-TO-TITLE-CASE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2150-CONVERT-TO-TITLE-CASE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    FIRST, CONVERT TO LOWER CASE.
+           MOVE FUNCTION LOWER-CASE(EMP-PRIMARY-NAME)
+              TO EMP-PRIMARY-NAME.
+
+      *    THEN, CAPITALIZE FIRST LETTER.
+           MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
+              TO EMP-PRIMARY-NAME(1:1).
+
+      *    FINALLY, CAPITALIZE EACH SPACE-FOLLOWING LETTER.
+           INSPECT EMP-PRIMARY-NAME
+              REPLACING
+              ALL ' a' BY ' A',
+              ALL ' b' BY ' B',
+              ALL ' c' BY ' C',
+              ALL ' d' BY ' D',
+              ALL ' e' BY ' E',
+              ALL ' f' BY ' F',
+              ALL ' g' BY ' G',
+              ALL ' h' BY ' H',
+              ALL ' i' BY ' I',
+              ALL ' j' BY ' J',
+              ALL ' k' BY ' K',
+              ALL ' l' BY ' L',
+              ALL ' m' BY ' M',
+              ALL ' n' BY ' N',
+              ALL ' o' BY ' O',
+              ALL ' p' BY ' P',
+              ALL ' q' BY ' Q',
+              ALL ' r' BY ' R',
+              ALL ' s' BY ' S',
+              ALL ' t' BY ' T',
+              ALL ' u' BY ' U',
+              ALL ' v' BY ' V',
+              ALL ' w' BY ' W',
+              ALL ' x' BY ' X',
+              ALL ' y' BY ' Y',
+              ALL ' z' BY ' Z'.
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE EMP-PRIMARY-NAME TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
        2200-TRANSFER-BACK-TO-CALLER.
       *    >>> DEBUGGING ONLY <<<

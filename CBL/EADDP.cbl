@@ -135,7 +135,7 @@
            INITIALIZE EADDMO.
 
            MOVE 'Welcome to the Add New Record page!' TO WS-MESSAGE.
-           MOVE -1 TO PRNAMEL. 
+           MOVE -1 TO PRNAMEL.
 
       *-----------------------------------------------------------------
        USE-CASE SECTION.
@@ -148,7 +148,7 @@
       *    >>> -------------- <<<
 
            MOVE 'So Far, So Good...' TO WS-MESSAGE.
-           
+
            EXEC CICS RECEIVE
                 MAP(APP-ADD-MAP-NAME)
                 MAPSET(APP-ADD-MAPSET-NAME)
@@ -210,7 +210,7 @@
                    END-EXEC
               MOVE DEPTIDI TO EMP-DEPARTMENT-ID
            END-IF.
-           
+
            IF STDATEL IS GREATER THAN ZERO THEN
               EXEC CICS BIF DEEDIT
                    FIELD(STDATEI)
@@ -230,8 +230,8 @@
       *      - TO SET THE CURSOR POSITION ON THE MAP, WE MOVE -1 TO
       *        THE LENGTH OF THE FIELD THAT IS INVALID *AND* WE ADD
       *        THE "CURSOR" OPTION ON THE 'CICS SEND MAP' COMMAND.
-      *      - IF ALL IS WELL, WE POSITION IT AT THE FIRST EDITABLE 
-      *        FIELD, WHICH IS 'PRIMARY NAME', TO PREVENT THE CURSOR TO 
+      *      - IF ALL IS WELL, WE POSITION IT AT THE FIRST EDITABLE
+      *        FIELD, WHICH IS 'PRIMARY NAME', TO PREVENT THE CURSOR TO
       *        SHOW UP AT "0,0" POSITION ON THE SCREEN.
 
            INITIALIZE WS-VALIDATION-FLAG.
@@ -242,7 +242,7 @@
               MOVE 'Validation Error: Primary Name is required!'
                  TO WS-MESSAGE
               MOVE -1 TO PRNAMEL
-              EXIT PARAGRAPH 
+              EXIT PARAGRAPH
            END-IF.
 
            IF EMP-PRIMARY-NAME IS NOT EQUAL TO SPACES THEN
@@ -251,7 +251,7 @@
                  MOVE 'Validation Error: Primary Name already exists!'
                     TO WS-MESSAGE
                  MOVE -1 TO PRNAMEL
-                 EXIT PARAGRAPH 
+                 EXIT PARAGRAPH
               END-IF
            END-IF.
 
@@ -259,28 +259,28 @@
               MOVE 'Validation Error: Full Name is required!'
                  TO WS-MESSAGE
               MOVE -1 TO FLNAMEL
-              EXIT PARAGRAPH 
+              EXIT PARAGRAPH
            END-IF.
 
            IF EMP-JOB-TITLE IS EQUAL TO SPACES THEN
               MOVE 'Validation Error: Job Title is required!'
                  TO WS-MESSAGE
               MOVE -1 TO JBTITLL
-              EXIT PARAGRAPH 
+              EXIT PARAGRAPH
            END-IF.
 
            IF EMP-START-DATE IS EQUAL TO SPACES THEN
               MOVE 'Validation Error: Start Date is required!'
                  TO WS-MESSAGE
               MOVE -1 TO STDATEL
-              EXIT PARAGRAPH 
+              EXIT PARAGRAPH
            END-IF.
 
       *    IF WE GET THIS FAR, THEN ALL FIELDS ARE VALIDATED!
            MOVE 'Employee Record Validated Successfully!'
-              TO WS-MESSAGE. 
+              TO WS-MESSAGE.
            MOVE -1 TO PRNAMEL.
-           
+
            SET VALIDATION-PASSED TO TRUE.
 
        2110-CHECK-PRIMARY-NAME.
@@ -301,7 +301,7 @@
            MOVE EMP-PRIMARY-NAME TO WS-NEW-PRIMARY-NAME.
 
       *    TRY TO SEE IF THE CHOSEN PRIMARY NAME ALREADY EXISTS IN THE
-      *    EMPLOYEE MASTER FILE BY BROWSING FOR *EQUALITY* ON ITS 
+      *    EMPLOYEE MASTER FILE BY BROWSING FOR *EQUALITY* ON ITS
       *    ALTERNATE 'NAME' PATH.
            PERFORM 2120-START-BROWSING-NM.
 
@@ -461,7 +461,7 @@
            INITIALIZE ADD-EMPLOYEE-RECORD.
            INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE EADDMO.
-           MOVE -1 TO PRNAMEL. 
+           MOVE -1 TO PRNAMEL.
 
       *-----------------------------------------------------------------
        WRITING SECTION.
@@ -492,17 +492,17 @@
            END-IF.
 
       *    SEEK LAST EMPLOYEE RECORD AND GET ITS ID.
-           IF NOT END-OF-FILE THEN 
+           IF NOT END-OF-FILE THEN
               PERFORM 3120-READ-PREV-RECORD-ID
               PERFORM 3130-END-BROWSING-ID
            END-IF.
 
-      *    IF WE FOUND A PREVIOUS RECORD (WE SHOULD!) INCREMENT ITS 
-      *    ID BY 1 TO GET THE NEW VALUE. IF, WEIRDLY, WE DIDN'T, THEN 
+      *    IF WE FOUND A PREVIOUS RECORD (WE SHOULD!) INCREMENT ITS
+      *    ID BY 1 TO GET THE NEW VALUE. IF, WEIRDLY, WE DIDN'T, THEN
       *    START AFRESH WITH ID = 1.
            IF RECORD-FOUND THEN
               MOVE EMP-EMPLOYEE-ID TO WS-NEW-EMPLOYEE-ID
-              ADD 1 TO WS-NEW-EMPLOYEE-ID 
+              ADD 1 TO WS-NEW-EMPLOYEE-ID
            ELSE
               MOVE 1 TO WS-NEW-EMPLOYEE-ID
            END-IF.
@@ -510,12 +510,10 @@
            PERFORM 3140-RESTORE-AND-UPDATE.
 
       *    >>> DEBUGGING ONLY <<<
-           SET I-AM-DEBUGGING TO TRUE.
-           MOVE WS-NEW-EMPLOYEE-ID TO WS-DEBUG-AID. 
+           MOVE WS-NEW-EMPLOYEE-ID TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
-           SET NOT-DEBUGGING TO TRUE.
       *    >>> -------------- <<<
-               
+
        3110-START-BROWSING-ID.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3110-START-BROWSING-ID' TO WS-DEBUG-AID.
@@ -605,7 +603,7 @@
        3140-RESTORE-AND-UPDATE.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3140-RESTORE-AND-UPDATE' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID. 
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
       *    RESTORE VALIDATED INPUT VALUES.
@@ -617,36 +615,68 @@
            MOVE 90125000 TO EMP-DEPARTMENT-ID.
            SET EMP-ACTIVE TO TRUE.
 
-           PERFORM 3150-CHANGE-LETTER-CASE.
+           PERFORM 3150-CONVERT-TO-TITLE-CASE.
 
       *    UPDATE IN TURN THE APP CONTAINER FOR NEXT RENDERING.
            MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
 
-       3150-CHANGE-LETTER-CASE.
+       3150-CONVERT-TO-TITLE-CASE.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '3150-CHANGE-LETTER-CASE' TO WS-DEBUG-AID.
+           MOVE '3150-CONVERT-TO-TITLE-CASE' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE FUNCTION LOWER-CASE(EMP-FULL-NAME)
-              TO EMP-FULL-NAME.
+      *    FIRST, CONVERT ALL EMPLOYEE DETAILS TO LOWER CASE.
+           MOVE FUNCTION LOWER-CASE(EMP-DETAILS) TO EMP-DETAILS.
+
+      *    THEN, CAPITALIZE FIRST LETTER OF EACH FIELD.
            MOVE FUNCTION UPPER-CASE(EMP-FULL-NAME(1:1))
               TO EMP-FULL-NAME(1:1).
-
-           MOVE FUNCTION LOWER-CASE(EMP-HONORIFIC)
-              TO EMP-HONORIFIC.
            MOVE FUNCTION UPPER-CASE(EMP-HONORIFIC(1:1))
               TO EMP-HONORIFIC(1:1).
-
-           MOVE FUNCTION LOWER-CASE(EMP-SHORT-NAME)
-              TO EMP-SHORT-NAME.
            MOVE FUNCTION UPPER-CASE(EMP-SHORT-NAME(1:1))
               TO EMP-SHORT-NAME(1:1).
-
-           MOVE FUNCTION LOWER-CASE(EMP-JOB-TITLE)
-              TO EMP-JOB-TITLE.
            MOVE FUNCTION UPPER-CASE(EMP-JOB-TITLE(1:1))
               TO EMP-JOB-TITLE(1:1).
+           MOVE FUNCTION UPPER-CASE(EMP-APPRAISAL-RESULT)
+              TO EMP-APPRAISAL-RESULT.
+           MOVE FUNCTION UPPER-CASE(EMP-DELETE-FLAG)
+              TO EMP-DELETE-FLAG.
+
+      *    FINALLY, CAPITALIZE EACH SPACE-FOLLOWING LETTER.
+           INSPECT EMP-DETAILS
+              REPLACING
+              ALL ' a' BY ' A',
+              ALL ' b' BY ' B',
+              ALL ' c' BY ' C',
+              ALL ' d' BY ' D',
+              ALL ' e' BY ' E',
+              ALL ' f' BY ' F',
+              ALL ' g' BY ' G',
+              ALL ' h' BY ' H',
+              ALL ' i' BY ' I',
+              ALL ' j' BY ' J',
+              ALL ' k' BY ' K',
+              ALL ' l' BY ' L',
+              ALL ' m' BY ' M',
+              ALL ' n' BY ' N',
+              ALL ' o' BY ' O',
+              ALL ' p' BY ' P',
+              ALL ' q' BY ' Q',
+              ALL ' r' BY ' R',
+              ALL ' s' BY ' S',
+              ALL ' t' BY ' T',
+              ALL ' u' BY ' U',
+              ALL ' v' BY ' V',
+              ALL ' w' BY ' W',
+              ALL ' x' BY ' X',
+              ALL ' y' BY ' Y',
+              ALL ' z' BY ' Z'.
+
+      *    >>> DEBUGGING ONLY <<<
+           MOVE EMP-DETAILS TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
        3200-LOCK-NEW-IDS.
       *    >>> DEBUGGING ONLY <<<
@@ -685,7 +715,7 @@
        3300-WRITE-NEW-RECORD.
       *    >>> DEBUGGING ONLY <<<
            MOVE '3300-WRITE-NEW-RECORD' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID. 
+           PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
            EXEC CICS WRITE
@@ -695,7 +725,7 @@
                 RIDFLD(EMP-EMPLOYEE-ID)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-     
+
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'New Record Added Successfully!' TO WS-MESSAGE
@@ -725,7 +755,7 @@
                 LENGTH(LENGTH OF EMP-EMPLOYEE-ID)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-     
+
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
@@ -734,13 +764,13 @@
            WHEN OTHER
                 MOVE 'Error Releasing Employee ID Lock!' TO WS-MESSAGE
            END-EVALUATE.
-     
+
            EXEC CICS DEQ
                 RESOURCE(EMP-PRIMARY-NAME)
                 LENGTH(LENGTH OF EMP-PRIMARY-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-     
+
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
@@ -858,7 +888,7 @@
                 MAPSET(APP-ADD-MAPSET-NAME)
                 FROM (EADDMO)
                 ERASE
-                CURSOR 
+                CURSOR
                 END-EXEC.
 
            EXEC CICS RETURN
@@ -883,20 +913,20 @@
            END-IF.
 
            IF ADD-EMPLOYEE-RECORD IS NOT EQUAL TO SPACES THEN
-              MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD 
+              MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD
 
               MOVE EMP-EMPLOYEE-ID TO EMPLIDO
               MOVE EMP-PRIMARY-NAME TO PRNAMEO
               MOVE EMP-HONORIFIC TO HONORO
               MOVE EMP-SHORT-NAME TO SHNAMEO
               MOVE EMP-FULL-NAME TO FLNAMEO
-              MOVE EMP-JOB-TITLE TO JBTITLO              
+              MOVE EMP-JOB-TITLE TO JBTITLO
               MOVE EMP-DEPARTMENT-ID TO DEPTIDO
               MOVE 'World Domination HQ' TO DEPTNMO
 
-              MOVE EMP-START-DATE TO WS-INPUT-DATE 
+              MOVE EMP-START-DATE TO WS-INPUT-DATE
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
-              MOVE WS-OUTPUT-DATE TO STDATEO   
+              MOVE WS-OUTPUT-DATE TO STDATEO
            END-IF.
 
            MOVE WS-MESSAGE TO MESSO.
