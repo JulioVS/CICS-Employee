@@ -29,7 +29,6 @@
           05 WS-CICS-RESPONSE     PIC S9(8) USAGE IS BINARY.
           05 WS-MESSAGE           PIC X(79).
           05 WS-NEW-EMPLOYEE-ID   PIC 9(8).
-          05 WS-NEW-PRIMARY-NAME  PIC X(30).
       *
        01 WS-VALIDATION-FLAG      PIC X(1)  VALUE SPACES.
           88 VALIDATION-PASSED              VALUE 'Y'.
@@ -293,12 +292,7 @@
 
       *    CONVERT THE PRIMARY NAME TO TITLE CASE TO BEST MATCH THE
       *    KEY VALUES PRESENT IN THE EMPLOYEE MASTER FILE.
-           MOVE FUNCTION LOWER-CASE(EMP-PRIMARY-NAME)
-              TO EMP-PRIMARY-NAME.
-           MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
-              TO EMP-PRIMARY-NAME(1:1).
-      *    SAVE THIS ALTERED VERSION FOR LATER USE.
-           MOVE EMP-PRIMARY-NAME TO WS-NEW-PRIMARY-NAME.
+           PERFORM 3150-CONVERT-TO-TITLE-CASE
 
       *    TRY TO SEE IF THE CHOSEN PRIMARY NAME ALREADY EXISTS IN THE
       *    EMPLOYEE MASTER FILE BY BROWSING FOR *EQUALITY* ON ITS
@@ -611,7 +605,6 @@
 
       *    UPDATE EMPLOYEE MASTER RECORD WITH NEW VALUES.
            MOVE WS-NEW-EMPLOYEE-ID TO EMP-EMPLOYEE-ID.
-           MOVE WS-NEW-PRIMARY-NAME TO EMP-PRIMARY-NAME.
            MOVE 90125000 TO EMP-DEPARTMENT-ID.
            SET EMP-ACTIVE TO TRUE.
 
@@ -672,6 +665,66 @@
               ALL ' x' BY ' X',
               ALL ' y' BY ' Y',
               ALL ' z' BY ' Z'.
+
+      *    THE *O'CONNOR* CASE!
+           INSPECT EMP-DETAILS
+              REPLACING
+              ALL "'a" BY "'A",
+              ALL "'b" BY "'B",
+              ALL "'c" BY "'C",
+              ALL "'d" BY "'D",
+              ALL "'e" BY "'E",
+              ALL "'f" BY "'F",
+              ALL "'g" BY "'G",
+              ALL "'h" BY "'H",
+              ALL "'i" BY "'I",
+              ALL "'j" BY "'J",
+              ALL "'k" BY "'K",
+              ALL "'l" BY "'L",
+              ALL "'m" BY "'M",
+              ALL "'n" BY "'N",
+              ALL "'o" BY "'O",
+              ALL "'p" BY "'P",
+              ALL "'q" BY "'Q",
+              ALL "'r" BY "'R",
+              ALL "'s" BY "'S",
+              ALL "'t" BY "'T",
+              ALL "'u" BY "'U",
+              ALL "'v" BY "'V",
+              ALL "'w" BY "'W",
+              ALL "'x" BY "'X",
+              ALL "'y" BY "'Y",
+              ALL "'z" BY "'Z".
+
+      *    THE 'JAN LEVINSON-GOULD' CASE! :)
+           INSPECT EMP-DETAILS
+              REPLACING
+              ALL '-a' BY '-A',
+              ALL '-b' BY '-B',
+              ALL '-c' BY '-C',
+              ALL '-d' BY '-D',
+              ALL '-e' BY '-E',
+              ALL '-f' BY '-F',
+              ALL '-g' BY '-G',
+              ALL '-h' BY '-H',
+              ALL '-i' BY '-I',
+              ALL '-j' BY '-J',
+              ALL '-k' BY '-K',
+              ALL '-l' BY '-L',
+              ALL '-m' BY '-M',
+              ALL '-n' BY '-N',
+              ALL '-o' BY '-O',
+              ALL '-p' BY '-P',
+              ALL '-q' BY '-Q',
+              ALL '-r' BY '-R',
+              ALL '-s' BY '-S',
+              ALL '-t' BY '-T',
+              ALL '-u' BY '-U',
+              ALL '-v' BY '-V',
+              ALL '-w' BY '-W',
+              ALL '-x' BY '-X',
+              ALL '-y' BY '-Y',
+              ALL '-z' BY '-Z'.
 
       *    >>> DEBUGGING ONLY <<<
            MOVE EMP-DETAILS TO WS-DEBUG-AID.

@@ -636,6 +636,66 @@
               ALL ' y' BY ' Y',
               ALL ' z' BY ' Z'.
 
+      *    THE *O'CONNOR* CASE!
+           INSPECT EMP-PRIMARY-NAME
+              REPLACING
+              ALL "'a" BY "'A",
+              ALL "'b" BY "'B",
+              ALL "'c" BY "'C",
+              ALL "'d" BY "'D",
+              ALL "'e" BY "'E",
+              ALL "'f" BY "'F",
+              ALL "'g" BY "'G",
+              ALL "'h" BY "'H",
+              ALL "'i" BY "'I",
+              ALL "'j" BY "'J",
+              ALL "'k" BY "'K",
+              ALL "'l" BY "'L",
+              ALL "'m" BY "'M",
+              ALL "'n" BY "'N",
+              ALL "'o" BY "'O",
+              ALL "'p" BY "'P",
+              ALL "'q" BY "'Q",
+              ALL "'r" BY "'R",
+              ALL "'s" BY "'S",
+              ALL "'t" BY "'T",
+              ALL "'u" BY "'U",
+              ALL "'v" BY "'V",
+              ALL "'w" BY "'W",
+              ALL "'x" BY "'X",
+              ALL "'y" BY "'Y",
+              ALL "'z" BY "'Z".
+
+      *    THE 'JAN LEVINSON-GOULD' CASE! :)
+           INSPECT EMP-PRIMARY-NAME
+              REPLACING
+              ALL '-a' BY '-A',
+              ALL '-b' BY '-B',
+              ALL '-c' BY '-C',
+              ALL '-d' BY '-D',
+              ALL '-e' BY '-E',
+              ALL '-f' BY '-F',
+              ALL '-g' BY '-G',
+              ALL '-h' BY '-H',
+              ALL '-i' BY '-I',
+              ALL '-j' BY '-J',
+              ALL '-k' BY '-K',
+              ALL '-l' BY '-L',
+              ALL '-m' BY '-M',
+              ALL '-n' BY '-N',
+              ALL '-o' BY '-O',
+              ALL '-p' BY '-P',
+              ALL '-q' BY '-Q',
+              ALL '-r' BY '-R',
+              ALL '-s' BY '-S',
+              ALL '-t' BY '-T',
+              ALL '-u' BY '-U',
+              ALL '-v' BY '-V',
+              ALL '-w' BY '-W',
+              ALL '-x' BY '-X',
+              ALL '-y' BY '-Y',
+              ALL '-z' BY '-Z'.
+
       *    >>> DEBUGGING ONLY <<<
            MOVE EMP-PRIMARY-NAME TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
