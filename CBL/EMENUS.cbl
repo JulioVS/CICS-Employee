@@ -138,7 +138,11 @@
                 WHEN '2'
                      PERFORM 2200-TRANSFER-TO-VIEW-PAGE
                 WHEN '3'
-                     PERFORM 2300-TRANSFER-TO-ADD-PAGE
+                     IF MON-CT-MANAGER THEN
+                        PERFORM 2300-TRANSFER-TO-ADD-PAGE
+                     ELSE 
+                        MOVE 'Invalid Selection!' TO WS-MESSAGE
+                     END-IF
                 WHEN OTHER
                      MOVE 'Invalid Selection!' TO WS-MESSAGE
                 END-EVALUATE
@@ -399,6 +403,10 @@
       *    PRESELECT OPTION '1' (LIST EMPLOYEES) AS DEFAULT.
            MOVE '1' TO SELECTO.
            MOVE DFHBMFSE TO SELECTF.
+
+           IF MON-CT-MANAGER THEN
+              MOVE '3 Add Employee' TO ADDEMPO
+           END-IF.
 
            MOVE WS-MESSAGE TO MESSO.
 

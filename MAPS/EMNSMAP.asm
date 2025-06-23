@@ -42,7 +42,7 @@ SELECT   DFHMDF POS=(3,12),LENGTH=1,ATTRB=(UNPROT,BRT,IC),             X
          DFHMDF POS=(6,8),LENGTH=50,ATTRB=(ASKIP,NORM),                X
                INITIAL='2 View Employee Details'
 *
-         DFHMDF POS=(7,8),LENGTH=50,ATTRB=(ASKIP,NORM),                X
+ADDEMP   DFHMDF POS=(7,8),LENGTH=50,ATTRB=(ASKIP,NORM),                X
                INITIAL='3 Add Employee'
 *
 *  MESSAGE SECTION.

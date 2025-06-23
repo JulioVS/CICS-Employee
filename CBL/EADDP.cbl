@@ -118,6 +118,11 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
+           IF NOT MON-CT-MANAGER THEN
+              MOVE 'You Are Not Authorized to Add New Records!'
+                 TO WS-MESSAGE
+           END-IF.
+
            MOVE MON-USER-ID TO ADD-USER-ID.
 
        1100-INITIALIZE.
@@ -157,6 +162,10 @@
       *    >>> CALL ACTIVITY MONITOR <<<
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
+
+           IF NOT MON-CT-MANAGER THEN
+              PERFORM 2300-TRANSFER-BACK-TO-MENU
+           END-IF.
 
            EVALUATE EIBAID
            WHEN DFHENTER
@@ -994,6 +1003,7 @@
            WHEN MESSO(01:5) IS EQUAL TO 'Error'
            WHEN MESSO(12:5) IS EQUAL TO 'Error'
            WHEN MESSO(01:9) IS EQUAL TO 'Duplicate'
+           WHEN MESSO(09:8) IS EQUAL TO 'Not Auth'
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 
