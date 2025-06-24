@@ -12,6 +12,7 @@
       *      - ADD CONTAINER.
       *      - ADD MAPSET.
       *      - ACTIVITY MONITOR CONTAINER.
+      *      - REGISTERED USERS.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
@@ -20,6 +21,7 @@
        COPY EADDMAP.
        COPY EMPMAST.
        COPY EMONCTR.
+       COPY EREGUSR.
        COPY DFHAID.
        COPY DFHBMSCA.
       ******************************************************************
@@ -118,12 +120,17 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
+      *    IF THE USER IS NOT A MANAGER, WE SEND AN ERROR MESSAGE.
            IF NOT MON-CT-MANAGER THEN
               MOVE 'You Are Not Authorized to Add New Records!'
                  TO WS-MESSAGE
+              EXIT PARAGRAPH 
            END-IF.
 
+      *    IF THE USER IS A MANAGER, WE SAVE HIS USER ID INTO THE APP 
+      *    CONTAINER AND PROCEED TO SEEK HIS DEPARTMENT ID.
            MOVE MON-USER-ID TO ADD-USER-ID.
+           PERFORM 1200-GET-USER-DEPT-ID.
 
        1100-INITIALIZE.
       *    >>> DEBUGGING ONLY <<<
@@ -135,11 +142,74 @@
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
            INITIALIZE ADD-EMPLOYEE-CONTAINER.
            INITIALIZE EMPLOYEE-MASTER-RECORD.
+           INITIALIZE REGISTERED-USER-RECORD.
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE EADDMO.
 
            MOVE 'Welcome to the Add New Record page!' TO WS-MESSAGE.
            MOVE -1 TO PRNAMEL.
+
+       1200-GET-USER-DEPT-ID.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1200-GET-USER-DEPT-ID' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    GET CURRENTLY LOGGED-IN USER FROM MONITOR CONTAINER.
+           MOVE MON-USER-ID TO REG-USER-ID.
+
+      *    READ THE REGISTERED USERS FILE TO GET THE USER'S EMPLOYEE ID.
+           EXEC CICS READ
+                FILE(APP-REG-USER-FILE-NAME)
+                RIDFLD(REG-USER-ID)
+                INTO (REGISTERED-USER-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE "User Not Found!" TO WS-MESSAGE
+           WHEN OTHER
+                MOVE "Error Reading Users File!" TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+      *    IF USER HAS NO EMPLOYEE ID, SEND MESSAGE AND EXIT.
+           IF REG-EMPLOYEE-ID IS EQUAL TO ZEROES THEN
+              MOVE "User is Not a Registered Employee!" TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    IF - CONTRADICTING ACTIVITY MONITOR - THE USER IS NOT A
+      *    MANAGER, SEND MESSAGE AND EXIT.
+           IF NOT REG-CT-MANAGER THEN
+              MOVE "User is Not a Manager!" TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    OTHERWISE, WE ARE GOOD TO AND SEEK HIS DEPARTMENT ID.
+           MOVE REG-EMPLOYEE-ID TO EMP-EMPLOYEE-ID.
+
+      *    READ THE EMPLOYEE MASTER FILE TO GET THE USER'S DEPT ID.
+           EXEC CICS READ
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                INTO (EMPLOYEE-MASTER-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+      *         SAVE DEPARTMENT ID INTO APP CONTAINER.
+                MOVE EMP-DEPARTMENT-ID TO ADD-DEPARTMENT-ID
+           WHEN DFHRESP(NOTFND)
+                MOVE "Employee Not Found!" TO WS-MESSAGE
+           WHEN OTHER
+                MOVE "Error Reading Employee File!" TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
 
       *-----------------------------------------------------------------
        USE-CASE SECTION.
@@ -163,10 +233,13 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
+      *    IF THE USER IS NOT A MANAGER, THE FIRST INTERACTION SENT AN
+      *    ERROR MESSAGE AND ON RETURN WE SIGN THE USER OFF.
            IF NOT MON-CT-MANAGER THEN
-              PERFORM 2300-TRANSFER-BACK-TO-MENU
+              PERFORM 2500-SIGN-USER-OFF
            END-IF.
 
+      *    IF THE USER IS A MANAGER, WE PROCEED WITH THE NORMAL FLOW.
            EVALUATE EIBAID
            WHEN DFHENTER
                 PERFORM 2100-VALIDATE-USER-INPUT
@@ -211,14 +284,6 @@
               MOVE FUNCTION TRIM(JBTITLI) TO EMP-JOB-TITLE
            END-IF.
 
-           IF DEPTIDL IS GREATER THAN ZERO THEN
-              EXEC CICS BIF DEEDIT
-                   FIELD(DEPTIDI)
-                   LENGTH(LENGTH OF DEPTIDI)
-                   END-EXEC
-              MOVE DEPTIDI TO EMP-DEPARTMENT-ID
-           END-IF.
-
            IF STDATEL IS GREATER THAN ZERO THEN
               EXEC CICS BIF DEEDIT
                    FIELD(STDATEI)
@@ -231,6 +296,9 @@
               MOVE STDATEI(3:8) TO EMP-START-DATE
            END-IF.
 
+      *    ADD THE LOGGED-IN USER'S DEPARTMENT ID TO THE RECORD.
+           MOVE ADD-DEPARTMENT-ID TO EMP-DEPARTMENT-ID.
+
       *    SAVE UPDATED RECORD BACK TO THE CONTAINER.
            MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
 
@@ -240,7 +308,7 @@
       *        THE "CURSOR" OPTION ON THE 'CICS SEND MAP' COMMAND.
       *      - IF ALL IS WELL, WE POSITION IT AT THE FIRST EDITABLE
       *        FIELD, WHICH IS 'PRIMARY NAME', TO PREVENT THE CURSOR TO
-      *        SHOW UP AT "0,0" POSITION ON THE SCREEN.
+      *        SHOW UP AT '0,0' POSITION ON THE SCREEN.
 
            INITIALIZE WS-VALIDATION-FLAG.
            INITIALIZE WS-PRIMARY-NAME-FLAG.
@@ -409,7 +477,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Transferring Back To Menu' TO WS-MESSAGE
+                CONTINUE
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalid Request!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -588,7 +656,7 @@
                 FILE(APP-EMP-MASTER-FILE-NAME)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
-\
+
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 CONTINUE
@@ -614,12 +682,11 @@
 
       *    UPDATE EMPLOYEE MASTER RECORD WITH NEW VALUES.
            MOVE WS-NEW-EMPLOYEE-ID TO EMP-EMPLOYEE-ID.
-           MOVE 90125000 TO EMP-DEPARTMENT-ID.
            SET EMP-ACTIVE TO TRUE.
 
            PERFORM 3150-CONVERT-TO-TITLE-CASE.
 
-      *    UPDATE IN TURN THE APP CONTAINER FOR NEXT RENDERING.
+      *    IN TURN, UPDATE THE APP CONTAINER FOR NEXT RENDERING.
            MOVE EMPLOYEE-MASTER-RECORD TO ADD-EMPLOYEE-RECORD.
 
        3150-CONVERT-TO-TITLE-CASE.
@@ -645,7 +712,7 @@
            MOVE FUNCTION UPPER-CASE(EMP-DELETE-FLAG)
               TO EMP-DELETE-FLAG.
 
-      *    FINALLY, CAPITALIZE EACH SPACE-FOLLOWING LETTER.
+      *    FINALLY, CAPITALIZE INITIAL LETTERS OF ALL INNER WORDS.
            INSPECT EMP-DETAILS
               REPLACING
               ALL ' a' BY ' A',
@@ -675,7 +742,7 @@
               ALL ' y' BY ' Y',
               ALL ' z' BY ' Z'.
 
-      *    THE *O'CONNOR* CASE!
+      *    PLUS -> THE *O'CONNOR* CASE!
            INSPECT EMP-DETAILS
               REPLACING
               ALL "'a" BY "'A",
@@ -705,7 +772,7 @@
               ALL "'y" BY "'Y",
               ALL "'z" BY "'Z".
 
-      *    THE 'JAN LEVINSON-GOULD' CASE! :)
+      *    AND -> THE 'JAN LEVINSON-GOULD' CASE! :)
            INSPECT EMP-DETAILS
               REPLACING
               ALL '-a' BY '-A',
@@ -782,9 +849,9 @@
 
            EXEC CICS WRITE
                 FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
                 FROM (EMPLOYEE-MASTER-RECORD)
                 LENGTH(LENGTH OF EMPLOYEE-MASTER-RECORD)
-                RIDFLD(EMP-EMPLOYEE-ID)
                 RESP(WS-CICS-RESPONSE)
                 END-EXEC.
 
@@ -1004,6 +1071,7 @@
            WHEN MESSO(12:5) IS EQUAL TO 'Error'
            WHEN MESSO(01:9) IS EQUAL TO 'Duplicate'
            WHEN MESSO(09:8) IS EQUAL TO 'Not Auth'
+           WHEN MESSO(1:11) IS EQUAL TO 'User is Not'
                 MOVE DFHRED TO MESSC
            END-EVALUATE.
 

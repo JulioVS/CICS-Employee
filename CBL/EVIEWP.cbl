@@ -606,7 +606,7 @@
            MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
               TO EMP-PRIMARY-NAME(1:1).
 
-      *    FINALLY, CAPITALIZE EACH SPACE-FOLLOWING LETTER.
+      *    FINALLY, CAPITALIZE INITIAL LETTERS OF ALL INNER WORDS.
            INSPECT EMP-PRIMARY-NAME
               REPLACING
               ALL ' a' BY ' A',
@@ -636,7 +636,7 @@
               ALL ' y' BY ' Y',
               ALL ' z' BY ' Z'.
 
-      *    THE *O'CONNOR* CASE!
+      *    PLUS -> THE *O'CONNOR* CASE!
            INSPECT EMP-PRIMARY-NAME
               REPLACING
               ALL "'a" BY "'A",
@@ -666,7 +666,7 @@
               ALL "'y" BY "'Y",
               ALL "'z" BY "'Z".
 
-      *    THE 'JAN LEVINSON-GOULD' CASE! :)
+      *    AND -> THE 'JAN LEVINSON-GOULD' CASE! :)
            INSPECT EMP-PRIMARY-NAME
               REPLACING
               ALL '-a' BY '-A',
