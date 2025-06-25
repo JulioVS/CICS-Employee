@@ -1,20 +1,24 @@
 //EMPNAMEJ JOB 1,NOTIFY=&SYSUID
 //*
-//*   VSAM <KSDS> ALTERNATE INDEX AND PATH NAME FOR EMPLOYEE FILE
-//*                                             (BY PRIMARY NAME)
+//*   VSAM <KSDS> ALTERNATE INDEX AND PATH BY PRIMARY NAME
+//*                                             
 // EXPORT SYMLIST=(*)
+//*
 // SET ENTITY='EMPMAST'
 // SET ALTIND='EMPNAME'
+// SET TYPE='KSDS'
+// SET AIDX='AIDX'
+// SET PATH='PATH'
 //*
 //DEFINE  EXEC PGM=IDCAMS
 //SYSPRINT  DD SYSOUT=*
 //SYSIN     DD *,SYMBOLS=CNVTSYS
-  DELETE &SYSUID..PSIN.&ALTIND. -
+  DELETE &SYSUID..&AIDX..&ALTIND. -
          ALTERNATEINDEX
   SET    MAXCC=0
   DEFINE ALTERNATEINDEX ( -
-            NAME ( &SYSUID..PSIN.&ALTIND. ) -
-            RELATE ( &SYSUID..PSVS.&ENTITY. ) -
+            NAME   ( &SYSUID..&AIDX..&ALTIND. ) -
+            RELATE ( &SYSUID..&TYPE..&ENTITY. ) -
             KEYS(38,87) -
             RECORDSIZE(51,51) -
             UNIQUEKEY -
@@ -23,8 +27,8 @@
             TRACKS(1,1) -
             CONTROLINTERVALSIZE(4096) )
   DEFINE PATH ( -
-            NAME ( &SYSUID..PSPT.&ALTIND. ) -
-            PATHENTRY ( &SYSUID..PSIN.&ALTIND. ) )
-  BLDINDEX  INDATASET ( &SYSUID..PSVS.&ENTITY. ) -
-            OUTDATASET ( &SYSUID..PSIN.&ALTIND. )
+            NAME       ( &SYSUID..&PATH..&ALTIND. ) -
+            PATHENTRY  ( &SYSUID..&AIDX..&ALTIND. ) )
+  BLDINDEX  INDATASET  ( &SYSUID..&TYPE..&ENTITY. ) -
+            OUTDATASET ( &SYSUID..&AIDX..&ALTIND. )
 /*

@@ -1,7 +1,7 @@
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP' - EMPLOYEE MASTER FILE.
       *      - RECORD LAYOUT FOR 'EMPMAST' VSAM <KSDS> FILE.
-      *      - VSAM CLUSTER -> 'Z45864.PSVS.EMPMAST'.
+      *      - VSAM CLUSTER -> 'Z45864.KSDS.EMPMAST'.
       *      - SEED DATASET -> 'Z45864.DATA.EMPMAST'.
       ******************************************************************
        01 EMPLOYEE-MASTER-RECORD.

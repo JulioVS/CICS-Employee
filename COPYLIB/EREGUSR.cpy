@@ -1,7 +1,7 @@
       ******************************************************************
       *   CICS PLURALSIGHT 'EMPLOYEE APP' - REGISTERED USERS.
       *      - RECORD LAYOUT FOR 'EREGUSR' VSAM <KSDS> FILE.
-      *      - VSAM CLUSTER -> 'Z45864.PSVS.EREGUSR'.
+      *      - VSAM CLUSTER -> 'Z45864.KSDS.EREGUSR'.
       *      - SEED DATASET -> 'Z45864.DATA.EREGUSR'.
       ******************************************************************
        01 REGISTERED-USER-RECORD.
