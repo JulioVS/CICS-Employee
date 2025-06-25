@@ -19,9 +19,14 @@ propertyGroups:
     language: jcl
     libraries:
       - name: proclib
+        type: local
+        locations:
+          - './PROCLIB'
+      - name: proclib
         type: mvs
         locations:
           - 'DFH620.CICS.SDFHPROC'
+          - 'Z45864.PROCLIB'
           - 'VENDOR.PROCLIB'
           - 'SYS1.PROCLIB'
   - name: hlasm-maclibs
