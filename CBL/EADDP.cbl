@@ -13,6 +13,7 @@
       *      - ADD MAPSET.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - REGISTERED USERS.
+      *      - AUDIT TRAIL RECORD.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
@@ -22,6 +23,7 @@
        COPY EMPMAST.
        COPY EMONCTR.
        COPY EREGUSR.
+       COPY EAUDIT.
        COPY DFHAID.
        COPY DFHBMSCA.
       ******************************************************************
@@ -143,6 +145,7 @@
            INITIALIZE ADD-EMPLOYEE-CONTAINER.
            INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE REGISTERED-USER-RECORD.
+           INITIALIZE AUDIT-TRAIL-RECORD.
            INITIALIZE WS-WORKING-VARS.
            INITIALIZE EADDMO.
 
@@ -858,6 +861,7 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'New Record Added Successfully!' TO WS-MESSAGE
+                PERFORM 3400-WRITE-AUDIT-TRAIL
            WHEN DFHRESP(DUPREC)
                 MOVE 'Duplicate Employee ID or Primary Name Found!'
                    TO WS-MESSAGE
@@ -870,6 +874,43 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            WHEN OTHER
                 MOVE 'Error Writing New Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       3400-WRITE-AUDIT-TRAIL.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3400-WRITE-AUDIT-TRAIL' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    LOAD AUDIT TRAIL RECORD WITH LOGGED-IN USER'S ID, CURRENT 
+      *    DATE AND TIME, ACTION INDICATOR AND THE NEW EMPLOYEE RECORD.
+           MOVE FUNCTION CURRENT-DATE TO AUD-TIMESTAMP.
+           MOVE ADD-USER-ID TO AUD-USER-ID.
+           SET AUD-ACTION-ADD TO TRUE.
+           MOVE EMPLOYEE-MASTER-RECORD TO AUD-RECORD-AFTER.
+
+      *    CALL AUDIT TRAIL ASYNC TRANSACTION TO LOG THE ADDITION.
+      *    ('FIRE AND FORGET' STYLE)
+           EXEC CICS START
+                TRANSID(APP-AUDIT-TRANSACTION-ID)
+                TERMID(EIBTRMID)
+                FROM (AUDIT-TRAIL-RECORD)
+                REQID(APP-AUDIT-REQUEST-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Audit Trail)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(TRANSIDERR)
+                MOVE 'Audit Trail Transaction Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Writing Audit Trail!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
