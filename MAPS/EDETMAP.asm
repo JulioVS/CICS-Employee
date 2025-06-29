@@ -17,7 +17,7 @@ EDETMAP  DFHMSD MODE=INOUT,                                            X
 * ---------------------------------------------------------------------
 *  SHOW DETAILS MAP.
 * ---------------------------------------------------------------------
-EDETM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1,COLOR=TURQUOISE
+EDETM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
 *
 *  HEADING SECTION.
 *
@@ -39,6 +39,7 @@ EMPLID   DFHMDF POS=(3,5),LENGTH=8,ATTRB=(NORM,NUM,IC),                X
                INITIAL='        Primary Name:'
 PRNAME   DFHMDF POS=(3,36),LENGTH=38,ATTRB=(UNPROT,BRT),               X
                HILIGHT=UNDERLINE
+         DFHMDF POS=(3,75),LENGTH=0
 *
          DFHMDF POS=(4,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
                INITIAL='Honorific:'

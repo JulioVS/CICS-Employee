@@ -18,7 +18,7 @@ EMNUMAP  DFHMSD MODE=INOUT,                                            X
 * ---------------------------------------------------------------------
 *  MAIN MENU MAP.
 * ---------------------------------------------------------------------
-EMNUM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1,COLOR=TURQUOISE
+EMNUM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
 *
 *  HEADING SECTION.
 *
