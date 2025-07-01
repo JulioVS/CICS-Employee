@@ -143,6 +143,8 @@
                      ELSE 
                         MOVE 'Invalid Selection!' TO WS-MESSAGE
                      END-IF
+                WHEN '4'
+                     PERFORM 2400-TRANSFER-TO-UPDATE-PAGE
                 WHEN OTHER
                      MOVE 'Invalid Selection!' TO WS-MESSAGE
                 END-EVALUATE
@@ -254,6 +256,33 @@
                 MOVE 'Add Page Program Not Found!' TO WS-MESSAGE
            WHEN OTHER
                 MOVE 'Error Transferring To Add Page!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       2400-TRANSFER-TO-UPDATE-PAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2400-TRANSFER-TO-UPDATE-PAGE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
+           PERFORM 2150-DELETE-MENU-CONTAINER.
+
+      *    TRANSFER LOGIC TO ADD EMPLOYEE PAGE.
+           EXEC CICS XCTL
+                PROGRAM(APP-UPDATE-PROGRAM-NAME)
+                CHANNEL(APP-UPDATE-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Transferring To Update Page' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request!' TO WS-MESSAGE
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Update Page Program Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Transferring To Update Page!' TO WS-MESSAGE
            END-EVALUATE.
 
        2500-SIGN-USER-OFF.

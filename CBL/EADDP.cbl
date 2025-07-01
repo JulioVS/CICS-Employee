@@ -247,7 +247,7 @@
            WHEN DFHENTER
                 PERFORM 2100-VALIDATE-USER-INPUT
            WHEN DFHPF3
-                PERFORM 2200-ADD-EMPLOYEE-RECORD
+           WHEN DFHPF12
                 PERFORM 2300-TRANSFER-BACK-TO-MENU
            WHEN DFHPF4
                 PERFORM 2200-ADD-EMPLOYEE-RECORD
@@ -255,8 +255,6 @@
                 PERFORM 2600-CLEAR-SCREEN
            WHEN DFHPF10
                 PERFORM 2500-SIGN-USER-OFF
-           WHEN DFHPF12
-                PERFORM 2300-TRANSFER-BACK-TO-MENU
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.

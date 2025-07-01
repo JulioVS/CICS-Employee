@@ -17,7 +17,7 @@ EADDMAP  DFHMSD MODE=INOUT,                                            X
 * ---------------------------------------------------------------------
 *  ADD EMPLOYEE MAP.
 * ---------------------------------------------------------------------
-EADDM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1,COLOR=TURQUOISE
+EADDM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
 *
 *  HEADING SECTION.
 *
