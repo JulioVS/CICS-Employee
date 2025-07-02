@@ -9,21 +9,21 @@
       ******************************************************************
       *   INCLUDE COPYBOOKS FOR:
       *      - APPLICATION CONSTANTS.
-      *      - UPDATE DETAILS MAPSET.
-      *      - UPDATE DETAILS CONTAINER.
-      *      - EMPLOYEE MASTER RECORD.
-      *      - VIEW DETAILS CONTAINER.
+      *      - UPDATE EMPLOYEE MAPSET.
+      *      - UPDATE EMPLOYEE CONTAINER.
+      *      - EMPLOYEE DETAILS CONTAINER.
       *      - ACTIVITY MONITOR CONTAINER.
-      *      - REGISTERED USERS.
+      *      - EMPLOYEE MASTER RECORD.
+      *      - REGISTERED USERS RECORD.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
        COPY ECONST.
        COPY EUPDMAP.
        COPY EUPDCTR.
-       COPY EMPMAST.
        COPY EDETCTR.
        COPY EMONCTR.
+       COPY EMPMAST.
        COPY EREGUSR.
        COPY DFHAID.
        COPY DFHBMSCA.
@@ -38,8 +38,6 @@
       *
        01 WS-DISPLAY-MESSAGES.
           05 WS-MESSAGE             PIC X(79) VALUE SPACES.
-          05 WS-PF7-LABEL           PIC X(9)  VALUE 'PF7 Prev '.
-          05 WS-PF8-LABEL           PIC X(9)  VALUE 'PF8 Next '.
       *
        01 WS-DATE-FORMATTING.
           05 WS-INPUT-DATE.
@@ -110,12 +108,10 @@
            WHEN DFHRESP(CHANNELERR)
            WHEN DFHRESP(CONTAINERERR)
       *         1ST INTERACTION -> NO CONTAINER YET (CREATE IT)
-      *         PERFORM 1000-FIRST-INTERACTION
-                CONTINUE 
+                PERFORM 1000-FIRST-INTERACTION
            WHEN DFHRESP(NORMAL)
       *         NEXT INTERACTIONS -> CONTAINER FOUND (CONTINUE)
-      *         PERFORM 2000-PROCESS-USER-INPUT
-                CONTINUE 
+                PERFORM 2000-PROCESS-USER-INPUT
            WHEN OTHER
                 MOVE 'Error Retrieving Update Container!' TO WS-MESSAGE
            END-EVALUATE.
@@ -123,8 +119,342 @@
            PERFORM 9000-SEND-MAP-AND-RETURN.
 
       *-----------------------------------------------------------------
-      *START-UP SECTION.
+       START-UP SECTION.
       *-----------------------------------------------------------------
+
+       1000-FIRST-INTERACTION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1000-FIRST-INTERACTION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 1100-INITIALIZE-VARIABLES.
+           PERFORM 1200-INITIALIZE-CONTAINER.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
+      *    IF NOT, JUST READ THE FIRST EMPLOYEE RECORD.
+           PERFORM 1300-READ-EMPLOYEE-BY-KEY.
+
+       1100-INITIALIZE-VARIABLES.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1100-INITIALIZE-VARIABLES' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    CLEAR ALL RECORDS AND VARIABLES.
+           INITIALIZE ACTIVITY-MONITOR-CONTAINER.
+           INITIALIZE EMPLOYEE-DETAILS-CONTAINER.
+           INITIALIZE UPDATE-EMPLOYEE-CONTAINER.
+           INITIALIZE EMPLOYEE-MASTER-RECORD.
+           INITIALIZE REGISTERED-USER-RECORD.
+           INITIALIZE WS-WORKING-VARS.
+
+       1200-INITIALIZE-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1200-INITIALIZE-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    SET INITIAL VALUES FOR LIST CONTAINER.
+           MOVE 'ANONYMUS' TO UPD-USER-ID.
+           MOVE 'STD' TO UPD-USER-CATEGORY.
+           MOVE '1' TO UPD-SELECT-KEY-TYPE.
+           MOVE LOW-VALUE TO UPD-SELECT-KEY-VALUE.
+
+      *    GET CALLING PROGRAM NAME FROM ITS TRANSACTION ID.
+           EXEC CICS INQUIRE
+                TRANSACTION(EIBTRNID)
+                PROGRAM(UPD-CALLING-PROGRAM)
+                END-EXEC.
+
+      *    >>> ---IMPORTANT!--- <<<
+      *    THE USE OF 'CICS INQUIRE' REQUIRED ADDING THE 'SP' OPTION
+      *    IN THE TRANSLATOR OPTIONS OF THE COMPILING JCL!
+      *    >>> ---------------- <<<
+
+       1300-READ-EMPLOYEE-BY-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1300-READ-EMPLOYEE-BY-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1300-READ-EMPLOYEE-BY-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    READ EMPLOYEE MASTER FILE RECORD INTO CONTAINER.
+           PERFORM 1310-START-BROWSING.
+
+      *    >>> DEBUGGING ONLY <<<
+           IF I-AM-DEBUGGING AND UPD-SEL-BY-EMPLOYEE-ID AND
+              EMP-EMPLOYEE-ID IS GREATER THAN 3 THEN
+              SET UPD-END-OF-FILE TO TRUE
+           END-IF.
+           IF I-AM-DEBUGGING AND UPD-SEL-BY-EMPLOYEE-NAME AND
+              EMP-PRIMARY-NAME(1:1) IS GREATER THAN 'A' THEN
+              SET UPD-END-OF-FILE TO TRUE
+           END-IF.
+      *    >>> -------------- <<<
+
+           PERFORM 1320-READ-NEXT-RECORD
+              UNTIL FILTERS-PASSED OR UPD-END-OF-FILE.
+
+           IF FILTERS-PASSED THEN
+              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+           END-IF.
+
+           IF NOT UPD-END-OF-FILE THEN
+              PERFORM 1330-END-BROWSING
+           END-IF.
+
+       1310-START-BROWSING.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1310-START-BROWSING (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1310-START-BROWSING (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS STARTBR
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS STARTBR
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Browsing Employee Master File' TO WS-MESSAGE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Records Found!' TO WS-MESSAGE
+                SET UPD-END-OF-FILE TO TRUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Starting Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       1320-READ-NEXT-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1320-READ-NEXT-RECORD (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1320-READ-NEXT-RECORD (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS READNEXT
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS READNEXT
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Reading Employee Master File' TO WS-MESSAGE
+      *         PERFORM 3200-APPLY-FILTERS
+      *         PERFORM 3700-CHECK-DELETION
+                SET FILTERS-PASSED TO TRUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Records Found!' TO WS-MESSAGE
+                SET UPD-END-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'End of Employee Master File' TO WS-MESSAGE
+                SET UPD-END-OF-FILE TO TRUE
+           WHEN OTHER
+                MOVE 'Error Reading Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       1330-END-BROWSING.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1330-END-BROWSING (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1330-END-BROWSING (NM)' TO WS-DEBUG-AID
+           END-IF
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS ENDBR
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS ENDBR
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'End of Browsing Master File' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Ending Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+      *-----------------------------------------------------------------
+       UPDATING SECTION.
+      *-----------------------------------------------------------------
+
+       2000-PROCESS-USER-INPUT.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2000-PROCESS-USER-INPUT' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE 'So Far, So Good...' TO WS-MESSAGE.
+
+           EXEC CICS RECEIVE
+                MAP(APP-UPDATE-MAP-NAME)
+                MAPSET(APP-UPDATE-MAPSET-NAME)
+                INTO (EUPDMI)
+                END-EXEC.
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
+           EVALUATE EIBAID
+      *    WHEN DFHENTER
+      *         PERFORM 2100-FIND-BY-EMPLOYEE-KEY
+           WHEN DFHPF3
+           WHEN DFHPF12
+                PERFORM 9200-RETURN-TO-CICS
+      *         PERFORM 2200-TRANSFER-BACK-TO-CALLER
+      *    WHEN DFHPF7
+      *         PERFORM 2300-PREV-BY-EMPLOYEE-KEY
+      *    WHEN DFHPF8
+      *         PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
+      *    WHEN DFHPF9
+      *         PERFORM 2700-SWITCH-DISPLAY-ORDER
+      *    WHEN DFHPF10
+      *         PERFORM 2500-SIGN-USER-OFF
+           WHEN OTHER
+                MOVE 'Invalid Key!' TO WS-MESSAGE
+           END-EVALUATE.
+
+      *-----------------------------------------------------------------
+       ACTIVITY-MONITOR SECTION.
+      *-----------------------------------------------------------------
+
+       4000-CHECK-USER-STATUS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4000-CHECK-USER-STATUS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    CHECK IF THE USER IS ALREADY SIGNED ON TO THE ACTIVITY
+           PERFORM 4100-GET-MONITOR-CONTAINER.
+
+      *    IF THE USER IS SIGNED ON, CHECK IF SESSION IS STILL ACTIVE.
+           SET MON-AC-APP-FUNCTION TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+
+
+       4100-GET-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4100-GET-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS GET
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                INTO (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Activity Monitor Data Found' TO WS-MESSAGE
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+                MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Getting Activity Monitor!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       4200-CALL-ACTIVITY-MONITOR.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4200-CALL-ACTIVITY-MONITOR' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    PUT CONTAINER AND LINK TO ACTIVITY MONITOR PROGRAM
+           MOVE APP-UPDATE-PROGRAM-NAME TO MON-LINKING-PROGRAM.
+           INITIALIZE MON-RESPONSE.
+
+           PERFORM 4300-PUT-MONITOR-CONTAINER.
+
+           EXEC CICS LINK
+                PROGRAM(APP-ACTMON-PROGRAM-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                TRANSID(EIBTRNID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Activity Monitor Program Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Linking to Activity Monitor!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       4300-PUT-MONITOR-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '4300-PUT-MONITOR-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-ACTMON-CONTAINER-NAME)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                FROM (ACTIVITY-MONITOR-CONTAINER)
+                FLENGTH(LENGTH OF ACTIVITY-MONITOR-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
+           END-EVALUATE.
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.
@@ -141,8 +471,8 @@
       *      - POPULATE AND SEND MAP TO CICS.
       *      - RETURN TO CICS.
 
-      *    PERFORM 9100-POPULATE-MAP.
-      *    PERFORM 9150-PUT-VIEW-CONTAINER.
+           PERFORM 9100-POPULATE-MAP.
+           PERFORM 9150-PUT-UPDATE-CONTAINER.
 
            EXEC CICS SEND
                 MAP(APP-UPDATE-MAP-NAME)
@@ -155,6 +485,179 @@
            EXEC CICS RETURN
                 CHANNEL(APP-UPDATE-CHANNEL-NAME)
                 TRANSID(APP-UPDATE-TRANSACTION-ID)
+                END-EXEC.
+
+       9100-POPULATE-MAP.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9100-POPULATE-MAP' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+
+      *    ALL USERS -> DISPLAY TRANSACTION ID.
+           MOVE EIBTRNID TO TRANIDO.
+
+      *    ALL USERS -> DISPLAY BROWSING ORDER.
+      *    IF UPD-SEL-BY-EMPLOYEE-ID THEN
+      *       MOVE 'By Id  ' TO SELBYO
+      *    ELSE
+      *       MOVE 'By Name' TO SELBYO
+      *    END-IF.
+
+      *    ALL USERS -> DISPLAY CURRENTLY LOGGED-IN USER.
+           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MON-USER-ID TO LOGDINO
+           ELSE
+              MOVE '<Anonym>' TO LOGDINO
+           END-IF.
+
+      *    ALL USERS -> DISPLAY ID AND ALT-KEY FIELDS.
+           MOVE EMP-EMPLOYEE-ID TO EMPLIDO.
+           MOVE EMP-PRIMARY-NAME TO PRNAMEO.
+
+      *    ALL USERS -> DISPLAY BASIC EMPLOYEE DATA.
+           MOVE EMP-HONORIFIC TO HONORO.
+           MOVE EMP-SHORT-NAME TO SHNAMEO.
+           MOVE EMP-FULL-NAME TO FLNAMEO.
+
+      *    STANDARD & MANAGERS -> DISPLAY FURTHER EMPLOYEE DATA.
+           IF UPD-CT-STANDARD OR UPD-CT-MANAGER THEN
+              MOVE EMP-JOB-TITLE TO JBTITLO
+              MOVE EMP-DEPARTMENT-ID TO DEPTIDO
+      *       MOVE 'Undefined' TO DEPTNMO
+
+              MOVE EMP-START-DATE TO WS-INPUT-DATE
+              MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
+              MOVE WS-OUTPUT-DATE TO STDATEO
+
+              MOVE EMP-END-DATE TO WS-INPUT-DATE
+              MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
+              MOVE WS-OUTPUT-DATE TO ENDATEO
+           ELSE
+      *       MOVE '<Hidden>' TO JBTITLO DEPTIDO DEPTNMO
+      *       MOVE '<Hidden>' TO STDATEO ENDATEO
+              CONTINUE
+           END-IF.
+
+      *    USER HIMSELF & MANAGERS -> DISPLAY APPRAISAL DATA.
+           IF UPD-CT-MANAGER OR
+              (UPD-CT-STANDARD AND
+              UPD-USER-EMP-ID IS EQUAL TO EMP-EMPLOYEE-ID) THEN
+
+              MOVE EMP-APPRAISAL-DATE TO WS-INPUT-DATE
+              MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
+              MOVE WS-OUTPUT-DATE TO APPRDTO
+
+              EVALUATE TRUE
+              WHEN EMP-EXCEEDS-EXPECTATIONS
+                   MOVE 'Exceeds Expectations' TO APPRRSO
+              WHEN EMP-MEETS-EXPECTATIONS
+                   MOVE 'Meets Expectations' TO APPRRSO
+              WHEN EMP-UH-OH
+                   MOVE 'You Are Truly Fucked' TO APPRRSO
+              WHEN OTHER
+                   MOVE 'Undefined' TO APPRRSO
+              END-EVALUATE
+           ELSE
+      *       MOVE '<Hidden>' TO APPRDTO APPRRSO
+              CONTINUE 
+           END-IF.
+
+      *    MANAGERS & ADMINS -> DISPLAY LOGICAL RECORD STATUS.
+           IF UPD-CT-MANAGER OR UPD-CT-ADMINISTRATOR THEN
+              MOVE EMP-DELETE-FLAG TO DELFLGO
+
+              EVALUATE TRUE
+              WHEN EMP-ACTIVE
+                   MOVE 'Active' TO DELDSCO
+              WHEN EMP-DELETED
+                   MOVE 'Deleted' TO DELDSCO
+              WHEN OTHER
+                   MOVE 'Undefined' TO DELDSCO
+              END-EVALUATE
+
+              MOVE EMP-DELETE-DATE TO WS-INPUT-DATE
+              MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
+              MOVE WS-OUTPUT-DATE TO DELDTO
+           ELSE
+      *       MOVE '-' TO DELFLGO
+      *       MOVE '<Hidden>' TO DELDSCO DELDTO
+              CONTINUE 
+           END-IF.
+
+      *    USER HIMSELF -> SPECIAL GREETING!
+           IF UPD-USER-EMP-ID IS GREATER THAN ZERO AND
+              UPD-USER-EMP-ID IS EQUAL TO EMP-EMPLOYEE-ID THEN
+              MOVE 'Hey! This Is Actually You!' TO WS-MESSAGE
+           END-IF.
+
+      *    ALL USERS -> DISPLAY ALL-IMPORTANT MESSAGE LINE!
+           MOVE WS-MESSAGE TO MESSO.
+           MOVE DFHTURQ TO MESSC.
+
+      *    ALL USERS -> COLOR MESSAGE ACCORDING TO TYPE/CONTENT.
+           EVALUATE TRUE
+           WHEN MESSO(1:5) IS EQUAL TO 'Error'
+                MOVE DFHRED TO MESSC
+           WHEN MESSO(1:3) IS EQUAL TO 'No '
+                MOVE DFHYELLO TO MESSC
+           WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
+           WHEN MESSO(1:4) IS EQUAL TO 'Hey!'
+                MOVE DFHPINK TO MESSC
+           END-EVALUATE.
+
+      *    HERE, WE SET THE MODIFIED DATA TAG (MDT) OF ONE THE FIELDS
+      *    TO 'ON' TO AVOID THE 'AEI9' ABEND THAT HAPPENS DUE TO A
+      *    'MAPFAIL' CONDITION WHEN WE LATER RECEIVE THE MAP WITH JUST
+      *    AN AID KEY PRESS AND NO MODIFIED DATA ON IT.
+           MOVE DFHBMFSE TO EMPLIDA.
+
+      *    ALL USERS -> HIDE NAVIGATION KEY LABELS IF NEEDED.
+           IF UPD-TOP-OF-FILE THEN
+              MOVE SPACES TO HLPPF7O
+           END-IF.
+           IF UPD-END-OF-FILE THEN
+              MOVE SPACES TO HLPPF8O
+           END-IF.
+
+       9150-PUT-UPDATE-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9150-PUT-UPDATE-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-UPDATE-CONTAINER-NAME)
+                CHANNEL(APP-UPDATE-CHANNEL-NAME)
+                FROM (UPDATE-EMPLOYEE-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting Update Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       9200-RETURN-TO-CICS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9200-RETURN-TO-CICS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    SIGN-OFF OR CANCEL:
+      *      - CLEAR TERMINAL SCREEN.
+      *      - COLD RETURN TO CICS.
+      *      - END OF CONVERSATION.
+
+           EXEC CICS SEND CONTROL
+                ERASE
+                FREEKB
+                END-EXEC.
+
+           EXEC CICS RETURN
                 END-EXEC.
 
        9300-DEBUG-AID.
