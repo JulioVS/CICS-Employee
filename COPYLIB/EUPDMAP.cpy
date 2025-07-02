@@ -6,6 +6,12 @@
              03 TRANIDA    PICTURE X.
            02  FILLER   PICTURE X(1).
            02  TRANIDI  PIC X(4).
+           02  SELBYL    COMP  PIC  S9(4).
+           02  SELBYF    PICTURE X.
+           02  FILLER REDEFINES SELBYF.
+             03 SELBYA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  SELBYI  PIC X(7).
            02  LOGDINL    COMP  PIC  S9(4).
            02  LOGDINF    PICTURE X.
            02  FILLER REDEFINES LOGDINF.
@@ -209,6 +215,9 @@
            02  FILLER PICTURE X(3).
            02  TRANIDC    PICTURE X.
            02  TRANIDO  PIC X(4).
+           02  FILLER PICTURE X(3).
+           02  SELBYC    PICTURE X.
+           02  SELBYO  PIC X(7).
            02  FILLER PICTURE X(3).
            02  LOGDINC    PICTURE X.
            02  LOGDINO  PIC X(8).

@@ -135,6 +135,16 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
+      *    IF WE HAVE A LOGGED-IN USER:
+      *      - SAVE HIS DATA ON THE APPLICATION CONTAINER.
+      *      - FIND HIS OWN 'EMPLOYEE ID'.
+           IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
+              MOVE MON-USER-ID TO UPD-USER-ID REG-USER-ID
+              MOVE MON-USER-CATEGORY TO UPD-USER-CATEGORY
+
+              PERFORM 1600-LOOKUP-USER-ID
+           END-IF.
+
       *    IF NOT, JUST READ THE FIRST EMPLOYEE RECORD.
            PERFORM 1300-READ-EMPLOYEE-BY-KEY.
 
@@ -324,6 +334,149 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
+       1400-READ-BACKWARDS-BY-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1400-READ-BACKWARDS-BY-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1400-READ-BACKWARDS-BY-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 1310-START-BROWSING.
+
+      *    <<< PATCH FOR BACKWARDS BROWSING BY NAME CASE >>>
+           IF UPD-SEL-BY-EMPLOYEE-NAME THEN
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   END-EXEC
+           END-IF.
+      *    <<< ----------------------------------------- >>>
+
+           PERFORM 1410-READ-PREV-RECORD
+              UNTIL FILTERS-PASSED OR UPD-TOP-OF-FILE.
+
+           IF FILTERS-PASSED THEN
+              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+           END-IF.
+
+           IF NOT UPD-TOP-OF-FILE THEN
+              PERFORM 1330-END-BROWSING
+           END-IF.
+
+       1410-READ-PREV-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1410-READ-PREV-RECORD (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1410-READ-PREV-RECORD (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS READPREV
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Reading Employee Master File' TO WS-MESSAGE
+      *         PERFORM 3200-APPLY-FILTERS
+      *         PERFORM 3700-CHECK-DELETION
+                SET FILTERS-PASSED TO TRUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Previous Records Found!' TO WS-MESSAGE
+                SET UPD-TOP-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'Start of Employee Master File' TO WS-MESSAGE
+                SET UPD-TOP-OF-FILE TO TRUE
+           WHEN OTHER
+                MOVE 'Error Reading Previous Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       1500-FIND-RECORD-BY-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '1500-FIND-RECORD-BY-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '1500-FIND-RECORD-BY-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              EXEC CICS READ
+                   FILE(APP-EMP-MASTER-FILE-NAME)
+                   RIDFLD(EMP-EMPLOYEE-ID)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           ELSE
+              EXEC CICS READ
+                   FILE(APP-EMP-MASTER-PATH-NAME)
+                   RIDFLD(EMP-PRIMARY-NAME)
+                   INTO (EMPLOYEE-MASTER-RECORD)
+                   RESP(WS-CICS-RESPONSE)
+                   END-EXEC
+           END-IF.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Reading Employee Master File' TO WS-MESSAGE
+      *         PERFORM 3200-APPLY-FILTERS
+      *         PERFORM 3700-CHECK-DELETION
+                SET FILTERS-PASSED TO TRUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Record Found By That Key!' TO WS-MESSAGE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'End of Employee Master File' TO WS-MESSAGE
+                SET UPD-END-OF-FILE TO TRUE
+           WHEN OTHER
+                MOVE 'Error Reading Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       1600-LOOKUP-USER-ID.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1600-LOOKUP-USER-ID' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    LOOKUP THE USER ID IN VSAM FILE
+           EXEC CICS READ
+                FILE(APP-REG-USER-FILE-NAME)
+                INTO (REGISTERED-USER-RECORD)
+                RIDFLD(REG-USER-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE "User Found!" TO WS-MESSAGE
+                MOVE REG-EMPLOYEE-ID TO UPD-USER-EMP-ID
+           WHEN DFHRESP(NOTFND)
+                MOVE "User Not Found!" TO WS-MESSAGE
+           WHEN OTHER
+                MOVE "Error Reading Users File!" TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
       *-----------------------------------------------------------------
        UPDATING SECTION.
       *-----------------------------------------------------------------
@@ -347,23 +500,197 @@
       *    >>> --------------------- <<<
 
            EVALUATE EIBAID
-      *    WHEN DFHENTER
-      *         PERFORM 2100-FIND-BY-EMPLOYEE-KEY
+           WHEN DFHENTER
+                PERFORM 2100-FIND-BY-EMPLOYEE-KEY
            WHEN DFHPF3
            WHEN DFHPF12
-                PERFORM 9200-RETURN-TO-CICS
-      *         PERFORM 2200-TRANSFER-BACK-TO-CALLER
-      *    WHEN DFHPF7
-      *         PERFORM 2300-PREV-BY-EMPLOYEE-KEY
-      *    WHEN DFHPF8
-      *         PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
-      *    WHEN DFHPF9
-      *         PERFORM 2700-SWITCH-DISPLAY-ORDER
-      *    WHEN DFHPF10
-      *         PERFORM 2500-SIGN-USER-OFF
+                PERFORM 2200-TRANSFER-BACK-TO-CALLER
+           WHEN DFHPF7
+                PERFORM 2300-PREV-BY-EMPLOYEE-KEY
+           WHEN DFHPF8
+                PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
+           WHEN DFHPF9
+                PERFORM 2700-SWITCH-DISPLAY-ORDER
+           WHEN DFHPF10
+                PERFORM 2500-SIGN-USER-OFF
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
+
+       2100-FIND-BY-EMPLOYEE-KEY.
+      *    IF EMPLOYEE ID WAS ENTERED, THEN FIND BY ID.
+           IF EMPLIDI IS NOT EQUAL TO LOW-VALUES AND
+              EMPLIDI IS NOT EQUAL TO SPACES THEN
+      *       --- BY ID ---
+              SET UPD-SEL-BY-EMPLOYEE-ID TO TRUE
+
+              EXEC CICS BIF DEEDIT
+                   FIELD(EMPLIDI)
+                   LENGTH(8)
+                   END-EXEC
+
+              MOVE EMPLIDI TO EMP-EMPLOYEE-ID
+           END-IF.
+
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2100-FIND-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2100-FIND-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           PERFORM 1500-FIND-RECORD-BY-KEY.
+
+           IF FILTERS-PASSED THEN
+              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+           ELSE
+              MOVE 'No Matching Record By That Key!' TO WS-MESSAGE
+           END-IF.
+
+       2200-TRANSFER-BACK-TO-CALLER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2200-TRANSFER-BACK-TO-CALLER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF WE ARE COMING FROM 'OURSELVES', I.E. WE INVOKED THE
+      *    'EUPD' TRANSACTION DIRECTLY, THEN WE JUST RETURN TO CICS.
+           IF UPD-CALLING-PROGRAM IS EQUAL TO APP-UPDATE-PROGRAM-NAME
+              PERFORM 9200-RETURN-TO-CICS
+           END-IF.
+
+      *    OTHERWISE, WE TRANSFER BACK TO THE CALLING PROGRAM.
+      *    I.E. 'EVIEWP' (EMPLOYEE DETAILS) OR 'EMENUP' (MENU).
+
+      *    RESET THIS CONVERSATION BY DELETING CURRENT CONTAINER.
+           PERFORM 2250-DELETE-UPDATE-CONTAINER.
+
+           EXEC CICS XCTL
+                PROGRAM(UPD-CALLING-PROGRAM)
+                CHANNEL(APP-ACTMON-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Transferring Back To Caller' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Caller Program Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Transferring To Caller!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       2250-DELETE-UPDATE-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2250-DELETE-UPDATE-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS DELETE
+                CONTAINER(APP-UPDATE-CONTAINER-NAME)
+                CHANNEL(APP-UPDATE-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'Update Container Not Found!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Deleting Update Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       2300-PREV-BY-EMPLOYEE-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2300-PREV-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2300-PREV-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF NOT UPD-TOP-OF-FILE THEN
+              IF UPD-SEL-BY-EMPLOYEE-ID THEN
+                 SUBTRACT 1 FROM EMP-EMPLOYEE-ID
+              ELSE
+                 CONTINUE
+              END-IF
+
+      *       RESET 'FILE BOUNDARY' FLAG.
+              INITIALIZE UPD-FILE-FLAG
+
+      *       READ FILE BACKWARDS!
+              PERFORM 1400-READ-BACKWARDS-BY-KEY
+           ELSE
+              MOVE 'No Previous Records To Display!' TO WS-MESSAGE
+              MOVE DFHPROTN TO HLPPF7A
+           END-IF.
+
+       2400-NEXT-BY-EMPLOYEE-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
+           ELSE
+              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
+           END-IF.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+
+           IF NOT UPD-END-OF-FILE THEN
+              IF UPD-SEL-BY-EMPLOYEE-ID THEN
+                 ADD 1 TO EMP-EMPLOYEE-ID
+              ELSE
+                 MOVE HIGH-VALUES TO EMP-PRIMARY-NAME(38:)
+              END-IF
+
+      *       RESET 'FILE BOUNDARY' FLAG.
+              INITIALIZE UPD-FILE-FLAG
+
+      *       READ FILE IN NORMAL (FORWARD) WAY.
+              PERFORM 1300-READ-EMPLOYEE-BY-KEY
+           ELSE
+              MOVE 'No More Records To Display!' TO WS-MESSAGE
+              MOVE DFHPROTN TO HLPPF8A
+           END-IF.
+
+       2500-SIGN-USER-OFF.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2500-SIGN-USER-OFF' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           SET MON-AC-SIGN-OFF TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+      *    >>> --------------------- <<<
+
+           PERFORM 9200-RETURN-TO-CICS.
+
+       2700-SWITCH-DISPLAY-ORDER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2700-SWITCH-DISPLAY-ORDER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              SET UPD-SEL-BY-EMPLOYEE-NAME TO TRUE
+           ELSE
+              SET UPD-SEL-BY-EMPLOYEE-ID TO TRUE
+           END-IF.
+
+      *    RESET 'FILE BOUNDARY' FLAG.
+           INITIALIZE UPD-FILE-FLAG.
 
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
@@ -499,11 +826,11 @@
            MOVE EIBTRNID TO TRANIDO.
 
       *    ALL USERS -> DISPLAY BROWSING ORDER.
-      *    IF UPD-SEL-BY-EMPLOYEE-ID THEN
-      *       MOVE 'By Id  ' TO SELBYO
-      *    ELSE
-      *       MOVE 'By Name' TO SELBYO
-      *    END-IF.
+           IF UPD-SEL-BY-EMPLOYEE-ID THEN
+              MOVE 'By Id  ' TO SELBYO
+           ELSE
+              MOVE 'By Name' TO SELBYO
+           END-IF.
 
       *    ALL USERS -> DISPLAY CURRENTLY LOGGED-IN USER.
            IF MON-USER-ID IS NOT EQUAL TO SPACES THEN
