@@ -571,6 +571,18 @@
               PERFORM 9200-RETURN-TO-CICS
            END-IF.
 
+      *    IF WE ARE COMING FROM THE 'EMPLOYEE DETAILS' VIEW, UPDATE 
+      *    'VIEW' CONTAINER PRIOR TO RETURNING.
+           IF UPD-CALLING-PROGRAM IS EQUAL TO APP-VIEW-PROGRAM-NAME
+      *       >>> UPDATED RECORD! <<<
+              MOVE UPD-EMPLOYEE-RECORD TO DET-EMPLOYEE-RECORD 
+      *       >>> --------------- <<<
+              MOVE UPD-SELECT-KEY-TYPE TO DET-SELECT-KEY-TYPE
+              MOVE APP-UPDATE-PROGRAM-NAME TO DET-SAVING-PROGRAM
+
+              PERFORM 3100-PUT-VIEW-CONTAINER
+           END-IF.
+
       *    OTHERWISE, WE TRANSFER BACK TO THE CALLING PROGRAM.
       *    I.E. 'EVIEWP' (EMPLOYEE DETAILS) OR 'EMENUP' (MENU).
 
@@ -919,7 +931,7 @@
            IF UPD-CT-STANDARD OR UPD-CT-MANAGER THEN
               MOVE EMP-JOB-TITLE TO JBTITLO
               MOVE EMP-DEPARTMENT-ID TO DEPTIDO
-      *       MOVE 'Undefined' TO DEPTNMO
+              MOVE SPACES TO DEPTNMO
 
               MOVE EMP-START-DATE TO WS-INPUT-DATE
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
@@ -929,9 +941,7 @@
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
               MOVE WS-OUTPUT-DATE TO ENDATEO
            ELSE
-      *       MOVE '<Hidden>' TO JBTITLO DEPTIDO DEPTNMO
-      *       MOVE '<Hidden>' TO STDATEO ENDATEO
-              CONTINUE
+              MOVE SPACES TO JBTITLO DEPTIDO DEPTNMO STDATEO ENDATEO
            END-IF.
 
       *    USER HIMSELF & MANAGERS -> DISPLAY APPRAISAL DATA.
@@ -951,11 +961,10 @@
               WHEN EMP-UH-OH
                    MOVE 'You Are Truly Fucked' TO APPRRSO
               WHEN OTHER
-                   MOVE 'Undefined' TO APPRRSO
+                   MOVE SPACES TO APPRRSO
               END-EVALUATE
            ELSE
-      *       MOVE '<Hidden>' TO APPRDTO APPRRSO
-              CONTINUE 
+              MOVE SPACES TO APPRDTO APPRRSO
            END-IF.
 
       *    MANAGERS & ADMINS -> DISPLAY LOGICAL RECORD STATUS.
@@ -968,16 +977,14 @@
               WHEN EMP-DELETED
                    MOVE 'Deleted' TO DELDSCO
               WHEN OTHER
-                   MOVE 'Undefined' TO DELDSCO
+                   MOVE SPACES TO DELDSCO DELFLGO
               END-EVALUATE
 
               MOVE EMP-DELETE-DATE TO WS-INPUT-DATE
               MOVE CORRESPONDING WS-INPUT-DATE TO WS-OUTPUT-DATE
               MOVE WS-OUTPUT-DATE TO DELDTO
            ELSE
-      *       MOVE '-' TO DELFLGO
-      *       MOVE '<Hidden>' TO DELDSCO DELDTO
-              CONTINUE 
+              MOVE SPACES TO DELFLGO DELDSCO DELDTO
            END-IF.
 
       *    USER HIMSELF -> SPECIAL GREETING!

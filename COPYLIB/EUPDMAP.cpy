@@ -53,13 +53,13 @@
            02  FILLER REDEFINES SHNAMELF.
              03 SHNAMELA    PICTURE X.
            02  FILLER   PICTURE X(1).
-           02  SHNAMELI  PIC X(21).
+           02  SHNAMELI  PIC X(14).
            02  SHNAMEL    COMP  PIC  S9(4).
            02  SHNAMEF    PICTURE X.
            02  FILLER REDEFINES SHNAMEF.
              03 SHNAMEA    PICTURE X.
            02  FILLER   PICTURE X(1).
-           02  SHNAMEI  PIC X(35).
+           02  SHNAMEI  PIC X(38).
            02  FLNAMELL    COMP  PIC  S9(4).
            02  FLNAMELF    PICTURE X.
            02  FILLER REDEFINES FLNAMELF.
@@ -238,10 +238,10 @@
            02  HONORO  PIC X(8).
            02  FILLER PICTURE X(3).
            02  SHNAMELC    PICTURE X.
-           02  SHNAMELO  PIC X(21).
+           02  SHNAMELO  PIC X(14).
            02  FILLER PICTURE X(3).
            02  SHNAMEC    PICTURE X.
-           02  SHNAMEO  PIC X(35).
+           02  SHNAMEO  PIC X(38).
            02  FILLER PICTURE X(3).
            02  FLNAMELC    PICTURE X.
            02  FLNAMELO  PIC X(10).

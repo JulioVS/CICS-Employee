@@ -46,10 +46,11 @@ HONORL   DFHMDF POS=(4,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
 HONOR    DFHMDF POS=(4,12),LENGTH=8,ATTRB=(UNPROT,BRT),                X
                HILIGHT=UNDERLINE
 *
-SHNAMEL  DFHMDF POS=(4,21),LENGTH=21,ATTRB=(ASKIP,NORM),               X
-               INITIAL='          Short Name:'
-SHNAME   DFHMDF POS=(4,44),LENGTH=35,ATTRB=(UNPROT,BRT),               X
+SHNAMEL  DFHMDF POS=(4,21),LENGTH=14,ATTRB=(ASKIP,NORM),               X
+               INITIAL='   Short Name:'
+SHNAME   DFHMDF POS=(4,36),LENGTH=38,ATTRB=(UNPROT,BRT),               X
                HILIGHT=UNDERLINE
+         DFHMDF POS=(4,75),LENGTH=0
 *
 FLNAMEL  DFHMDF POS=(5,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
                INITIAL='Full Name:'
