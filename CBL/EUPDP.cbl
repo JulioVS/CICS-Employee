@@ -12,6 +12,7 @@
       *      - UPDATE EMPLOYEE MAPSET.
       *      - UPDATE EMPLOYEE CONTAINER.
       *      - EMPLOYEE DETAILS CONTAINER.
+      *      - LIST CONTAINER.
       *      - ACTIVITY MONITOR CONTAINER.
       *      - EMPLOYEE MASTER RECORD.
       *      - REGISTERED USERS RECORD.
@@ -22,6 +23,7 @@
        COPY EUPDMAP.
        COPY EUPDCTR.
        COPY EDETCTR.
+       COPY ELSTCTR.
        COPY EMONCTR.
        COPY EMPMAST.
        COPY EREGUSR.
@@ -167,6 +169,7 @@
            INITIALIZE ACTIVITY-MONITOR-CONTAINER.
            INITIALIZE EMPLOYEE-DETAILS-CONTAINER.
            INITIALIZE UPDATE-EMPLOYEE-CONTAINER.
+           INITIALIZE LIST-EMPLOYEE-CONTAINER.
            INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE REGISTERED-USER-RECORD.
            INITIALIZE WS-WORKING-VARS.
@@ -299,9 +302,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-      *         PERFORM 3200-APPLY-FILTERS
-      *         PERFORM 3700-CHECK-DELETION
-                SET FILTERS-PASSED TO TRUE
+                PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Records Found!' TO WS-MESSAGE
                 SET UPD-END-OF-FILE TO TRUE
@@ -405,9 +407,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-      *         PERFORM 3200-APPLY-FILTERS
-      *         PERFORM 3700-CHECK-DELETION
-                SET FILTERS-PASSED TO TRUE
+                PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Previous Records Found!' TO WS-MESSAGE
                 SET UPD-TOP-OF-FILE TO TRUE
@@ -448,9 +449,8 @@
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 MOVE 'Reading Employee Master File' TO WS-MESSAGE
-      *         PERFORM 3200-APPLY-FILTERS
-      *         PERFORM 3700-CHECK-DELETION
-                SET FILTERS-PASSED TO TRUE
+                PERFORM 3200-APPLY-FILTERS
+                PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Record Found By That Key!' TO WS-MESSAGE
            WHEN DFHRESP(ENDFILE)
@@ -715,7 +715,7 @@
            INITIALIZE UPD-FILE-FLAG.
 
       *-----------------------------------------------------------------
-       VIEW-FILTERS SECTION.
+       FILTERS SECTION.
       *-----------------------------------------------------------------
 
        3000-GET-VIEW-CONTAINER.
@@ -770,6 +770,221 @@
            WHEN OTHER
                 MOVE 'Error Putting Details Container!' TO WS-MESSAGE
            END-EVALUATE.
+
+       3200-APPLY-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3200-APPLY-FILTERS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    RESET ALL FILTERS FLAGS.
+           INITIALIZE WS-FILTER-FLAGS.
+
+      *    RESTORE FILTERS FROM APP CONTAINER.
+           MOVE UPD-FILTERS TO LST-FILTERS.
+
+      *    IF NO FILTERS WERE SET, THEN WE JUST 'OK' THE RECORD.
+           IF LST-NO-FILTERS-SET THEN
+              SET FILTERS-PASSED TO TRUE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    IF FILTERS WERE SET, THEN WE CHECK THEM ALL.
+           PERFORM 3300-APPLY-KEY-FILTERS.
+           PERFORM 3400-APPLY-DEPT-FILTERS.
+           PERFORM 3500-APPLY-DATE-FILTERS.
+
+      *    IF *ALL* FILTERS WERE MET, THEN WE SET THE 'PASSED' FLAG.
+           IF KEY-FILTER-PASSED AND
+              DEPT-FILTER-PASSED AND
+              DATE-FILTER-PASSED THEN
+              SET FILTERS-PASSED TO TRUE
+           END-IF.
+
+       3300-APPLY-KEY-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3300-APPLY-KEY-FILTERS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF 'VALUE' WAS OMITTED, WE IGNORE THE FILTER.
+           IF LST-SELECT-KEY-VALUE IS EQUAL TO SPACES THEN
+              SET KEY-FILTER-PASSED TO TRUE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    OTHERWISE, WE CHECK THE KEY FILTERS.
+
+      *    IF 'KEY' WAS OMITTED BUT WE GOT A 'VALUE', THEN WE GUESS THE
+      *    KEY FROM THE VALUE!
+           IF LST-SELECT-KEY-TYPE IS EQUAL TO SPACES AND
+              LST-SELECT-KEY-VALUE IS NOT EQUAL TO SPACES THEN
+              IF FUNCTION TRIM(LST-SELECT-KEY-VALUE) IS NUMERIC THEN
+                 MOVE '1' TO LST-SELECT-KEY-TYPE
+              ELSE
+                 MOVE '2' TO LST-SELECT-KEY-TYPE
+              END-IF
+           END-IF.
+
+      *    SELECT OPTION '1' -> 'EMPLOYEE ID' FILTER.
+           IF LST-SEL-BY-EMPLOYEE-ID THEN
+              INITIALIZE WS-INSP-COUNTER
+
+              INSPECT EMP-KEY
+                 TALLYING WS-INSP-COUNTER
+                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+
+              IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+                 SET KEY-FILTER-PASSED TO TRUE
+              END-IF
+           END-IF.
+
+      *    SELECT OPTION '2' -> 'EMPLOYEE NAME' FILTER.
+           IF LST-SEL-BY-EMPLOYEE-NAME THEN
+              INITIALIZE WS-INSP-COUNTER
+
+              INSPECT FUNCTION UPPER-CASE(EMP-PRIMARY-NAME)
+                 TALLYING WS-INSP-COUNTER
+                 FOR ALL FUNCTION TRIM(LST-SELECT-KEY-VALUE)
+
+              IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+                 SET KEY-FILTER-PASSED TO TRUE
+              END-IF
+           END-IF.
+
+       3400-APPLY-DEPT-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3400-APPLY-DEPT-FILTERS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF NO DEPARTMENT FILTERS WERE SET, WE JUST 'OK' IT.
+           IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES AND
+              LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
+              SET DEPT-FILTER-PASSED TO TRUE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    OTHERWISE, WE CHECK THE DEPARTMENT FILTERS.
+           MOVE EMP-DEPARTMENT-ID TO WS-DEPT-KEY.
+
+      *    FIRST, THE 'POSITIVE' DEPARTMENT INCLUSION FILTERS.
+           IF LST-INCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
+      *       NO 'INCLUDE' FILTERS, SO *ALL* DEPARTMENTS ARE FINE.
+              SET DEPT-FILTER-PASSED TO TRUE
+           ELSE
+      *       WE NEED TO MATCH A 'WHITE-LISTED' DEPARTMENT TO PASS.
+              PERFORM VARYING LST-IN-DEPT-INDEX
+                 FROM 1 BY 1
+                 UNTIL LST-IN-DEPT-INDEX IS GREATER THAN 4
+                 OR DEPT-FILTER-PASSED
+                      IF LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX)
+                         IS NOT EQUAL TO SPACES THEN
+
+                         INITIALIZE WS-INSP-COUNTER
+
+                         INSPECT WS-DEPT-KEY
+                            TALLYING WS-INSP-COUNTER
+                            FOR ALL FUNCTION TRIM
+                            (LST-INCL-DEPT-ID(LST-IN-DEPT-INDEX))
+
+                         IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+      *                     SUCCESS! IT PASSES THE FILTER.
+                            SET DEPT-FILTER-PASSED TO TRUE
+                         END-IF
+                      END-IF
+              END-PERFORM
+           END-IF.
+
+      *    SECOND, THE 'NEGATIVE' DEPARTMENT EXCLUSION FILTERS.
+           IF LST-EXCLUDE-DEPT-FILTERS IS EQUAL TO SPACES THEN
+      *       NO 'EXCLUDE' FILTERS, SO *NO* DEPARTMENTS ARE OFF.
+      *       WE MANTAIN THE STATUS QUO (AS IN THE 'INCLUDE' OUTCOME)
+              CONTINUE
+           ELSE
+      *       WE NEED TO AVOID ALL 'BLACK-LISTED' DEPARTMENTS TO PASS.
+              PERFORM VARYING LST-EX-DEPT-INDEX
+                 FROM 1 BY 1
+                 UNTIL LST-EX-DEPT-INDEX IS GREATER THAN 4
+                 OR DEPT-FILTER-FAILED
+                      IF LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX)
+                         IS NOT EQUAL TO SPACES THEN
+
+                         INITIALIZE WS-INSP-COUNTER
+
+                         INSPECT WS-DEPT-KEY
+                            TALLYING WS-INSP-COUNTER
+                            FOR ALL FUNCTION TRIM
+                            (LST-EXCL-DEPT-ID(LST-EX-DEPT-INDEX))
+
+                         IF WS-INSP-COUNTER IS GREATER THAN ZERO THEN
+      *                     BLACKLISTED! IT DOESN'T MAKE THE CUT.
+                            SET DEPT-FILTER-FAILED TO TRUE
+                         END-IF
+                      END-IF
+              END-PERFORM
+           END-IF.
+
+       3500-APPLY-DATE-FILTERS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3500-APPLY-DATE-FILTERS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF NO DATE FILTERS WERE SET, WE JUST 'OK' IT AND RETURN
+           IF LST-EMPLOYMENT-DATE-FILTERS IS EQUAL TO SPACES THEN
+              SET DATE-FILTER-PASSED TO TRUE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    OTHERWISE, WE CHECK THE DATE FILTERS.
+
+      *    IF BOTH FILTERS WERE SET, WE CHECK THE EMPLOYEE START DATE
+      *    AGAINST THE FILTERS.
+           IF LST-EMPL-DATE-AFTER IS NOT EQUAL TO SPACES AND
+              LST-EMPL-DATE-BEFORE IS NOT EQUAL TO SPACES THEN
+              IF EMP-START-DATE IS GREATER THAN LST-EMPL-DATE-AFTER AND
+                 EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
+      *          SUCCESS!
+                 SET DATE-FILTER-PASSED TO TRUE
+                 EXIT PARAGRAPH
+              END-IF
+           END-IF.
+
+      *    IF ONLY DATE-BEFORE FILTER WAS SET.
+           IF LST-EMPL-DATE-AFTER IS EQUAL TO SPACES THEN
+              IF EMP-START-DATE IS LESS THAN LST-EMPL-DATE-BEFORE THEN
+      *          SUCCESS!
+                 SET DATE-FILTER-PASSED TO TRUE
+                 EXIT PARAGRAPH
+              END-IF
+           END-IF.
+
+      *    IF ONLY DATE-AFTER FILTER WAS SET.
+           IF LST-EMPL-DATE-BEFORE IS EQUAL TO SPACES THEN
+              IF EMP-START-DATE IS GREATER THAN LST-EMPL-DATE-AFTER THEN
+      *          SUCCESS!
+                 SET DATE-FILTER-PASSED TO TRUE
+                 EXIT PARAGRAPH
+              END-IF
+           END-IF.
+
+       3700-CHECK-DELETION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3700-CHECK-DELETION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    FILTER 'LOGICALLY DELETED' RECORDS FROM STANDARD USERS, BUT
+      *    ALLOW MANAGERS AND ADMINISTRATORS TO SEE THEM.
+
+           IF UPD-CT-MANAGER OR UPD-CT-ADMINISTRATOR THEN
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-DELETED THEN
+              SET FILTERS-FAILED TO TRUE
+           END-IF.
 
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.
