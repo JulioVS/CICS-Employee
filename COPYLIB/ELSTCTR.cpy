@@ -9,7 +9,6 @@
              88 LST-CT-MANAGER                     VALUE 'MGR'.
              88 LST-CT-ADMINISTRATOR               VALUE 'ADM'.
              88 LST-CT-NOT-SET                     VALUE SPACES.
-          05 LST-PROGRAM-NAME           PIC X(8).
           05 LST-CURRENT-PAGE-NUMBER    PIC 9(6).
           05 LST-SELECT-LINE-NUMBER     PIC 9(2).
       *
@@ -17,6 +16,8 @@
              88 LST-TOP-OF-FILE                    VALUE 'T'.
              88 LST-END-OF-FILE                    VALUE 'E'.
              88 LST-NOT-SET                        VALUE SPACES.
+      *
+          05 LST-SAVING-PROGRAM         PIC X(8).
       *
       *   LIST EMPLOYEES MAP DETAIL SECTION.
       *

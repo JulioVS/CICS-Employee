@@ -145,6 +145,15 @@
               PERFORM 1600-LOOKUP-USER-ID
            END-IF.
 
+      *    CHECK IF WE ARE COMING FROM THE 'EMPLOYEE DETAILS' VIEW AND
+      *    IF SO, RETRIEVE THE SELECTED RECORD FOR DISPLAY.
+           IF EIBTRNID IS EQUAL TO APP-VIEW-TRANSACTION-ID THEN
+              PERFORM 3000-GET-VIEW-CONTAINER
+              IF UPD-EMPLOYEE-RECORD IS NOT EQUAL TO SPACES THEN
+                 EXIT PARAGRAPH
+              END-IF
+           END-IF.
+
       *    IF NOT, JUST READ THE FIRST EMPLOYEE RECORD.
            PERFORM 1300-READ-EMPLOYEE-BY-KEY.
 
@@ -168,7 +177,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    SET INITIAL VALUES FOR LIST CONTAINER.
+      *    SET INITIAL VALUES FOR 'UPDATE' CONTAINER.
            MOVE 'ANONYMUS' TO UPD-USER-ID.
            MOVE 'STD' TO UPD-USER-CATEGORY.
            MOVE '1' TO UPD-SELECT-KEY-TYPE.
@@ -503,6 +512,7 @@
            WHEN DFHENTER
                 PERFORM 2100-FIND-BY-EMPLOYEE-KEY
            WHEN DFHPF3
+           WHEN DFHPF5
            WHEN DFHPF12
                 PERFORM 2200-TRANSFER-BACK-TO-CALLER
            WHEN DFHPF7
@@ -691,6 +701,63 @@
 
       *    RESET 'FILE BOUNDARY' FLAG.
            INITIALIZE UPD-FILE-FLAG.
+
+      *-----------------------------------------------------------------
+       VIEW-FILTERS SECTION.
+      *-----------------------------------------------------------------
+
+       3000-GET-VIEW-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3000-GET-VIEW-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS GET
+                CONTAINER(APP-VIEW-CONTAINER-NAME)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                INTO (EMPLOYEE-DETAILS-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(CHANNELERR)
+           WHEN DFHRESP(CONTAINERERR)
+                MOVE 'No Details Container Found!' TO WS-MESSAGE
+                INITIALIZE UPD-EMPLOYEE-RECORD
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Details Container Found' TO WS-MESSAGE
+
+      *         GET RECORD AND FILTERS FROM 'DETAILS' CONTAINER.                
+                MOVE DET-EMPLOYEE-RECORD TO UPD-EMPLOYEE-RECORD
+                MOVE DET-SELECT-KEY-TYPE TO UPD-SELECT-KEY-TYPE
+                MOVE DET-FILTERS TO UPD-FILTERS
+
+      *         ALSO UPDATE CONTAINER WITH THIS PROGRAM'S NAME.
+                MOVE APP-UPDATE-PROGRAM-NAME TO DET-SAVING-PROGRAM
+                PERFORM 3100-PUT-VIEW-CONTAINER
+           WHEN OTHER
+                MOVE 'Error Retrieving Details Container!' TO WS-MESSAGE
+           END-EVALUATE.
+
+       3100-PUT-VIEW-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '3100-PUT-VIEW-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS PUT
+                CONTAINER(APP-VIEW-CONTAINER-NAME)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                FROM (EMPLOYEE-DETAILS-CONTAINER)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Error Putting Details Container!' TO WS-MESSAGE
+           END-EVALUATE.
 
       *-----------------------------------------------------------------
        ACTIVITY-MONITOR SECTION.

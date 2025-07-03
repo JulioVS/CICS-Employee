@@ -31,56 +31,62 @@
       *   DEFINE MY WORKING VARIABLES.
       ******************************************************************
        01 WS-WORKING-VARS.
-          05 WS-CICS-RESPONSE       PIC S9(8) USAGE IS BINARY.
-          05 WS-EMPLOYEE-ID         PIC X(8) JUSTIFIED RIGHT.
-          05 WS-INSP-COUNTER        PIC S9(2) USAGE IS BINARY.
-          05 WS-DEPT-KEY            PIC X(8).
+          05 WS-CICS-RESPONSE         PIC S9(8) USAGE IS BINARY.
+          05 WS-EMPLOYEE-ID           PIC X(8) JUSTIFIED RIGHT.
+          05 WS-INSP-COUNTER          PIC S9(2) USAGE IS BINARY.
+          05 WS-DEPT-KEY              PIC X(8).
       *
        01 WS-DISPLAY-MESSAGES.
-          05 WS-MESSAGE             PIC X(79) VALUE SPACES.
-          05 WS-PF7-LABEL           PIC X(9)  VALUE 'PF7 Prev '.
-          05 WS-PF8-LABEL           PIC X(9)  VALUE 'PF8 Next '.
+          05 WS-MESSAGE               PIC X(79)  VALUE SPACES.
+          05 WS-PF7-LABEL             PIC X(9)   VALUE 'PF7 Prev '.
+          05 WS-PF8-LABEL             PIC X(9)   VALUE 'PF8 Next '.
       *
        01 WS-DATE-FORMATTING.
           05 WS-INPUT-DATE.
-             10 WS-YYYY             PIC X(4)  VALUE SPACES.
-             10 WS-MM               PIC X(2)  VALUE SPACES.
-             10 WS-DD               PIC X(2)  VALUE SPACES.
+             10 WS-YYYY               PIC X(4)   VALUE SPACES.
+             10 WS-MM                 PIC X(2)   VALUE SPACES.
+             10 WS-DD                 PIC X(2)   VALUE SPACES.
           05 WS-OUTPUT-DATE.
-             10 WS-DD               PIC X(2)  VALUE SPACES.
-             10 FILLER              PIC X(1)  VALUE '-'.
-             10 WS-MM               PIC X(2)  VALUE SPACES.
-             10 FILLER              PIC X(1)  VALUE '-'.
-             10 WS-YYYY             PIC X(4)  VALUE SPACES.
+             10 WS-DD                 PIC X(2)   VALUE SPACES.
+             10 FILLER                PIC X(1)   VALUE '-'.
+             10 WS-MM                 PIC X(2)   VALUE SPACES.
+             10 FILLER                PIC X(1)   VALUE '-'.
+             10 WS-YYYY               PIC X(4)   VALUE SPACES.
       *
        01 WS-FILTER-FLAGS.
-          03 WS-FILTERS-CHECK       PIC X(1)  VALUE SPACES.
-             88 FILTERS-PASSED                VALUE 'Y'.
-             88 FILTERS-FAILED                VALUE 'N'.
-          03 WS-KEY-FILTER-CHECK    PIC X(1)  VALUE SPACES.
-             88 KEY-FILTER-PASSED             VALUE 'Y'.
-          03 WS-DEPT-FILTER-CHECK   PIC X(1)  VALUE SPACES.
-             88 DEPT-FILTER-PASSED            VALUE 'Y'.
-             88 DEPT-FILTER-FAILED            VALUE 'N'.
-          03 WS-DATE-FILTER-CHECK   PIC X(1)  VALUE SPACES.
-             88 DATE-FILTER-PASSED            VALUE 'Y'.
+          03 WS-FILTERS-CHECK         PIC X(1)   VALUE SPACES.
+             88 FILTERS-PASSED                   VALUE 'Y'.
+             88 FILTERS-FAILED                   VALUE 'N'.
+          03 WS-KEY-FILTER-CHECK      PIC X(1)   VALUE SPACES.
+             88 KEY-FILTER-PASSED                VALUE 'Y'.
+          03 WS-DEPT-FILTER-CHECK     PIC X(1)   VALUE SPACES.
+             88 DEPT-FILTER-PASSED               VALUE 'Y'.
+             88 DEPT-FILTER-FAILED               VALUE 'N'.
+          03 WS-DATE-FILTER-CHECK     PIC X(1)   VALUE SPACES.
+             88 DATE-FILTER-PASSED               VALUE 'Y'.
       *
-       01 WS-DEBUG-AID              PIC X(45) VALUE SPACES.
+       01 WS-RE-ENTRY-AID.
+          05 WS-RE-ENTRY-FILTERS      PIC X(112) VALUE SPACES.
+          05 WS-RE-ENTRY-RECORD       PIC X(251) VALUE SPACES.
+          05 WS-RE-ENTRY-FLAG         PIC X(1)   VALUE SPACES.
+             88 RE-ENTRY-FROM-UPDATE             VALUE 'Y'.
+      *
+       01 WS-DEBUG-AID                PIC X(45)  VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
-          05 FILLER                 PIC X(5)  VALUE '<MSG:'.
-          05 WS-DEBUG-TEXT          PIC X(45) VALUE SPACES.
-          05 FILLER                 PIC X(1)  VALUE '>'.
-          05 FILLER                 PIC X(5)  VALUE '<EB1='.
-          05 WS-DEBUG-EIBRESP       PIC 9(8)  VALUE ZEROES.
-          05 FILLER                 PIC X(1)  VALUE '>'.
-          05 FILLER                 PIC X(5)  VALUE '<EB2='.
-          05 WS-DEBUG-EIBRESP2      PIC 9(8)  VALUE ZEROES.
-          05 FILLER                 PIC X(1)  VALUE '>'.
+          05 FILLER                   PIC X(5)   VALUE '<MSG:'.
+          05 WS-DEBUG-TEXT            PIC X(45)  VALUE SPACES.
+          05 FILLER                   PIC X(1)   VALUE '>'.
+          05 FILLER                   PIC X(5)   VALUE '<EB1='.
+          05 WS-DEBUG-EIBRESP         PIC 9(8)   VALUE ZEROES.
+          05 FILLER                   PIC X(1)   VALUE '>'.
+          05 FILLER                   PIC X(5)   VALUE '<EB2='.
+          05 WS-DEBUG-EIBRESP2        PIC 9(8)   VALUE ZEROES.
+          05 FILLER                   PIC X(1)   VALUE '>'.
       *
-       01 WS-DEBUG-MODE             PIC X(1)  VALUE 'N'.
-          88 I-AM-DEBUGGING                   VALUE 'Y'.
-          88 NOT-DEBUGGING                    VALUE 'N'.
+       01 WS-DEBUG-MODE               PIC X(1)   VALUE 'N'.
+          88 I-AM-DEBUGGING                      VALUE 'Y'.
+          88 NOT-DEBUGGING                       VALUE 'N'.
 
        PROCEDURE DIVISION.
       *-----------------------------------------------------------------
@@ -113,7 +119,15 @@
                 PERFORM 1000-FIRST-INTERACTION
            WHEN DFHRESP(NORMAL)
       *         NEXT INTERACTIONS -> CONTAINER FOUND (CONTINUE)
-                PERFORM 2000-PROCESS-USER-INPUT
+                IF DET-SAVING-PROGRAM EQUAL TO APP-VIEW-PROGRAM-NAME
+                   PERFORM 2000-PROCESS-USER-INPUT
+                   EXIT
+                END-IF
+      *         IF BOUNCING BACK FROM 'UPDATE', RESTART CONVERSATION
+                IF DET-SAVING-PROGRAM EQUAL TO APP-UPDATE-PROGRAM-NAME
+                   PERFORM 5000-RE-ENTRY-FROM-UPDATE
+                END-IF
+
            WHEN OTHER
                 MOVE 'Error Retrieving View Container!' TO WS-MESSAGE
            END-EVALUATE.
@@ -180,11 +194,18 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    SET INITIAL VALUES FOR LIST CONTAINER.
+      *    SET INITIAL VALUES FOR 'DETAILS' CONTAINER.
            MOVE 'ANONYMUS' TO DET-USER-ID.
            MOVE 'STD' TO DET-USER-CATEGORY.
            MOVE '1' TO DET-SELECT-KEY-TYPE.
            MOVE LOW-VALUE TO DET-SELECT-KEY-VALUE.
+           MOVE APP-VIEW-PROGRAM-NAME TO DET-SAVING-PROGRAM.
+
+      *    IF BOUNCING BACK FROM 'UPDATE DETAiLS' PAGE, RESTORE DATA.
+           IF RE-ENTRY-FROM-UPDATE THEN
+              MOVE WS-RE-ENTRY-FILTERS TO DET-FILTERS
+              MOVE WS-RE-ENTRY-RECORD TO DET-EMPLOYEE-RECORD
+           END-IF.
 
       *    GET CALLING PROGRAM NAME FROM ITS TRANSACTION ID WHILE IT'S
       *    STILL AVAILABLE IN THE EXECUTION INTERFACE BLOCK.
@@ -228,7 +249,7 @@
               SET DET-END-OF-FILE TO TRUE
            END-IF.
       *    >>> -------------- <<<
-Í
+
            PERFORM 1320-READ-NEXT-RECORD
               UNTIL FILTERS-PASSED OR DET-END-OF-FILE.
 
@@ -522,6 +543,8 @@
            WHEN DFHPF3
            WHEN DFHPF12
                 PERFORM 2200-TRANSFER-BACK-TO-CALLER
+           WHEN DFHPF5 
+                PERFORM 2600-TRANSFER-TO-UPDATE-PAGE 
            WHEN DFHPF7
                 PERFORM 2300-PREV-BY-EMPLOYEE-KEY
            WHEN DFHPF8
@@ -830,13 +853,33 @@
 
            PERFORM 9200-RETURN-TO-CICS.
 
-      *2600-CANCEL-ACTION.
-      **    >>> DEBUGGING ONLY <<<
-      *    MOVE '2600-CANCEL-ACTION' TO WS-DEBUG-AID.
-      *    PERFORM 9300-DEBUG-AID.
-      **    >>> -------------- <<<
+       2600-TRANSFER-TO-UPDATE-PAGE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2600-TRANSFER-TO-UPDATE-PAGE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
-      *    PERFORM 9200-RETURN-TO-CICS.
+           PERFORM 9150-PUT-VIEW-CONTAINER.
+
+           EXEC CICS XCTL
+                PROGRAM(APP-UPDATE-PROGRAM-NAME)
+                CHANNEL(APP-VIEW-CHANNEL-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Transferring To Update Page' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(PGMIDERR)
+                MOVE 'Update Program Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Transferring To Update Page!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
 
        2700-SWITCH-DISPLAY-ORDER.
       *    >>> DEBUGGING ONLY <<<
@@ -882,13 +925,15 @@
       *         IF SUCCESSFULLY FOUND, WE RETRIEVE THE EMPLOYEE RECORD
       *         FOR THE CURRENTLY SELECTED LINE, AS WELL AS THE CURRENT
       *         DISPLAY ORDER AND FILTER SET FROM THE LIST CONTAINER.
+                MOVE 'List Container Found' TO WS-MESSAGE
+
                 MOVE LST-CURRENT-RECORD(LST-SELECT-LINE-NUMBER)
                    TO DET-EMPLOYEE-RECORD
                 MOVE LST-SELECT-KEY-TYPE TO DET-SELECT-KEY-TYPE
                 MOVE LST-FILTERS TO DET-FILTERS
 
       *         ALSO UPDATE LIST CONTAINER WITH THIS PROGRAM'S NAME.
-                MOVE APP-VIEW-PROGRAM-NAME TO LST-PROGRAM-NAME
+                MOVE APP-VIEW-PROGRAM-NAME TO LST-SAVING-PROGRAM
                 PERFORM 3100-PUT-LIST-CONTAINER
            WHEN OTHER
                 MOVE 'Error Retrieving List Container!' TO WS-MESSAGE
@@ -1219,6 +1264,26 @@
            WHEN OTHER
                 MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
            END-EVALUATE.
+
+      *-----------------------------------------------------------------
+       RE-ENTRY SECTION.
+      *-----------------------------------------------------------------
+
+       5000-RE-ENTRY-FROM-UPDATE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5000-RE-ENTRY-FROM-UPDATE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    SAVE FILTERS SENT BACK FROM THE VIEW DETAILS SCREEN AND SET 
+      *    THE RE-ENTRY FLAG SO THEY WILL BE RECALLED ON THE NEXT 
+      *    RENDERING OF THE FILTERS PAGE.
+           MOVE DET-FILTERS TO WS-RE-ENTRY-FILTERS.
+           MOVE DET-EMPLOYEE-RECORD TO WS-RE-ENTRY-RECORD.
+           SET RE-ENTRY-FROM-UPDATE TO TRUE.
+
+      *    OTHERWISE, WE JUST RESTART THE LISTING CONVERSATION.
+           PERFORM 1000-FIRST-INTERACTION.
 
       *-----------------------------------------------------------------
        EXIT-ROUTE SECTION.

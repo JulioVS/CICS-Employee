@@ -29,4 +29,4 @@
              88 UPD-END-OF-FILE                    VALUE 'E'.
              88 UPD-NOT-SET                        VALUE SPACES.
       *
-          05 UPD-CALLING-PROGRAM        PIC X(8)   VALUE SPACES.
+          05 UPD-CALLING-PROGRAM        PIC X(8).

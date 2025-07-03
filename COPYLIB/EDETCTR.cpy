@@ -28,4 +28,5 @@
              88 DET-END-OF-FILE                    VALUE 'E'.
              88 DET-NOT-SET                        VALUE SPACES.
       *
-          05 DET-CALLING-PROGRAM        PIC X(8)   VALUE SPACES.
+          05 DET-CALLING-PROGRAM        PIC X(8).
+          05 DET-SAVING-PROGRAM         PIC X(8).
