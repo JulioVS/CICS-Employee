@@ -147,6 +147,13 @@
               PERFORM 1600-LOOKUP-USER-ID
            END-IF.
 
+      *    IF THE LOGGED-IN USER IS A MANAGER, FIND HIS DEPARTMENT ID.
+           IF UPD-CT-MANAGER AND
+              UPD-USER-EMP-ID IS NOT EQUAL TO ZERO THEN
+
+              PERFORM 1700-GET-DEPARTMENT-ID                 
+           END-IF.
+
       *    CHECK IF WE ARE COMING FROM THE 'EMPLOYEE DETAILS' VIEW AND
       *    IF SO, RETRIEVE THE SELECTED RECORD FOR DISPLAY.
            IF EIBTRNID IS EQUAL TO APP-VIEW-TRANSACTION-ID THEN
@@ -483,6 +490,34 @@
                 MOVE "User Not Found!" TO WS-MESSAGE
            WHEN OTHER
                 MOVE "Error Reading Users File!" TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       1700-GET-DEPARTMENT-ID.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1700-GET-DEPARTMENT-ID' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE UPD-USER-EMP-ID TO EMP-EMPLOYEE-ID.
+
+      *    READ THE EMPLOYEE MASTER FILE TO GET THE USER'S DEPT ID.
+           EXEC CICS READ
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                INTO (EMPLOYEE-MASTER-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+      *         SAVE DEPARTMENT ID INTO APP CONTAINER.
+                MOVE EMP-DEPARTMENT-ID TO UPD-USER-DEPT-ID
+                INITIALIZE EMPLOYEE-MASTER-RECORD 
+           WHEN DFHRESP(NOTFND)
+                MOVE "Employee Not Found!" TO WS-MESSAGE
+           WHEN OTHER
+                MOVE "Error Reading Employee File!" TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
@@ -1093,6 +1128,7 @@
       *      - RETURN TO CICS.
 
            PERFORM 9100-POPULATE-MAP.
+           PERFORM 9130-SET-PROTECTED-FIELDS.
            PERFORM 9150-PUT-UPDATE-CONTAINER.
 
            EXEC CICS SEND
@@ -1235,6 +1271,70 @@
            END-IF.
            IF UPD-END-OF-FILE THEN
               MOVE SPACES TO HLPPF8O
+           END-IF.
+
+       9130-SET-PROTECTED-FIELDS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '9130-SET-PROTECTED-FIELDS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    PROTECT FIELDS THAT ARE NOT ALLOWED TO BE MODIFIED, 
+      *    DEPENDING ON THE LOGGED-IN USER TYPE.
+
+      *    A STANDARD USER CAN'T MODIFY THESE FIELDS.
+           IF UPD-CT-STANDARD THEN
+              MOVE DFHBMPRO TO JBTITLA
+                               DEPTIDA
+                               STDATEA
+                               ENDATEA
+                               APPRDTO
+                               APPRRSO
+                               DELFLGA
+                               DELDSCA
+
+      *       A STANDARD USER CAN NEITHER MODIFY THESE FIELDS, UNLESS 
+      *       HE HIMSELF IS THE EMPLOYEE BEING UPDATED.
+              IF EMP-EMPLOYEE-ID IS NOT EQUAL TO UPD-USER-EMP-ID THEN
+                 MOVE DFHBMPRO TO PRNAMEA
+                                  FLNAMEA
+                                  HONORA
+                                  SHNAMEA
+              END-IF
+           END-IF.
+
+      *    A MANAGER CAN'T MODIFY THESE FIELDS.
+           IF UPD-CT-MANAGER THEN
+              MOVE DFHBMPRO TO PRNAMEA
+                               FLNAMEA
+                               HONORA
+                               SHNAMEA
+
+      *       A MANAGER CAN NEITHER MODIFY THESE FIELDS, UNLESS THE
+      *       THE EMPLOYEE BEING UPDATED BELONGS TO HIS DEPARTMENT.
+              IF EMP-DEPARTMENT-ID IS NOT EQUAL TO UPD-USER-DEPT-ID
+                 MOVE DFHBMPRO TO JBTITLA
+                                  DEPTIDA
+                                  STDATEA
+                                  ENDATEA
+                                  APPRDTO
+                                  APPRRSO
+                                  DELFLGA
+                                  DELDSCA
+              END-IF
+           END-IF.
+
+      *    AN ADMINISTRATOR CAN'T MODIFY THESE FIELDS.
+           IF UPD-CT-ADMINISTRATOR THEN
+              MOVE DFHBMPRO TO FLNAMEA
+                               HONORA
+                               SHNAMEA
+                               JBTITLA
+                               DEPTIDA
+                               STDATEA
+                               ENDATEA
+                               APPRDTO
+                               APPRRSO
            END-IF.
 
        9150-PUT-UPDATE-CONTAINER.

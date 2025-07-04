@@ -13,6 +13,7 @@
              88 UPD-CT-NOT-SET                     VALUE SPACES.
       *
           05 UPD-USER-EMP-ID            PIC 9(8).
+          05 UPD-USER-DEPT-ID           PIC 9(8).
       *
           05 UPD-SELECT-KEY.
              10 UPD-SELECT-KEY-TYPE     PIC X(1)   VALUE SPACES.

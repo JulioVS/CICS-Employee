@@ -97,7 +97,7 @@ MESS     DFHMDF POS=(23,1),LENGTH=79,ATTRB=(ASKIP,BRT)
 *  AID KEY SECTION.
 *
          DFHMDF POS=(24,1),LENGTH=18,ATTRB=(ASKIP,NORM),               X
-               INITIAL='PF3 Save and Exit'
+               INITIAL='PF3 Save PF5 Edit'
 HLPPF7   DFHMDF POS=(24,20),LENGTH=9,ATTRB=(ASKIP,NORM),               X
                INITIAL='PF7 Prev '
 HLPPF8   DFHMDF POS=(24,30),LENGTH=9,ATTRB=(ASKIP,NORM),               X
