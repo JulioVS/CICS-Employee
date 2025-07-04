@@ -1282,19 +1282,22 @@
       *    PROTECT FIELDS THAT ARE NOT ALLOWED TO BE MODIFIED, 
       *    DEPENDING ON THE LOGGED-IN USER TYPE.
 
-      *    A STANDARD USER CAN'T MODIFY THESE FIELDS.
+      *    >>> -------------- <<<
+      *    STANDARD RESTRICTIONS.
+      *    >>> -------------- <<<
+
            IF UPD-CT-STANDARD THEN
+      *       FIELDS NEVER ALLOWED TO UPDATE.
               MOVE DFHBMPRO TO JBTITLA
                                DEPTIDA
                                STDATEA
                                ENDATEA
-                               APPRDTO
-                               APPRRSO
+                               APPRDTA
+                               APPRRSA
                                DELFLGA
                                DELDSCA
 
-      *       A STANDARD USER CAN NEITHER MODIFY THESE FIELDS, UNLESS 
-      *       HE HIMSELF IS THE EMPLOYEE BEING UPDATED.
+      *       ALLOWED ONLY IF THE EMPLOYEE BEING UPDATED IS HIMSELF.
               IF EMP-EMPLOYEE-ID IS NOT EQUAL TO UPD-USER-EMP-ID THEN
                  MOVE DFHBMPRO TO PRNAMEA
                                   FLNAMEA
@@ -1303,38 +1306,51 @@
               END-IF
            END-IF.
 
-      *    A MANAGER CAN'T MODIFY THESE FIELDS.
-           IF UPD-CT-MANAGER THEN
-              MOVE DFHBMPRO TO PRNAMEA
-                               FLNAMEA
-                               HONORA
-                               SHNAMEA
+      *    >>> ------------- <<<
+      *    MANAGER RESTRICTIONS.
+      *    >>> ------------- <<<
 
-      *       A MANAGER CAN NEITHER MODIFY THESE FIELDS, UNLESS THE
-      *       THE EMPLOYEE BEING UPDATED BELONGS TO HIS DEPARTMENT.
+           IF UPD-CT-MANAGER THEN
+      *       ALLOWED ONLY IF UPDATING EMPLOYEES IN HIS OWN DEPARTMENT.
               IF EMP-DEPARTMENT-ID IS NOT EQUAL TO UPD-USER-DEPT-ID
                  MOVE DFHBMPRO TO JBTITLA
                                   DEPTIDA
                                   STDATEA
                                   ENDATEA
-                                  APPRDTO
-                                  APPRRSO
+                                  APPRDTA
+                                  APPRRSA
                                   DELFLGA
                                   DELDSCA
               END-IF
+
+      *       ALLOWED ONLY IF THE EMPLOYEE BEING UPDATED IS HIMSELF.
+              IF EMP-EMPLOYEE-ID IS NOT EQUAL TO UPD-USER-EMP-ID THEN
+                 MOVE DFHBMPRO TO PRNAMEA
+                                  FLNAMEA
+                                  HONORA
+                                  SHNAMEA
+              END-IF
            END-IF.
 
-      *    AN ADMINISTRATOR CAN'T MODIFY THESE FIELDS.
+      *    >>> ------------------- <<<
+      *    ADMINISTRATOR RESTRICTIONS.
+      *    >>> ------------------- <<<
+
            IF UPD-CT-ADMINISTRATOR THEN
-              MOVE DFHBMPRO TO FLNAMEA
-                               HONORA
-                               SHNAMEA
-                               JBTITLA
+      *       FIELDS NEVER ALLOWED TO UPDATE.
+              MOVE DFHBMPRO TO JBTITLA
                                DEPTIDA
                                STDATEA
                                ENDATEA
-                               APPRDTO
-                               APPRRSO
+                               APPRDTA
+                               APPRRSA
+
+      *       ALLOWED ONLY IF THE EMPLOYEE BEING UPDATED IS HIMSELF.
+              IF EMP-EMPLOYEE-ID IS NOT EQUAL TO UPD-USER-EMP-ID THEN
+                 MOVE DFHBMPRO TO FLNAMEA
+                                  HONORA
+                                  SHNAMEA
+              END-IF
            END-IF.
 
        9150-PUT-UPDATE-CONTAINER.
