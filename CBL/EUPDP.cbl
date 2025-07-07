@@ -206,11 +206,7 @@
 
        1300-READ-EMPLOYEE-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '1300-READ-EMPLOYEE-BY-KEY (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '1300-READ-EMPLOYEE-BY-KEY (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '1300-READ-EMPLOYEE-BY-KEY' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -241,11 +237,7 @@
 
        1310-START-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '1310-START-BROWSING (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '1310-START-BROWSING (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '1310-START-BROWSING' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -265,7 +257,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Browsing Employee Master File' TO WS-MESSAGE
+                CONTINUE 
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Records Found!' TO WS-MESSAGE
                 SET UPD-END-OF-FILE TO TRUE
@@ -282,11 +274,7 @@
 
        1320-READ-NEXT-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '1320-READ-NEXT-RECORD (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '1320-READ-NEXT-RECORD (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '1320-READ-NEXT-RECORD' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -308,7 +296,6 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
@@ -324,11 +311,7 @@
 
        1330-END-BROWSING.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '1330-END-BROWSING (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '1330-END-BROWSING (NM)' TO WS-DEBUG-AID
-           END-IF
+           MOVE '1330-END-BROWSING' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -346,7 +329,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'End of Browsing Master File' TO WS-MESSAGE
+                CONTINUE
            WHEN OTHER
                 MOVE 'Error Ending Browse!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -354,11 +337,7 @@
 
        1400-READ-BACKWARDS-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '1400-READ-BACKWARDS-BY-KEY (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '1400-READ-BACKWARDS-BY-KEY (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '1400-READ-BACKWARDS-BY-KEY' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -387,11 +366,7 @@
 
        1410-READ-PREV-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '1410-READ-PREV-RECORD (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '1410-READ-PREV-RECORD (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '1410-READ-PREV-RECORD' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -413,7 +388,6 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
@@ -429,11 +403,7 @@
 
        1500-FIND-RECORD-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '1500-FIND-RECORD-BY-KEY (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '1500-FIND-RECORD-BY-KEY (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '1500-FIND-RECORD-BY-KEY' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -455,7 +425,6 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Reading Employee Master File' TO WS-MESSAGE
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
@@ -484,7 +453,6 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE "User Found!" TO WS-MESSAGE
                 MOVE REG-EMPLOYEE-ID TO UPD-USER-EMP-ID
            WHEN DFHRESP(NOTFND)
                 MOVE "User Not Found!" TO WS-MESSAGE
@@ -531,8 +499,6 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'So Far, So Good...' TO WS-MESSAGE.
-
            EXEC CICS RECEIVE
                 MAP(APP-UPDATE-MAP-NAME)
                 MAPSET(APP-UPDATE-MAPSET-NAME)
@@ -563,6 +529,11 @@
            END-EVALUATE.
 
        2100-FIND-BY-EMPLOYEE-KEY.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2100-FIND-BY-EMPLOYEE-KEY' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
       *    IF EMPLOYEE ID WAS ENTERED, THEN FIND BY ID.
            IF EMPLIDI IS NOT EQUAL TO LOW-VALUES AND
               EMPLIDI IS NOT EQUAL TO SPACES THEN
@@ -576,15 +547,6 @@
 
               MOVE EMPLIDI TO EMP-EMPLOYEE-ID
            END-IF.
-
-      *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '2100-FIND-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '2100-FIND-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
-           END-IF.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
 
            PERFORM 1500-FIND-RECORD-BY-KEY.
 
@@ -632,7 +594,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Transferring Back To Caller' TO WS-MESSAGE
+                CONTINUE
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalid Request!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
@@ -667,11 +629,7 @@
 
        2300-PREV-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '2300-PREV-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '2300-PREV-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '2300-PREV-BY-EMPLOYEE-KEY' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -694,11 +652,7 @@
 
        2400-NEXT-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (ID)' TO WS-DEBUG-AID
-           ELSE
-              MOVE '2400-NEXT-BY-EMPLOYEE-KEY (NM)' TO WS-DEBUG-AID
-           END-IF.
+           MOVE '2400-NEXT-BY-EMPLOYEE-KEY' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -772,8 +726,6 @@
                 MOVE 'No Details Container Found!' TO WS-MESSAGE
                 INITIALIZE UPD-EMPLOYEE-RECORD
            WHEN DFHRESP(NORMAL)
-                MOVE 'Details Container Found' TO WS-MESSAGE
-
       *         GET RECORD AND FILTERS FROM 'DETAILS' CONTAINER.                
                 MOVE DET-EMPLOYEE-RECORD TO UPD-EMPLOYEE-RECORD
                 MOVE DET-SELECT-KEY-TYPE TO UPD-SELECT-KEY-TYPE
@@ -1055,7 +1007,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Activity Monitor Data Found' TO WS-MESSAGE
+                CONTINUE
            WHEN DFHRESP(CHANNELERR)
            WHEN DFHRESP(CONTAINERERR)
                 MOVE 'No Activity Monitor Data Found!' TO WS-MESSAGE
@@ -1240,7 +1192,8 @@
 
       *    USER HIMSELF -> SPECIAL GREETING!
            IF UPD-USER-EMP-ID IS GREATER THAN ZERO AND
-              UPD-USER-EMP-ID IS EQUAL TO EMP-EMPLOYEE-ID THEN
+              UPD-USER-EMP-ID IS EQUAL TO EMP-EMPLOYEE-ID AND
+              WS-MESSAGE IS EQUAL TO SPACES THEN
               MOVE 'Hey! This Is Actually You!' TO WS-MESSAGE
            END-IF.
 
@@ -1263,7 +1216,7 @@
       *    TO 'ON' TO AVOID THE 'AEI9' ABEND THAT HAPPENS DUE TO A
       *    'MAPFAIL' CONDITION WHEN WE LATER RECEIVE THE MAP WITH JUST
       *    AN AID KEY PRESS AND NO MODIFIED DATA ON IT.
-           MOVE DFHBMFSE TO EMPLIDA.
+           MOVE DFHBMFSE TO TRANIDA.
 
       *    ALL USERS -> HIDE NAVIGATION KEY LABELS IF NEEDED.
            IF UPD-TOP-OF-FILE THEN

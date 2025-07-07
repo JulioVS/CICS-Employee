@@ -231,8 +231,6 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'So Far, So Good...' TO WS-MESSAGE.
-
            EXEC CICS RECEIVE
                 MAP(APP-ADD-MAP-NAME)
                 MAPSET(APP-ADD-MAPSET-NAME)
