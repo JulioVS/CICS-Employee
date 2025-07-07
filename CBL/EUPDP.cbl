@@ -65,6 +65,9 @@
           03 WS-DATE-FILTER-CHECK   PIC X(1)  VALUE SPACES.
              88 DATE-FILTER-PASSED            VALUE 'Y'.
       *
+       01 WS-USER-ID-FLAG           PIC X(1)  VALUE SPACES.
+          88 USER-ID-INPUT                    VALUE 'Y'.
+      *
        01 WS-DEBUG-AID              PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
@@ -511,7 +514,17 @@
 
            EVALUATE EIBAID
            WHEN DFHENTER
-                PERFORM 2100-FIND-BY-EMPLOYEE-KEY
+      *         IF THE USER HAS ENTERED AN USER ID, THEN WE SEEK THAT
+      *         EMPLOYEE RECORD FOR DISPLAY.
+      *         IF HE DIDN'T, THEN WE PROCEED TO VALIDATE POTENTIALLY
+      *         UPDATED FIELDS ON THE CURRENT ONE.      
+                PERFORM 2050-CHECK-USER-ID-INPUT
+
+                IF USER-ID-INPUT THEN
+                   PERFORM 2100-FIND-BY-EMPLOYEE-KEY
+                ELSE  
+                   PERFORM 2700-VALIDATE-USER-INPUT
+                END-IF
            WHEN DFHPF3
            WHEN DFHPF5
            WHEN DFHPF12
@@ -521,13 +534,27 @@
            WHEN DFHPF8
                 PERFORM 2400-NEXT-BY-EMPLOYEE-KEY
            WHEN DFHPF9
-                PERFORM 2700-SWITCH-DISPLAY-ORDER
+                PERFORM 2500-SWITCH-DISPLAY-ORDER
            WHEN DFHPF10
-                PERFORM 2500-SIGN-USER-OFF
+                PERFORM 2600-SIGN-USER-OFF
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
 
+       2050-CHECK-USER-ID-INPUT.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2050-CHECK-USER-ID-INPUT' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE 'I am in 2050-CHECK-USER-ID-INPUT' TO WS-MESSAGE.
+
+           INITIALIZE WS-USER-ID-FLAG.
+
+           IF EMPLIDL IS GREATER THAN ZERO THEN 
+              SET USER-ID-INPUT TO TRUE
+           END-IF.
+      
        2100-FIND-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
            MOVE '2100-FIND-BY-EMPLOYEE-KEY' TO WS-DEBUG-AID.
@@ -675,22 +702,9 @@
               MOVE DFHPROTN TO HLPPF8A
            END-IF.
 
-       2500-SIGN-USER-OFF.
+       2500-SWITCH-DISPLAY-ORDER.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2500-SIGN-USER-OFF' TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
-
-      *    >>> CALL ACTIVITY MONITOR <<<
-           SET MON-AC-SIGN-OFF TO TRUE.
-           PERFORM 4200-CALL-ACTIVITY-MONITOR.
-      *    >>> --------------------- <<<
-
-           PERFORM 9200-RETURN-TO-CICS.
-
-       2700-SWITCH-DISPLAY-ORDER.
-      *    >>> DEBUGGING ONLY <<<
-           MOVE '2700-SWITCH-DISPLAY-ORDER' TO WS-DEBUG-AID.
+           MOVE '2500-SWITCH-DISPLAY-ORDER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -702,6 +716,28 @@
 
       *    RESET 'FILE BOUNDARY' FLAG.
            INITIALIZE UPD-FILE-FLAG.
+
+       2600-SIGN-USER-OFF.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2600-SIGN-USER-OFF' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           SET MON-AC-SIGN-OFF TO TRUE.
+           PERFORM 4200-CALL-ACTIVITY-MONITOR.
+      *    >>> --------------------- <<<
+
+           PERFORM 9200-RETURN-TO-CICS.
+
+       2700-VALIDATE-USER-INPUT.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2700-VALIDATE-USER-INPUT' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           MOVE 'I am in 2700-VALIDATE-USER-INPUT' TO WS-MESSAGE.
+           CONTINUE.
 
       *-----------------------------------------------------------------
        FILTERS SECTION.
