@@ -14,6 +14,7 @@
       *
           05 UPD-USER-EMP-ID            PIC 9(8).
           05 UPD-USER-DEPT-ID           PIC 9(8).
+          05 UPD-USER-ALT-KEY           PIC X(38).
       *
           05 UPD-SELECT-KEY.
              10 UPD-SELECT-KEY-TYPE     PIC X(1)   VALUE SPACES.

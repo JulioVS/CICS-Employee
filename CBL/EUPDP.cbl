@@ -68,6 +68,18 @@
        01 WS-USER-ID-FLAG           PIC X(1)  VALUE SPACES.
           88 USER-ID-INPUT                    VALUE 'Y'.
       *
+       01 WS-VALIDATION-FLAG        PIC X(1)  VALUE SPACES.
+          88 VALIDATION-PASSED                VALUE 'Y'.
+          88 VALIDATION-FAILED                VALUE SPACES.
+       01 WS-PRIMARY-NAME-FLAG      PIC X(1)  VALUE SPACES.
+          88 PRIMARY-NAME-VALID               VALUE 'Y'.
+          88 PRIMARY-NAME-EXISTS              VALUE SPACES.
+      *
+       01 WS-FILE-FLAG              PIC X(1)  VALUE SPACES.
+          88 END-OF-FILE                      VALUE 'E'.
+          88 TOP-OF-FILE                      VALUE 'T'.
+          88 RECORD-FOUND                     VALUE 'R'.
+      *
        01 WS-DEBUG-AID              PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
@@ -154,7 +166,7 @@
            IF UPD-CT-MANAGER AND
               UPD-USER-EMP-ID IS NOT EQUAL TO ZERO THEN
 
-              PERFORM 1700-GET-DEPARTMENT-ID                 
+              PERFORM 1700-GET-DEPARTMENT-ID
            END-IF.
 
       *    CHECK IF WE ARE COMING FROM THE 'EMPLOYEE DETAILS' VIEW AND
@@ -231,7 +243,7 @@
               UNTIL FILTERS-PASSED OR UPD-END-OF-FILE.
 
            IF FILTERS-PASSED THEN
-              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+              PERFORM 1325-COPY-INTO-CONTAINER
            END-IF.
 
            IF NOT UPD-END-OF-FILE THEN
@@ -260,7 +272,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                CONTINUE 
+                CONTINUE
            WHEN DFHRESP(NOTFND)
                 MOVE 'No Records Found!' TO WS-MESSAGE
                 SET UPD-END-OF-FILE TO TRUE
@@ -338,6 +350,27 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
+       1325-COPY-INTO-CONTAINER.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '1325-COPY-INTO-CONTAINER' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    MOVE RECORD TO THE APPLICATION CONTAINER'S WORKING AREA.
+      *    THIS WILL BE CHANGED EVERY TIME THE USER UPDATES FIELDS
+      *    WHILE EDITING A SINGLE EMPLOYEE RECORD.
+           MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD.
+
+      *    THEN, ALSO SAVE A COPY OF THE ORIGINAL RECORD HERE.
+      *    THIS WILL REMAIN UNCHANGED UNTIL THE USER EITHER COMMITS
+      *    HIS CHANGES OR SWITCHES TO EDIT ANOTHER EMPLOYEE RECORD.
+           MOVE EMPLOYEE-MASTER-RECORD TO UPD-ORIGINAL-RECORD.
+
+      *    FINALLY, SAVE THE EMPLOYEE'S PRIMARY NAME IN THE
+      *    CONTAINER AS AN AID TO VALIDATING CHANGES TO THIS
+      *    ALTERNATE-KEY FIELD LATER ON.
+           MOVE EMP-PRIMARY-NAME TO UPD-USER-ALT-KEY.
+
        1400-READ-BACKWARDS-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
            MOVE '1400-READ-BACKWARDS-BY-KEY' TO WS-DEBUG-AID.
@@ -360,7 +393,7 @@
               UNTIL FILTERS-PASSED OR UPD-TOP-OF-FILE.
 
            IF FILTERS-PASSED THEN
-              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+              PERFORM 1325-COPY-INTO-CONTAINER
            END-IF.
 
            IF NOT UPD-TOP-OF-FILE THEN
@@ -484,7 +517,7 @@
            WHEN DFHRESP(NORMAL)
       *         SAVE DEPARTMENT ID INTO APP CONTAINER.
                 MOVE EMP-DEPARTMENT-ID TO UPD-USER-DEPT-ID
-                INITIALIZE EMPLOYEE-MASTER-RECORD 
+                INITIALIZE EMPLOYEE-MASTER-RECORD
            WHEN DFHRESP(NOTFND)
                 MOVE "Employee Not Found!" TO WS-MESSAGE
            WHEN OTHER
@@ -512,17 +545,20 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
+      *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD.
+           MOVE -1 TO EMPLIDL.
+
            EVALUATE EIBAID
            WHEN DFHENTER
       *         IF THE USER HAS ENTERED AN USER ID, THEN WE SEEK THAT
       *         EMPLOYEE RECORD FOR DISPLAY.
       *         IF HE DIDN'T, THEN WE PROCEED TO VALIDATE POTENTIALLY
-      *         UPDATED FIELDS ON THE CURRENT ONE.      
+      *         UPDATED FIELDS ON THE CURRENT ONE.
                 PERFORM 2050-CHECK-USER-ID-INPUT
 
                 IF USER-ID-INPUT THEN
                    PERFORM 2100-FIND-BY-EMPLOYEE-KEY
-                ELSE  
+                ELSE
                    PERFORM 2700-VALIDATE-USER-INPUT
                 END-IF
            WHEN DFHPF3
@@ -551,10 +587,10 @@
 
            INITIALIZE WS-USER-ID-FLAG.
 
-           IF EMPLIDL IS GREATER THAN ZERO THEN 
+           IF EMPLIDL IS GREATER THAN ZERO THEN
               SET USER-ID-INPUT TO TRUE
            END-IF.
-      
+
        2100-FIND-BY-EMPLOYEE-KEY.
       *    >>> DEBUGGING ONLY <<<
            MOVE '2100-FIND-BY-EMPLOYEE-KEY' TO WS-DEBUG-AID.
@@ -578,7 +614,7 @@
            PERFORM 1500-FIND-RECORD-BY-KEY.
 
            IF FILTERS-PASSED THEN
-              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+              PERFORM 1325-COPY-INTO-CONTAINER
            ELSE
               MOVE 'No Matching Record By That Key!' TO WS-MESSAGE
            END-IF.
@@ -595,11 +631,11 @@
               PERFORM 9200-RETURN-TO-CICS
            END-IF.
 
-      *    IF WE ARE COMING FROM THE 'EMPLOYEE DETAILS' VIEW, UPDATE 
+      *    IF WE ARE COMING FROM THE 'EMPLOYEE DETAILS' VIEW, UPDATE
       *    'VIEW' CONTAINER PRIOR TO RETURNING.
            IF UPD-CALLING-PROGRAM IS EQUAL TO APP-VIEW-PROGRAM-NAME
       *       >>> UPDATED RECORD! <<<
-              MOVE UPD-EMPLOYEE-RECORD TO DET-EMPLOYEE-RECORD 
+              MOVE UPD-EMPLOYEE-RECORD TO DET-EMPLOYEE-RECORD
       *       >>> --------------- <<<
               MOVE UPD-SELECT-KEY-TYPE TO DET-SELECT-KEY-TYPE
               MOVE APP-UPDATE-PROGRAM-NAME TO DET-SAVING-PROGRAM
@@ -737,7 +773,290 @@
       *    >>> -------------- <<<
 
            MOVE 'I am in 2700-VALIDATE-USER-INPUT' TO WS-MESSAGE.
-           CONTINUE.
+
+      *    RESTORE LAST SAVED AND VALIDATED DATA FROM CONTAINER.
+           MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+
+      *    GET UPDATED FIELDS FROM THE MAP.
+           IF PRNAMEL IS GREATER THAN ZERO THEN
+              MOVE FUNCTION TRIM(PRNAMEI) TO EMP-PRIMARY-NAME
+           END-IF.
+           IF HONORL IS GREATER THAN ZERO THEN
+              MOVE FUNCTION TRIM(HONORI) TO EMP-HONORIFIC
+           END-IF.
+           IF SHNAMEL IS GREATER THAN ZERO THEN
+              MOVE FUNCTION TRIM(SHNAMEI) TO EMP-SHORT-NAME
+           END-IF.
+           IF FLNAMEL IS GREATER THAN ZERO THEN
+              MOVE FUNCTION TRIM(FLNAMEI) TO EMP-FULL-NAME
+           END-IF.
+           IF JBTITLL IS GREATER THAN ZERO THEN
+              MOVE FUNCTION TRIM(JBTITLI) TO EMP-JOB-TITLE
+           END-IF.
+           IF STDATEL IS GREATER THAN ZERO THEN
+              EXEC CICS BIF DEEDIT
+                   FIELD(STDATEI)
+                   LENGTH(LENGTH OF STDATEI)
+                   END-EXEC
+              MOVE STDATEI(3:8) TO EMP-START-DATE
+           END-IF.
+
+      *    VERY FIRST CHECK -> IF NO CHANGES WERE MADE, JUST EXIT.
+           IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
+              SET VALIDATION-PASSED TO TRUE
+              EXIT PARAGRAPH
+           ELSE
+      *       OTHERWISE, SAVE UPDATED RECORD BACK INTO APP CONTAINER.
+              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+           END-IF.
+
+      *    VALIDATE THE UPDATED FIELDS.
+           INITIALIZE WS-VALIDATION-FLAG.
+           INITIALIZE WS-PRIMARY-NAME-FLAG.
+
+           IF EMP-PRIMARY-NAME IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Primary Name is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO PRNAMEL
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    CHECK IF THE PRIMARY NAME HAS ACTUALLY CHANGED FROM ITS
+      *    ORIGINAL VALUE WHEN THE RECORD WAS READ FROM THE FILE.
+           IF EMP-PRIMARY-NAME IS EQUAL TO UPD-USER-ALT-KEY THEN
+      *       NO ACTUAL PRIMARY NAME CHANGE, SO JUST MOVE ON.
+              MOVE 'Primary Name has not changed' TO WS-MESSAGE
+              CONTINUE
+           ELSE
+      *       ACTUAL PRIMARY NAME CHANGE, CHECK ALT-KEY AVAILABILTY.
+              PERFORM 2710-CHECK-PRIMARY-NAME
+
+              IF PRIMARY-NAME-EXISTS THEN
+                 MOVE 'Validation Error: Primary Name already exists!'
+                    TO WS-MESSAGE
+                 MOVE -1 TO PRNAMEL
+                 EXIT PARAGRAPH
+              ELSE
+                 MOVE 'New Primary Name is available' TO WS-MESSAGE
+              END-IF
+           END-IF.
+
+           IF EMP-FULL-NAME IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Full Name is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO FLNAMEL
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-JOB-TITLE IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Job Title is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO JBTITLL
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-START-DATE IS EQUAL TO SPACES THEN
+              MOVE 'Validation Error: Start Date is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO STDATEL
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    IF WE GET THIS FAR, THEN ALL FIELDS ARE VALIDATED!
+           MOVE 'Updated Fields Successfully Validated!' TO WS-MESSAGE.
+           SET VALIDATION-PASSED TO TRUE.
+
+       2710-CHECK-PRIMARY-NAME.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2710-CHECK-PRIMARY-NAME' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           INITIALIZE WS-FILE-FLAG.
+
+           PERFORM 2750-CONVERT-TO-TITLE-CASE
+           PERFORM 2720-START-BROWSING-NM.
+
+           IF NOT END-OF-FILE THEN
+              PERFORM 2730-END-BROWSING-NM
+           END-IF.
+
+       2720-START-BROWSING-NM.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2720-START-BROWSING-NM' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS STARTBR
+                FILE(APP-EMP-MASTER-PATH-NAME)
+                RIDFLD(EMP-PRIMARY-NAME)
+                EQUAL
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Validation Error: Primary Name already exists!'
+                   TO WS-MESSAGE
+                SET PRIMARY-NAME-EXISTS TO TRUE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'Primary Name is available!' TO WS-MESSAGE
+                SET PRIMARY-NAME-VALID TO TRUE
+                SET END-OF-FILE TO TRUE
+           WHEN DFHRESP(ENDFILE)
+                MOVE 'No Records Found!' TO WS-MESSAGE
+                SET END-OF-FILE TO TRUE
+                SET PRIMARY-NAME-VALID TO TRUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Starting Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       2730-END-BROWSING-NM.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2730-END-BROWSING-NM' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           EXEC CICS ENDBR
+                FILE(APP-EMP-MASTER-PATH-NAME)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (End Browse)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Name Path Not Open!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Ending Browse!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       2750-CONVERT-TO-TITLE-CASE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2750-CONVERT-TO-TITLE-CASE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    FIRST, CONVERT ALL EMPLOYEE DETAILS TO LOWER CASE.
+           MOVE FUNCTION LOWER-CASE(EMP-DETAILS) TO EMP-DETAILS.
+
+      *    THEN, CAPITALIZE FIRST LETTER OF EACH FIELD.
+           MOVE FUNCTION UPPER-CASE(EMP-FULL-NAME(1:1))
+              TO EMP-FULL-NAME(1:1).
+           MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
+              TO EMP-PRIMARY-NAME(1:1).
+           MOVE FUNCTION UPPER-CASE(EMP-HONORIFIC(1:1))
+              TO EMP-HONORIFIC(1:1).
+           MOVE FUNCTION UPPER-CASE(EMP-SHORT-NAME(1:1))
+              TO EMP-SHORT-NAME(1:1).
+           MOVE FUNCTION UPPER-CASE(EMP-JOB-TITLE(1:1))
+              TO EMP-JOB-TITLE(1:1).
+           MOVE FUNCTION UPPER-CASE(EMP-APPRAISAL-RESULT)
+              TO EMP-APPRAISAL-RESULT.
+           MOVE FUNCTION UPPER-CASE(EMP-DELETE-FLAG)
+              TO EMP-DELETE-FLAG.
+
+      *    FINALLY, CAPITALIZE INITIAL LETTERS OF ALL INNER WORDS.
+           INSPECT EMP-DETAILS
+              REPLACING
+              ALL ' a' BY ' A',
+              ALL ' b' BY ' B',
+              ALL ' c' BY ' C',
+              ALL ' d' BY ' D',
+              ALL ' e' BY ' E',
+              ALL ' f' BY ' F',
+              ALL ' g' BY ' G',
+              ALL ' h' BY ' H',
+              ALL ' i' BY ' I',
+              ALL ' j' BY ' J',
+              ALL ' k' BY ' K',
+              ALL ' l' BY ' L',
+              ALL ' m' BY ' M',
+              ALL ' n' BY ' N',
+              ALL ' o' BY ' O',
+              ALL ' p' BY ' P',
+              ALL ' q' BY ' Q',
+              ALL ' r' BY ' R',
+              ALL ' s' BY ' S',
+              ALL ' t' BY ' T',
+              ALL ' u' BY ' U',
+              ALL ' v' BY ' V',
+              ALL ' w' BY ' W',
+              ALL ' x' BY ' X',
+              ALL ' y' BY ' Y',
+              ALL ' z' BY ' Z'.
+
+      *    PLUS -> THE *O'CONNOR* CASE!
+           INSPECT EMP-DETAILS
+              REPLACING
+              ALL "'a" BY "'A",
+              ALL "'b" BY "'B",
+              ALL "'c" BY "'C",
+              ALL "'d" BY "'D",
+              ALL "'e" BY "'E",
+              ALL "'f" BY "'F",
+              ALL "'g" BY "'G",
+              ALL "'h" BY "'H",
+              ALL "'i" BY "'I",
+              ALL "'j" BY "'J",
+              ALL "'k" BY "'K",
+              ALL "'l" BY "'L",
+              ALL "'m" BY "'M",
+              ALL "'n" BY "'N",
+              ALL "'o" BY "'O",
+              ALL "'p" BY "'P",
+              ALL "'q" BY "'Q",
+              ALL "'r" BY "'R",
+              ALL "'s" BY "'S",
+              ALL "'t" BY "'T",
+              ALL "'u" BY "'U",
+              ALL "'v" BY "'V",
+              ALL "'w" BY "'W",
+              ALL "'x" BY "'X",
+              ALL "'y" BY "'Y",
+              ALL "'z" BY "'Z".
+
+      *    AND -> THE 'JAN LEVINSON-GOULD' CASE! :)
+           INSPECT EMP-DETAILS
+              REPLACING
+              ALL '-a' BY '-A',
+              ALL '-b' BY '-B',
+              ALL '-c' BY '-C',
+              ALL '-d' BY '-D',
+              ALL '-e' BY '-E',
+              ALL '-f' BY '-F',
+              ALL '-g' BY '-G',
+              ALL '-h' BY '-H',
+              ALL '-i' BY '-I',
+              ALL '-j' BY '-J',
+              ALL '-k' BY '-K',
+              ALL '-l' BY '-L',
+              ALL '-m' BY '-M',
+              ALL '-n' BY '-N',
+              ALL '-o' BY '-O',
+              ALL '-p' BY '-P',
+              ALL '-q' BY '-Q',
+              ALL '-r' BY '-R',
+              ALL '-s' BY '-S',
+              ALL '-t' BY '-T',
+              ALL '-u' BY '-U',
+              ALL '-v' BY '-V',
+              ALL '-w' BY '-W',
+              ALL '-x' BY '-X',
+              ALL '-y' BY '-Y',
+              ALL '-z' BY '-Z'.
 
       *-----------------------------------------------------------------
        FILTERS SECTION.
@@ -762,10 +1081,12 @@
                 MOVE 'No Details Container Found!' TO WS-MESSAGE
                 INITIALIZE UPD-EMPLOYEE-RECORD
            WHEN DFHRESP(NORMAL)
-      *         GET RECORD AND FILTERS FROM 'DETAILS' CONTAINER.                
-                MOVE DET-EMPLOYEE-RECORD TO UPD-EMPLOYEE-RECORD
+      *         GET RECORD AND FILTERS FROM 'DETAILS' CONTAINER.
+                MOVE DET-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD
                 MOVE DET-SELECT-KEY-TYPE TO UPD-SELECT-KEY-TYPE
                 MOVE DET-FILTERS TO UPD-FILTERS
+
+                PERFORM 1325-COPY-INTO-CONTAINER
 
       *         ALSO UPDATE CONTAINER WITH THIS PROGRAM'S NAME.
                 MOVE APP-UPDATE-PROGRAM-NAME TO DET-SAVING-PROGRAM
@@ -1124,7 +1445,7 @@
                 MAPSET(APP-UPDATE-MAPSET-NAME)
                 FROM (EUPDMO)
                 ERASE
-                FREEKB
+                CURSOR
                 END-EXEC.
 
            EXEC CICS RETURN
@@ -1268,7 +1589,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    PROTECT FIELDS THAT ARE NOT ALLOWED TO BE MODIFIED, 
+      *    PROTECT FIELDS THAT ARE NOT ALLOWED TO BE MODIFIED,
       *    DEPENDING ON THE LOGGED-IN USER TYPE.
 
       *    >>> -------------- <<<

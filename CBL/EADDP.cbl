@@ -270,7 +270,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    RESTORE LAST SAVED AND VAILDATED DATA FROM CONTAINER.
+      *    RESTORE LAST SAVED AND VALIDATED DATA FROM CONTAINER.
            MOVE ADD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
 
       *    GET NEWLY ENTERED FIELDS AND UPDATE THE RECORD.
@@ -359,8 +359,7 @@
            END-IF.
 
       *    IF WE GET THIS FAR, THEN ALL FIELDS ARE VALIDATED!
-           MOVE 'Employee Record Validated Successfully!'
-              TO WS-MESSAGE.
+           MOVE 'Employee Record Validated Successfully!' TO WS-MESSAGE.
            MOVE -1 TO PRNAMEL.
 
            SET VALIDATION-PASSED TO TRUE.
@@ -707,6 +706,8 @@
       *    THEN, CAPITALIZE FIRST LETTER OF EACH FIELD.
            MOVE FUNCTION UPPER-CASE(EMP-FULL-NAME(1:1))
               TO EMP-FULL-NAME(1:1).
+           MOVE FUNCTION UPPER-CASE(EMP-PRIMARY-NAME(1:1))
+              TO EMP-PRIMARY-NAME(1:1).
            MOVE FUNCTION UPPER-CASE(EMP-HONORIFIC(1:1))
               TO EMP-HONORIFIC(1:1).
            MOVE FUNCTION UPPER-CASE(EMP-SHORT-NAME(1:1))
@@ -807,11 +808,6 @@
               ALL '-x' BY '-X',
               ALL '-y' BY '-Y',
               ALL '-z' BY '-Z'.
-
-      *    >>> DEBUGGING ONLY <<<
-           MOVE EMP-DETAILS TO WS-DEBUG-AID.
-           PERFORM 9300-DEBUG-AID.
-      *    >>> -------------- <<<
 
        3200-LOCK-NEW-IDS.
       *    >>> DEBUGGING ONLY <<<
