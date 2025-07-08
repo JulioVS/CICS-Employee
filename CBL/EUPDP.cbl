@@ -70,7 +70,8 @@
       *
        01 WS-VALIDATION-FLAG        PIC X(1)  VALUE SPACES.
           88 VALIDATION-PASSED                VALUE 'Y'.
-          88 VALIDATION-FAILED                VALUE SPACES.
+          88 VALIDATION-FAILED                VALUE 'N'.
+          88 NO-VALIDATION                    VALUE SPACES.
        01 WS-PRIMARY-NAME-FLAG      PIC X(1)  VALUE SPACES.
           88 PRIMARY-NAME-VALID               VALUE 'Y'.
           88 PRIMARY-NAME-EXISTS              VALUE SPACES.
@@ -225,19 +226,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    READ EMPLOYEE MASTER FILE RECORD INTO CONTAINER.
            PERFORM 1310-START-BROWSING.
-
-      *    >>> DEBUGGING ONLY <<<
-           IF I-AM-DEBUGGING AND UPD-SEL-BY-EMPLOYEE-ID AND
-              EMP-EMPLOYEE-ID IS GREATER THAN 3 THEN
-              SET UPD-END-OF-FILE TO TRUE
-           END-IF.
-           IF I-AM-DEBUGGING AND UPD-SEL-BY-EMPLOYEE-NAME AND
-              EMP-PRIMARY-NAME(1:1) IS GREATER THAN 'A' THEN
-              SET UPD-END-OF-FILE TO TRUE
-           END-IF.
-      *    >>> -------------- <<<
 
            PERFORM 1320-READ-NEXT-RECORD
               UNTIL FILTERS-PASSED OR UPD-END-OF-FILE.
@@ -355,6 +344,8 @@
            MOVE '1325-COPY-INTO-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+           MOVE 'I AM IN 1325-COPY-INTO-CONTAINER' TO WS-MESSAGE.
 
       *    MOVE RECORD TO THE APPLICATION CONTAINER'S WORKING AREA.
       *    THIS WILL BE CHANGED EVERY TIME THE USER UPDATES FIELDS
@@ -545,9 +536,6 @@
            PERFORM 4000-CHECK-USER-STATUS.
       *    >>> --------------------- <<<
 
-      *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD.
-           MOVE -1 TO EMPLIDL.
-
            EVALUATE EIBAID
            WHEN DFHENTER
       *         IF THE USER HAS ENTERED AN USER ID, THEN WE SEEK THAT
@@ -583,7 +571,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'I am in 2050-CHECK-USER-ID-INPUT' TO WS-MESSAGE.
+           MOVE 'I AM IN 2050-CHECK-USER-ID-INPUT' TO WS-MESSAGE.
 
            INITIALIZE WS-USER-ID-FLAG.
 
@@ -772,7 +760,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'I am in 2700-VALIDATE-USER-INPUT' TO WS-MESSAGE.
+           MOVE 'I AM IN 2700-VALIDATE-USER-INPUT' TO WS-MESSAGE.
 
       *    RESTORE LAST SAVED AND VALIDATED DATA FROM CONTAINER.
            MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
@@ -1581,6 +1569,11 @@
            END-IF.
            IF UPD-END-OF-FILE THEN
               MOVE SPACES TO HLPPF8O
+           END-IF.
+
+      *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD BY DEFAULT.
+           IF VALIDATION-PASSED OR NO-VALIDATION THEN
+              MOVE -1 TO EMPLIDL
            END-IF.
 
        9130-SET-PROTECTED-FIELDS.
