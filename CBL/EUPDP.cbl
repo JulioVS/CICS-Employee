@@ -70,8 +70,6 @@
       *
        01 WS-VALIDATION-FLAG        PIC X(1)  VALUE SPACES.
           88 VALIDATION-PASSED                VALUE 'Y'.
-          88 VALIDATION-FAILED                VALUE 'N'.
-          88 NO-VALIDATION                    VALUE SPACES.
        01 WS-PRIMARY-NAME-FLAG      PIC X(1)  VALUE SPACES.
           88 PRIMARY-NAME-VALID               VALUE 'Y'.
           88 PRIMARY-NAME-EXISTS              VALUE SPACES.
@@ -196,6 +194,9 @@
            INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE REGISTERED-USER-RECORD.
            INITIALIZE WS-WORKING-VARS.
+
+      *    NO VALIDATIONS NEEDED ON FIRST RENDER.
+           SET VALIDATION-PASSED TO TRUE.
 
        1200-INITIALIZE-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
@@ -344,8 +345,6 @@
            MOVE '1325-COPY-INTO-CONTAINER' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
-
-           MOVE 'I AM IN 1325-COPY-INTO-CONTAINER' TO WS-MESSAGE.
 
       *    MOVE RECORD TO THE APPLICATION CONTAINER'S WORKING AREA.
       *    THIS WILL BE CHANGED EVERY TIME THE USER UPDATES FIELDS
@@ -571,7 +570,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'I AM IN 2050-CHECK-USER-ID-INPUT' TO WS-MESSAGE.
+           MOVE 'I am in 2050-CHECK-USER-ID-INPUT' TO WS-MESSAGE.
 
            INITIALIZE WS-USER-ID-FLAG.
 
@@ -760,12 +759,33 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'I AM IN 2700-VALIDATE-USER-INPUT' TO WS-MESSAGE.
+           MOVE 'I am in 2700-VALIDATE-USER-INPUT' TO WS-MESSAGE.
 
       *    RESTORE LAST SAVED AND VALIDATED DATA FROM CONTAINER.
            MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
 
-      *    GET UPDATED FIELDS FROM THE MAP.
+      *    GET MODIFIED FIELDS FROM MAP.
+           PERFORM 2710-GET-UPDATED-FIELDS.
+
+      *    VERY FIRST CHECK -> IF NO CHANGES WERE MADE, JUST EXIT.
+           IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
+              SET VALIDATION-PASSED TO TRUE
+              EXIT PARAGRAPH
+           ELSE
+      *       OTHERWISE, SAVE UPDATED STATE INTO APP CONTAINER.
+              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+           END-IF.
+
+      *    NOW, VALIDATE THE UPDATED FIELDS.
+           PERFORM 2720-VALIDATE-UPDATED-FIELDS.
+
+       2710-GET-UPDATED-FIELDS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2710-GET-UPDATED-FIELDS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    UPDATED FIELDS WILL HAVE POSITIVE LENGTHS.
            IF PRNAMEL IS GREATER THAN ZERO THEN
               MOVE FUNCTION TRIM(PRNAMEI) TO EMP-PRIMARY-NAME
            END-IF.
@@ -781,6 +801,21 @@
            IF JBTITLL IS GREATER THAN ZERO THEN
               MOVE FUNCTION TRIM(JBTITLI) TO EMP-JOB-TITLE
            END-IF.
+           IF APPRRSL IS GREATER THAN ZERO THEN
+              MOVE FUNCTION TRIM(APPRRSI) TO EMP-APPRAISAL-RESULT 
+           END-IF.
+           IF DELFLGL IS GREATER THAN ZERO THEN
+              MOVE FUNCTION TRIM(DELFLGI) TO EMP-DELETE-FLAG  
+           END-IF.
+
+      *    CLEAN UP NUMERIC VALUES LIKE DATES AND IDS.
+           IF DEPTIDL IS GREATER THAN ZERO THEN
+              EXEC CICS BIF DEEDIT
+                   FIELD(DEPTIDI)
+                   LENGTH(LENGTH OF DEPTIDI)
+                   END-EXEC
+              MOVE DEPTIDI TO EMP-DEPARTMENT-ID
+           END-IF.
            IF STDATEL IS GREATER THAN ZERO THEN
               EXEC CICS BIF DEEDIT
                    FIELD(STDATEI)
@@ -788,19 +823,33 @@
                    END-EXEC
               MOVE STDATEI(3:8) TO EMP-START-DATE
            END-IF.
-
-      *    VERY FIRST CHECK -> IF NO CHANGES WERE MADE, JUST EXIT.
-           IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
-              SET VALIDATION-PASSED TO TRUE
-              EXIT PARAGRAPH
-           ELSE
-      *       OTHERWISE, SAVE UPDATED RECORD BACK INTO APP CONTAINER.
-              MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
+           IF ENDATEL IS GREATER THAN ZERO THEN
+              EXEC CICS BIF DEEDIT
+                   FIELD(ENDATEI)
+                   LENGTH(LENGTH OF ENDATEI)
+                   END-EXEC
+              MOVE ENDATEI(3:8) TO EMP-END-DATE
+           END-IF.
+           IF APPRDTL IS GREATER THAN ZERO THEN
+              EXEC CICS BIF DEEDIT
+                   FIELD(APPRDTI)
+                   LENGTH(LENGTH OF APPRDTI)
+                   END-EXEC
+              MOVE APPRDTI(3:8) TO EMP-APPRAISAL-DATE
+           END-IF.
+           IF DELDTL IS GREATER THAN ZERO THEN
+              EXEC CICS BIF DEEDIT
+                   FIELD(DELDTI)
+                   LENGTH(LENGTH OF DELDTI)
+                   END-EXEC
+              MOVE DELDTI(3:8) TO EMP-DELETE-DATE 
            END-IF.
 
-      *    VALIDATE THE UPDATED FIELDS.
-           INITIALIZE WS-VALIDATION-FLAG.
-           INITIALIZE WS-PRIMARY-NAME-FLAG.
+       2720-VALIDATE-UPDATED-FIELDS.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2720-VALIDATE-UPDATED-FIELDS' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
 
            IF EMP-PRIMARY-NAME IS EQUAL TO SPACES THEN
               MOVE 'Validation Error: Primary Name is required!'
@@ -817,7 +866,7 @@
               CONTINUE
            ELSE
       *       ACTUAL PRIMARY NAME CHANGE, CHECK ALT-KEY AVAILABILTY.
-              PERFORM 2710-CHECK-PRIMARY-NAME
+              PERFORM 2730-CHECK-PRIMARY-NAME
 
               IF PRIMARY-NAME-EXISTS THEN
                  MOVE 'Validation Error: Primary Name already exists!'
@@ -843,6 +892,13 @@
               EXIT PARAGRAPH
            END-IF.
 
+           IF EMP-DEPARTMENT-ID IS EQUAL TO ZERO THEN
+              MOVE 'Validation Error: Department Id is required!'
+                 TO WS-MESSAGE
+              MOVE -1 TO DEPTIDL
+              EXIT PARAGRAPH
+           END-IF.
+
            IF EMP-START-DATE IS EQUAL TO SPACES THEN
               MOVE 'Validation Error: Start Date is required!'
                  TO WS-MESSAGE
@@ -850,28 +906,93 @@
               EXIT PARAGRAPH
            END-IF.
 
+           IF EMP-START-DATE IS GREATER THAN EMP-END-DATE THEN
+              MOVE 'Validation Error: Start Date is later than End!'
+                 TO WS-MESSAGE
+              MOVE -1 TO STDATEL
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-END-DATE IS LESS THAN EMP-START-DATE THEN
+              MOVE 'Validation Error: End Date is earlier than Start!'
+                 TO WS-MESSAGE
+              MOVE -1 TO ENDATEL
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-APPRAISAL-DATE IS LESS THAN EMP-START-DATE THEN
+              MOVE 'Validation Error: Appr Date is earlier than Start!'
+                 TO WS-MESSAGE
+              MOVE -1 TO APPRDTL
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-APPRAISAL-DATE IS GREATER THAN EMP-END-DATE THEN
+              MOVE 'Validation Error: Appr Date is later than End!'
+                 TO WS-MESSAGE
+              MOVE -1 TO APPRDTL
+              EXIT PARAGRAPH
+           END-IF.
+
+           EVALUATE EMP-APPRAISAL-RESULT 
+           WHEN 'E'
+           WHEN 'M'
+           WHEN 'U'
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Validation Error: Invalid Appraisal Result!'
+                   TO WS-MESSAGE
+                MOVE -1 TO APPRRSL
+                EXIT PARAGRAPH
+           END-EVALUATE.
+
+           EVALUATE EMP-DELETE-FLAG  
+           WHEN 'A'
+           WHEN 'D'
+                CONTINUE
+           WHEN OTHER
+                MOVE 'Validation Error: Invalid Delete Flag Value!'
+                   TO WS-MESSAGE
+                MOVE -1 TO DELFLGL
+                EXIT PARAGRAPH
+           END-EVALUATE.
+
+           IF EMP-DELETE-DATE IS LESS THAN EMP-START-DATE THEN
+              MOVE 'Validation Error: Delete Date is earlier than Strt!'
+                 TO WS-MESSAGE
+              MOVE -1 TO DELDTL
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-DELETE-DATE IS LESS THAN EMP-END-DATE THEN
+              MOVE 'Validation Error: Delete Date is earlier than End!'
+                 TO WS-MESSAGE
+              MOVE -1 TO DELDTL
+              EXIT PARAGRAPH
+           END-IF.
+
       *    IF WE GET THIS FAR, THEN ALL FIELDS ARE VALIDATED!
            MOVE 'Updated Fields Successfully Validated!' TO WS-MESSAGE.
            SET VALIDATION-PASSED TO TRUE.
 
-       2710-CHECK-PRIMARY-NAME.
+       2730-CHECK-PRIMARY-NAME.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2710-CHECK-PRIMARY-NAME' TO WS-DEBUG-AID.
+           MOVE '2730-CHECK-PRIMARY-NAME' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
            INITIALIZE WS-FILE-FLAG.
 
-           PERFORM 2750-CONVERT-TO-TITLE-CASE
-           PERFORM 2720-START-BROWSING-NM.
+           PERFORM 2760-CONVERT-TO-TITLE-CASE
+           PERFORM 2740-START-BROWSING-NM.
 
            IF NOT END-OF-FILE THEN
-              PERFORM 2730-END-BROWSING-NM
+              PERFORM 2750-END-BROWSING-NM
            END-IF.
 
-       2720-START-BROWSING-NM.
+       2740-START-BROWSING-NM.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2720-START-BROWSING-NM' TO WS-DEBUG-AID.
+           MOVE '2740-START-BROWSING-NM' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -906,9 +1027,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       2730-END-BROWSING-NM.
+       2750-END-BROWSING-NM.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2730-END-BROWSING-NM' TO WS-DEBUG-AID.
+           MOVE '2750-END-BROWSING-NM' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -931,9 +1052,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       2750-CONVERT-TO-TITLE-CASE.
+       2760-CONVERT-TO-TITLE-CASE.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2750-CONVERT-TO-TITLE-CASE' TO WS-DEBUG-AID.
+           MOVE '2760-CONVERT-TO-TITLE-CASE' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1572,7 +1693,7 @@
            END-IF.
 
       *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD BY DEFAULT.
-           IF VALIDATION-PASSED OR NO-VALIDATION THEN
+           IF VALIDATION-PASSED THEN
               MOVE -1 TO EMPLIDL
            END-IF.
 
