@@ -69,7 +69,8 @@
           88 USER-ID-INPUT                    VALUE 'Y'.
       *
        01 WS-VALIDATION-FLAG        PIC X(1)  VALUE SPACES.
-          88 VALIDATION-PASSED                VALUE 'Y'.
+          88 VALIDATION-PASSED                VALUE SPACES.
+          88 VALIDATION-FAILED                VALUE 'N'.
        01 WS-PRIMARY-NAME-FLAG      PIC X(1)  VALUE SPACES.
           88 PRIMARY-NAME-VALID               VALUE 'Y'.
           88 PRIMARY-NAME-EXISTS              VALUE SPACES.
@@ -194,9 +195,6 @@
            INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE REGISTERED-USER-RECORD.
            INITIALIZE WS-WORKING-VARS.
-
-      *    NO VALIDATIONS NEEDED ON FIRST RENDER.
-           SET VALIDATION-PASSED TO TRUE.
 
        1200-INITIALIZE-CONTAINER.
       *    >>> DEBUGGING ONLY <<<
@@ -570,8 +568,6 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'I am in 2050-CHECK-USER-ID-INPUT' TO WS-MESSAGE.
-
            INITIALIZE WS-USER-ID-FLAG.
 
            IF EMPLIDL IS GREATER THAN ZERO THEN
@@ -759,8 +755,6 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           MOVE 'I am in 2700-VALIDATE-USER-INPUT' TO WS-MESSAGE.
-
       *    RESTORE LAST SAVED AND VALIDATED DATA FROM CONTAINER.
            MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
 
@@ -769,10 +763,10 @@
 
       *    VERY FIRST CHECK -> IF NO CHANGES WERE MADE, JUST EXIT.
            IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
-              SET VALIDATION-PASSED TO TRUE
               EXIT PARAGRAPH
            ELSE
       *       OTHERWISE, SAVE UPDATED STATE INTO APP CONTAINER.
+              PERFORM 2800-CONVERT-TO-TITLE-CASE
               MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD
            END-IF.
 
@@ -802,10 +796,10 @@
               MOVE FUNCTION TRIM(JBTITLI) TO EMP-JOB-TITLE
            END-IF.
            IF APPRRSL IS GREATER THAN ZERO THEN
-              MOVE FUNCTION TRIM(APPRRSI) TO EMP-APPRAISAL-RESULT 
+              MOVE FUNCTION TRIM(APPRRSI) TO EMP-APPRAISAL-RESULT
            END-IF.
            IF DELFLGL IS GREATER THAN ZERO THEN
-              MOVE FUNCTION TRIM(DELFLGI) TO EMP-DELETE-FLAG  
+              MOVE FUNCTION TRIM(DELFLGI) TO EMP-DELETE-FLAG
            END-IF.
 
       *    CLEAN UP NUMERIC VALUES LIKE DATES AND IDS.
@@ -842,7 +836,7 @@
                    FIELD(DELDTI)
                    LENGTH(LENGTH OF DELDTI)
                    END-EXEC
-              MOVE DELDTI(3:8) TO EMP-DELETE-DATE 
+              MOVE DELDTI(3:8) TO EMP-DELETE-DATE
            END-IF.
 
        2720-VALIDATE-UPDATED-FIELDS.
@@ -850,6 +844,9 @@
            MOVE '2720-VALIDATE-UPDATED-FIELDS' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+      *    INITIALIZE VALIDATION STATE IS 'NOT PASSED'.
+           SET VALIDATION-FAILED TO TRUE.
 
            IF EMP-PRIMARY-NAME IS EQUAL TO SPACES THEN
               MOVE 'Validation Error: Primary Name is required!'
@@ -906,35 +903,7 @@
               EXIT PARAGRAPH
            END-IF.
 
-           IF EMP-START-DATE IS GREATER THAN EMP-END-DATE THEN
-              MOVE 'Validation Error: Start Date is later than End!'
-                 TO WS-MESSAGE
-              MOVE -1 TO STDATEL
-              EXIT PARAGRAPH
-           END-IF.
-
-           IF EMP-END-DATE IS LESS THAN EMP-START-DATE THEN
-              MOVE 'Validation Error: End Date is earlier than Start!'
-                 TO WS-MESSAGE
-              MOVE -1 TO ENDATEL
-              EXIT PARAGRAPH
-           END-IF.
-
-           IF EMP-APPRAISAL-DATE IS LESS THAN EMP-START-DATE THEN
-              MOVE 'Validation Error: Appr Date is earlier than Start!'
-                 TO WS-MESSAGE
-              MOVE -1 TO APPRDTL
-              EXIT PARAGRAPH
-           END-IF.
-
-           IF EMP-APPRAISAL-DATE IS GREATER THAN EMP-END-DATE THEN
-              MOVE 'Validation Error: Appr Date is later than End!'
-                 TO WS-MESSAGE
-              MOVE -1 TO APPRDTL
-              EXIT PARAGRAPH
-           END-IF.
-
-           EVALUATE EMP-APPRAISAL-RESULT 
+           EVALUATE EMP-APPRAISAL-RESULT
            WHEN 'E'
            WHEN 'M'
            WHEN 'U'
@@ -946,7 +915,7 @@
                 EXIT PARAGRAPH
            END-EVALUATE.
 
-           EVALUATE EMP-DELETE-FLAG  
+           EVALUATE EMP-DELETE-FLAG
            WHEN 'A'
            WHEN 'D'
                 CONTINUE
@@ -956,20 +925,6 @@
                 MOVE -1 TO DELFLGL
                 EXIT PARAGRAPH
            END-EVALUATE.
-
-           IF EMP-DELETE-DATE IS LESS THAN EMP-START-DATE THEN
-              MOVE 'Validation Error: Delete Date is earlier than Strt!'
-                 TO WS-MESSAGE
-              MOVE -1 TO DELDTL
-              EXIT PARAGRAPH
-           END-IF.
-
-           IF EMP-DELETE-DATE IS LESS THAN EMP-END-DATE THEN
-              MOVE 'Validation Error: Delete Date is earlier than End!'
-                 TO WS-MESSAGE
-              MOVE -1 TO DELDTL
-              EXIT PARAGRAPH
-           END-IF.
 
       *    IF WE GET THIS FAR, THEN ALL FIELDS ARE VALIDATED!
            MOVE 'Updated Fields Successfully Validated!' TO WS-MESSAGE.
@@ -983,7 +938,6 @@
 
            INITIALIZE WS-FILE-FLAG.
 
-           PERFORM 2760-CONVERT-TO-TITLE-CASE
            PERFORM 2740-START-BROWSING-NM.
 
            IF NOT END-OF-FILE THEN
@@ -1052,9 +1006,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       2760-CONVERT-TO-TITLE-CASE.
+       2800-CONVERT-TO-TITLE-CASE.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2760-CONVERT-TO-TITLE-CASE' TO WS-DEBUG-AID.
+           MOVE '2800-CONVERT-TO-TITLE-CASE' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1663,18 +1617,24 @@
               MOVE 'Hey! This Is Actually You!' TO WS-MESSAGE
            END-IF.
 
+      *    ALL USERS -> DEFAULT 'ALL OK' MESSAGE.
+           IF WS-MESSAGE IS EQUAL TO SPACES THEN
+              MOVE 'So Far, So Good...' TO WS-MESSAGE
+           END-IF.
+
       *    ALL USERS -> DISPLAY ALL-IMPORTANT MESSAGE LINE!
            MOVE WS-MESSAGE TO MESSO.
            MOVE DFHTURQ TO MESSC.
 
       *    ALL USERS -> COLOR MESSAGE ACCORDING TO TYPE/CONTENT.
            EVALUATE TRUE
-           WHEN MESSO(1:5) IS EQUAL TO 'Error'
+           WHEN MESSO(01:5) IS EQUAL TO 'Error'
+           WHEN MESSO(12:5) IS EQUAL TO 'Error'
                 MOVE DFHRED TO MESSC
-           WHEN MESSO(1:3) IS EQUAL TO 'No '
+           WHEN MESSO(01:3) IS EQUAL TO 'No '
                 MOVE DFHYELLO TO MESSC
-           WHEN MESSO(1:7) IS EQUAL TO 'Invalid'
-           WHEN MESSO(1:4) IS EQUAL TO 'Hey!'
+           WHEN MESSO(01:7) IS EQUAL TO 'Invalid'
+           WHEN MESSO(01:4) IS EQUAL TO 'Hey!'
                 MOVE DFHPINK TO MESSC
            END-EVALUATE.
 
@@ -1735,6 +1695,9 @@
       *    >>> ------------- <<<
 
            IF UPD-CT-MANAGER THEN
+      *       FIELDS NEVER ALLOWED TO UPDATE.
+              MOVE DFHBMPRO TO DEPTIDA
+
       *       ALLOWED ONLY IF UPDATING EMPLOYEES IN HIS OWN DEPARTMENT.
               IF EMP-DEPARTMENT-ID IS NOT EQUAL TO UPD-USER-DEPT-ID
                  MOVE DFHBMPRO TO JBTITLA
