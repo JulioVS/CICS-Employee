@@ -365,7 +365,7 @@
       *    FINALLY, SAVE THE EMPLOYEE'S PRIMARY NAME IN THE
       *    CONTAINER AS AN AID TO VALIDATING CHANGES TO THIS
       *    ALTERNATE-KEY FIELD LATER ON.
-           MOVE EMP-PRIMARY-NAME TO UPD-USER-ALT-KEY.
+           MOVE EMP-PRIMARY-NAME TO UPD-EMP-ALT-KEY.
 
        1400-READ-BACKWARDS-BY-KEY.
       *    >>> DEBUGGING ONLY <<<
@@ -866,7 +866,7 @@
 
       *    CHECK IF THE PRIMARY NAME HAS ACTUALLY CHANGED FROM ITS
       *    ORIGINAL VALUE WHEN THE RECORD WAS READ FROM THE FILE.
-           IF EMP-PRIMARY-NAME IS EQUAL TO UPD-USER-ALT-KEY THEN
+           IF EMP-PRIMARY-NAME IS EQUAL TO UPD-EMP-ALT-KEY THEN
       *       NO ACTUAL PRIMARY NAME CHANGE, SO JUST MOVE ON.
               MOVE 'Primary Name has not changed' TO WS-MESSAGE
               CONTINUE
@@ -1594,6 +1594,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
+      *    FILTER UNAUTHORIZED REQUESTS FIRST.
            IF UPD-CT-STANDARD THEN
               MOVE 'Standard Users Cannot Delete Employees'
                  TO WS-MESSAGE
@@ -1606,6 +1607,21 @@
                  TO WS-MESSAGE
               EXIT PARAGRAPH
            END-IF.
+
+      *    FIRST TIME HERE -> ASK FOR USER CONFIRMATION.
+           IF NOT UPD-DELETION-IN-PROGRESS THEN
+              SET UPD-DELETION-IN-PROGRESS TO TRUE
+              MOVE 'Confirm Record Deletion? (Press PF11 for Yes)'
+                 TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    SECOND TIME HERE -> PROCEED WITH DELETION.
+           MOVE '***RECORD DELETION LOGIC***' TO WS-MESSAGE.
+           INITIALIZE UPD-EMPLOYEE-RECORD UPD-ORIGINAL-RECORD.
+
+      *    FINALLY, RESET CONFIRMATION FLAG.
+           INITIALIZE UPD-DELETION-FLAG.
 
       *-----------------------------------------------------------------
        AUDIT-TRAIL SECTION.
@@ -1802,12 +1818,13 @@
            EVALUATE TRUE
            WHEN MESSO(01:5) IS EQUAL TO 'Error'
            WHEN MESSO(12:5) IS EQUAL TO 'Error'
+           WHEN MESSO(01:7) IS EQUAL TO 'Invalid'
                 MOVE DFHRED TO MESSC
            WHEN MESSO(01:3) IS EQUAL TO 'No '
            WHEN MESSO(01:8) IS EQUAL TO 'Standard'
            WHEN MESSO(01:8) IS EQUAL TO 'Managers'
+           WHEN MESSO(01:8) IS EQUAL TO 'Confirm '
                 MOVE DFHYELLO TO MESSC
-           WHEN MESSO(01:7) IS EQUAL TO 'Invalid'
            WHEN MESSO(01:4) IS EQUAL TO 'Hey!'
                 MOVE DFHPINK TO MESSC
            END-EVALUATE.
@@ -1840,6 +1857,12 @@
       *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD BY DEFAULT.
            IF VALIDATION-PASSED OR NO-CHANGES-MADE THEN
               MOVE -1 TO EMPLIDL
+           END-IF.
+
+      *    RESET THE 'DELETION' FLAG ON ALL CASES EXCEPT ON 'PF11' KEY 
+      *    PRESSES.
+           IF EIBAID IS NOT EQUAL TO DFHPF11 THEN
+              INITIALIZE UPD-DELETION-FLAG
            END-IF.
 
        9130-SET-PROTECTED-FIELDS.

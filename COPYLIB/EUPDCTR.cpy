@@ -14,7 +14,7 @@
       *
           05 UPD-USER-EMP-ID            PIC 9(8).
           05 UPD-USER-DEPT-ID           PIC 9(8).
-          05 UPD-USER-ALT-KEY           PIC X(38).
+          05 UPD-EMP-ALT-KEY            PIC X(38).
       *
           05 UPD-SELECT-KEY.
              10 UPD-SELECT-KEY-TYPE     PIC X(1)   VALUE SPACES.
@@ -30,5 +30,8 @@
              88 UPD-TOP-OF-FILE                    VALUE 'T'.
              88 UPD-END-OF-FILE                    VALUE 'E'.
              88 UPD-NOT-SET                        VALUE SPACES.
+      *
+          05 UPD-DELETION-FLAG          PIC X(1)   VALUE SPACES.
+             88 UPD-DELETION-IN-PROGRESS           VALUE 'I'.
       *
           05 UPD-CALLING-PROGRAM        PIC X(8).
