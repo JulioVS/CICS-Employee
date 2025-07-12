@@ -119,19 +119,25 @@
            02  FILLER REDEFINES HLPPF4F.
              03 HLPPF4A    PICTURE X.
            02  FILLER   PICTURE X(1).
-           02  HLPPF4I  PIC X(10).
+           02  HLPPF4I  PIC X(7).
            02  HLPPF7L    COMP  PIC  S9(4).
            02  HLPPF7F    PICTURE X.
            02  FILLER REDEFINES HLPPF7F.
              03 HLPPF7A    PICTURE X.
            02  FILLER   PICTURE X(1).
-           02  HLPPF7I  PIC X(9).
+           02  HLPPF7I  PIC X(7).
            02  HLPPF8L    COMP  PIC  S9(4).
            02  HLPPF8F    PICTURE X.
            02  FILLER REDEFINES HLPPF8F.
              03 HLPPF8A    PICTURE X.
            02  FILLER   PICTURE X(1).
-           02  HLPPF8I  PIC X(9).
+           02  HLPPF8I  PIC X(7).
+           02  HLPPF11L    COMP  PIC  S9(4).
+           02  HLPPF11F    PICTURE X.
+           02  FILLER REDEFINES HLPPF11F.
+             03 HLPPF11A    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  HLPPF11I  PIC X(10).
        01  EUPDMO REDEFINES EUPDMI.
            02  FILLER PIC X(12).
            02  FILLER PICTURE X(3).
@@ -193,10 +199,13 @@
            02  MESSO  PIC X(79).
            02  FILLER PICTURE X(3).
            02  HLPPF4C    PICTURE X.
-           02  HLPPF4O  PIC X(10).
+           02  HLPPF4O  PIC X(7).
            02  FILLER PICTURE X(3).
            02  HLPPF7C    PICTURE X.
-           02  HLPPF7O  PIC X(9).
+           02  HLPPF7O  PIC X(7).
            02  FILLER PICTURE X(3).
            02  HLPPF8C    PICTURE X.
-           02  HLPPF8O  PIC X(9).
+           02  HLPPF8O  PIC X(7).
+           02  FILLER PICTURE X(3).
+           02  HLPPF11C    PICTURE X.
+           02  HLPPF11O  PIC X(10).

@@ -110,16 +110,20 @@ MESS     DFHMDF POS=(23,1),LENGTH=79,ATTRB=(ASKIP,BRT)
 *
 *  AID KEY SECTION.
 *
-         DFHMDF POS=(24,1),LENGTH=21,ATTRB=(ASKIP,NORM),               X
-               INITIAL='ENTER Val  PF3 Exit  '
-HLPPF4   DFHMDF POS=(24,23),LENGTH=10,ATTRB=(ASKIP,NORM),              X
-               INITIAL='PF4 Save  '
-HLPPF7   DFHMDF POS=(24,34),LENGTH=9,ATTRB=(ASKIP,NORM),               X
-               INITIAL='PF7 Prev '
-HLPPF8   DFHMDF POS=(24,44),LENGTH=9,ATTRB=(ASKIP,NORM),               X
-               INITIAL='PF8 Next '
-         DFHMDF POS=(24,54),LENGTH=26,ATTRB=(ASKIP,NORM),              X
-               INITIAL='PF10 Sign Off  PF12 Cancel'
+         DFHMDF POS=(24,1),LENGTH=16,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENT Val  3 Exit '
+HLPPF4   DFHMDF POS=(24,18),LENGTH=7,ATTRB=(ASKIP,NORM),               X
+               INITIAL='4 Save '
+HLPPF7   DFHMDF POS=(24,26),LENGTH=7,ATTRB=(ASKIP,NORM),               X
+               INITIAL='7 Prev '
+HLPPF8   DFHMDF POS=(24,34),LENGTH=7,ATTRB=(ASKIP,NORM),               X
+               INITIAL='8 Next '
+         DFHMDF POS=(24,42),LENGTH=12,ATTRB=(ASKIP,NORM),              X
+               INITIAL='10 Sign Off '
+HLPPF11  DFHMDF POS=(24,55),LENGTH=10,ATTRB=(ASKIP,NORM),              X
+               INITIAL='11 Delete '
+         DFHMDF POS=(24,66),LENGTH=10,ATTRB=(ASKIP,NORM),              X
+               INITIAL='12 Cancel '
 * ---------------------------------------------------------------------
 *  ENDING SECTION.
 * ---------------------------------------------------------------------

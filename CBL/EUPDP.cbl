@@ -72,7 +72,9 @@
       *
        01 WS-VALIDATION-FLAG        PIC X(1)  VALUE SPACES.
           88 VALIDATION-PASSED                VALUE SPACES.
-          88 VALIDATION-FAILED                VALUE 'N'.
+          88 VALIDATION-FAILED                VALUE 'F'.
+          88 NO-CHANGES-MADE                  VALUE 'N'.
+      *
        01 WS-PRIMARY-NAME-FLAG      PIC X(1)  VALUE SPACES.
           88 PRIMARY-NAME-VALID               VALUE 'Y'.
           88 PRIMARY-NAME-EXISTS              VALUE SPACES.
@@ -766,6 +768,8 @@
 
       *    VERY FIRST CHECK -> IF NO CHANGES WERE MADE, JUST EXIT.
            IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
+              MOVE 'No Changes Made!' TO WS-MESSAGE
+              SET NO-CHANGES-MADE TO TRUE
               EXIT PARAGRAPH
            ELSE
       *       OTHERWISE, SAVE UPDATED STATE INTO APP CONTAINER.
@@ -1796,7 +1800,7 @@
            END-IF.
 
       *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD BY DEFAULT.
-           IF VALIDATION-PASSED THEN
+           IF VALIDATION-PASSED OR NO-CHANGES-MADE THEN
               MOVE -1 TO EMPLIDL
            END-IF.
 
