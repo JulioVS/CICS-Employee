@@ -16,6 +16,7 @@
       *      - ACTIVITY MONITOR CONTAINER.
       *      - EMPLOYEE MASTER RECORD.
       *      - REGISTERED USERS RECORD.
+      *      - AUDIT TRAIL RECORD.
       *      - IBM'S AID KEYS.
       *      - IBM'S BMS VALUES.
       ******************************************************************
@@ -27,6 +28,7 @@
        COPY EMONCTR.
        COPY EMPMAST.
        COPY EREGUSR.
+       COPY EAUDIT.
        COPY DFHAID.
        COPY DFHBMSCA.
       ******************************************************************
@@ -197,6 +199,7 @@
            INITIALIZE LIST-EMPLOYEE-CONTAINER.
            INITIALIZE EMPLOYEE-MASTER-RECORD.
            INITIALIZE REGISTERED-USER-RECORD.
+           INITIALIZE AUDIT-TRAIL-RECORD.
            INITIALIZE WS-WORKING-VARS.
 
        1200-INITIALIZE-CONTAINER.
@@ -1136,7 +1139,7 @@
       *    TIME THROUGH, THEN WE ARE GOOD TO GO!
            IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
               MOVE 'No Changes Detected!' TO WS-MESSAGE
-              PERFORM 2920-REWRITE-EMPLOYEE-RECORD
+              PERFORM 2920-REWRITE-RECORD
            ELSE
               MOVE 'Employee Record Has Changed Since!' TO WS-MESSAGE
               EXIT PARAGRAPH
@@ -1177,9 +1180,9 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       2920-REWRITE-EMPLOYEE-RECORD.
+       2920-REWRITE-RECORD.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2920-REWRITE-EMPLOYEE-RECORD' TO WS-DEBUG-AID.
+           MOVE '2920-REWRITE-RECORD' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1193,12 +1196,16 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-      *         IF REWRITE WAS SUCCESSFUL, THEN THIS VERSION BECOMES 
-      *         THE NEW 'ORIGINAL' AGAINST FUTURE UPDATES.
-                MOVE UPD-EMPLOYEE-RECORD TO UPD-ORIGINAL-RECORD
-                
                 MOVE 'Employee Record Successfully Updated!'
                    TO WS-MESSAGE
+ 
+      *         WRITE AUDIT TRAIL FOR UPDATE ACTION.
+                PERFORM 5000-WRITE-AUDIT-TRAIL                
+
+      *         SET THE UPDATED VERSION AS THE NEW 'ORIGINAL' FOR
+      *         COMPARING AGAINST FUTURE REWRITES.
+                MOVE UPD-EMPLOYEE-RECORD TO UPD-ORIGINAL-RECORD
+                
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalid Request (Rewrite)!' TO WS-MESSAGE
            WHEN DFHRESP(NOTOPEN)
@@ -1569,6 +1576,55 @@
                 CONTINUE
            WHEN OTHER
                 MOVE 'Error Putting Activity Monitor!' TO WS-MESSAGE
+           END-EVALUATE.
+
+      *-----------------------------------------------------------------
+       AUDIT-TRAIL SECTION.
+      *-----------------------------------------------------------------
+
+       5000-WRITE-AUDIT-TRAIL.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5000-WRITE-AUDIT-TRAIL' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    LOAD AUDIT TRAIL WITH:
+      *    
+      *      - LOGGED-IN USER'S ID.
+      *      - CURRENT DATE AND TIME.
+      *      - ACTION INDICATOR.
+      *      - ORGINAL EMPLOYEE RECORD (BEFORE UPDATE).
+      *      - UPDATED EMPLOYEE RECORD.
+
+           MOVE FUNCTION CURRENT-DATE TO AUD-TIMESTAMP.
+           MOVE UPD-USER-ID TO AUD-USER-ID.
+           SET AUD-ACTION-UPDATE TO TRUE.
+
+           MOVE UPD-ORIGINAL-RECORD TO AUD-RECORD-BEFORE.
+           MOVE UPD-EMPLOYEE-RECORD TO AUD-RECORD-AFTER.
+
+      *    CALL AUDIT TRAIL ASYNC TRANSACTION TO LOG THE UPDATE.
+      *    ('FIRE AND FORGET' STYLE)
+           EXEC CICS START
+                TRANSID(APP-AUDIT-TRANSACTION-ID)
+                TERMID(EIBTRMID)
+                FROM (AUDIT-TRAIL-RECORD)
+                REQID(APP-AUDIT-REQUEST-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                CONTINUE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Audit Trail)!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN DFHRESP(TRANSIDERR)
+                MOVE 'Audit Trail Transaction Not Found!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           WHEN OTHER
+                MOVE 'Error Writing Audit Trail!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
       *-----------------------------------------------------------------
