@@ -563,6 +563,8 @@
                 PERFORM 2500-SWITCH-DISPLAY-ORDER
            WHEN DFHPF10
                 PERFORM 2600-SIGN-USER-OFF
+           WHEN DFHPF11
+                PERFORM 5000-DELETE-EMPLOYEE
            WHEN OTHER
                 MOVE 'Invalid Key!' TO WS-MESSAGE
            END-EVALUATE.
@@ -1204,7 +1206,7 @@
                    TO WS-MESSAGE
  
       *         WRITE AUDIT TRAIL FOR UPDATE ACTION.
-                PERFORM 5000-WRITE-AUDIT-TRAIL                
+                PERFORM 7000-WRITE-AUDIT-TRAIL                
 
       *         SET THE UPDATED VERSION AS THE NEW 'ORIGINAL' FOR
       *         COMPARING AGAINST FUTURE REWRITES.
@@ -1583,12 +1585,35 @@
            END-EVALUATE.
 
       *-----------------------------------------------------------------
+       DELETING SECTION.
+      *-----------------------------------------------------------------
+
+       5000-DELETE-EMPLOYEE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5000-DELETE-EMPLOYEE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+           IF UPD-CT-STANDARD THEN
+              MOVE 'Standard Users Cannot Delete Employees'
+                 TO WS-MESSAGE
+              EXIT PARAGRAPH 
+           END-IF.
+
+           IF UPD-CT-MANAGER AND
+              EMP-DEPARTMENT-ID IS NOT EQUAL TO UPD-USER-DEPT-ID THEN
+              MOVE 'Managers Cannot Delete Employees From Other Depts'
+                 TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *-----------------------------------------------------------------
        AUDIT-TRAIL SECTION.
       *-----------------------------------------------------------------
 
-       5000-WRITE-AUDIT-TRAIL.
+       7000-WRITE-AUDIT-TRAIL.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '5000-WRITE-AUDIT-TRAIL' TO WS-DEBUG-AID.
+           MOVE '7000-WRITE-AUDIT-TRAIL' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1779,6 +1804,8 @@
            WHEN MESSO(12:5) IS EQUAL TO 'Error'
                 MOVE DFHRED TO MESSC
            WHEN MESSO(01:3) IS EQUAL TO 'No '
+           WHEN MESSO(01:8) IS EQUAL TO 'Standard'
+           WHEN MESSO(01:8) IS EQUAL TO 'Managers'
                 MOVE DFHYELLO TO MESSC
            WHEN MESSO(01:7) IS EQUAL TO 'Invalid'
            WHEN MESSO(01:4) IS EQUAL TO 'Hey!'
@@ -1797,6 +1824,17 @@
            END-IF.
            IF UPD-END-OF-FILE THEN
               MOVE SPACES TO HLPPF8O
+           END-IF.
+
+      *    STANDARD -> HIDE DELETION KEY LABEL.
+           IF UPD-CT-STANDARD THEN
+              MOVE SPACES TO HLPPF11O
+           END-IF.
+
+      *    MANAGERS -> HIDE DELETION KEY LABEL IF NOT IN SAME DEPT.
+           IF UPD-CT-MANAGER AND
+              EMP-DEPARTMENT-ID IS NOT EQUAL TO UPD-USER-DEPT-ID THEN
+              MOVE SPACES TO HLPPF11O
            END-IF.
 
       *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD BY DEFAULT.
