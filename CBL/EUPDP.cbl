@@ -80,6 +80,9 @@
           88 TOP-OF-FILE                      VALUE 'T'.
           88 RECORD-FOUND                     VALUE 'R'.
       *
+       01 WS-UPDATE-FLAG            PIC X(1)  VALUE SPACES.
+          88 AVAILABLE-FOR-UPDATE             VALUE 'Y'.
+      *
        01 WS-DEBUG-AID              PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
@@ -425,34 +428,25 @@
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
 
-       1500-FIND-RECORD-BY-KEY.
+       1500-FIND-RECORD-BY-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '1500-FIND-RECORD-BY-KEY' TO WS-DEBUG-AID.
+           MOVE '1500-FIND-RECORD-BY-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-           IF UPD-SEL-BY-EMPLOYEE-ID THEN
-              EXEC CICS READ
-                   FILE(APP-EMP-MASTER-FILE-NAME)
-                   RIDFLD(EMP-EMPLOYEE-ID)
-                   INTO (EMPLOYEE-MASTER-RECORD)
-                   RESP(WS-CICS-RESPONSE)
-                   END-EXEC
-           ELSE
-              EXEC CICS READ
-                   FILE(APP-EMP-MASTER-PATH-NAME)
-                   RIDFLD(EMP-PRIMARY-NAME)
-                   INTO (EMPLOYEE-MASTER-RECORD)
-                   RESP(WS-CICS-RESPONSE)
-                   END-EXEC
-           END-IF.
+           EXEC CICS READ
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                INTO (EMPLOYEE-MASTER-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
                 PERFORM 3200-APPLY-FILTERS
                 PERFORM 3700-CHECK-DELETION
            WHEN DFHRESP(NOTFND)
-                MOVE 'No Record Found By That Key!' TO WS-MESSAGE
+                MOVE 'No Record Found By That Id!' TO WS-MESSAGE
            WHEN DFHRESP(ENDFILE)
                 MOVE 'End of Employee Master File' TO WS-MESSAGE
                 SET UPD-END-OF-FILE TO TRUE
@@ -542,7 +536,7 @@
                 PERFORM 2050-CHECK-USER-ID-INPUT
 
                 IF USER-ID-INPUT THEN
-                   PERFORM 2100-FIND-BY-EMPLOYEE-KEY
+                   PERFORM 2100-FIND-BY-EMPLOYEE-ID
                 ELSE
                    PERFORM 2700-VALIDATE-USER-INPUT
                 END-IF
@@ -550,6 +544,12 @@
            WHEN DFHPF5
            WHEN DFHPF12
                 PERFORM 2200-TRANSFER-BACK-TO-CALLER
+           WHEN DFHPF4
+                PERFORM 2700-VALIDATE-USER-INPUT
+
+                IF VALIDATION-PASSED THEN
+                   PERFORM 2900-UPDATE-EMPLOYEE
+                END-IF
            WHEN DFHPF7
                 PERFORM 2300-PREV-BY-EMPLOYEE-KEY
            WHEN DFHPF8
@@ -574,9 +574,9 @@
               SET USER-ID-INPUT TO TRUE
            END-IF.
 
-       2100-FIND-BY-EMPLOYEE-KEY.
+       2100-FIND-BY-EMPLOYEE-ID.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '2100-FIND-BY-EMPLOYEE-KEY' TO WS-DEBUG-AID.
+           MOVE '2100-FIND-BY-EMPLOYEE-ID' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -594,7 +594,7 @@
               MOVE EMPLIDI TO EMP-EMPLOYEE-ID
            END-IF.
 
-           PERFORM 1500-FIND-RECORD-BY-KEY.
+           PERFORM 1500-FIND-RECORD-BY-ID.
 
            IF FILTERS-PASSED THEN
               PERFORM 1325-COPY-INTO-CONTAINER
@@ -1120,6 +1120,93 @@
               ALL '-x' BY '-X',
               ALL '-y' BY '-Y',
               ALL '-z' BY '-Z'.
+
+       2900-UPDATE-EMPLOYEE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2900-UPDATE-EMPLOYEE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    READ EMPLOYEE RECORD AGAIN, THIS TIME FOR UPDATE.
+           INITIALIZE WS-UPDATE-FLAG.
+
+           PERFORM 2910-READ-FOR-UPDATE UNTIL AVAILABLE-FOR-UPDATE.
+
+      *    IF WE GET EXACTLY THE SAME DATA AS ORIGINALLY READ FIRST 
+      *    TIME THROUGH, THEN WE ARE GOOD TO GO!
+           IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
+              MOVE 'No Changes Detected!' TO WS-MESSAGE
+              PERFORM 2920-REWRITE-EMPLOYEE-RECORD
+           ELSE
+              MOVE 'Employee Record Has Changed Since!' TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
+
+       2910-READ-FOR-UPDATE.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2910-READ-FOR-UPDATE' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    GET THE CURRENTLY EDITED EMPLOYEE ID FROM THE APP CONTAINER.
+           MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+           
+      *    AND THEN RE-READ THE RECORD FROM THE FILE BUT THIS TIME
+      *    FOR UPDATE! (NOTE 'UPDATE' CLAUSE)
+           EXEC CICS READ
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                INTO (EMPLOYEE-MASTER-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                UPDATE
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                SET AVAILABLE-FOR-UPDATE TO TRUE
+           WHEN DFHRESP(RECORDBUSY)
+                MOVE 'Record is Busy!' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Read For Update)!' TO WS-MESSAGE
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Record Found By That Id!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Reading Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       2920-REWRITE-EMPLOYEE-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '2920-REWRITE-EMPLOYEE-RECORD' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF WE GET HERE, THEN WE ARE READY TO REWRITE THE RECORD
+      *    FROM THE SCREEN-UPDATED DATA.
+           EXEC CICS REWRITE
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                FROM (UPD-EMPLOYEE-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+      *         IF REWRITE WAS SUCCESSFUL, THEN THIS VERSION BECOMES 
+      *         THE NEW 'ORIGINAL' AGAINST FUTURE UPDATES.
+                MOVE UPD-EMPLOYEE-RECORD TO UPD-ORIGINAL-RECORD
+                
+                MOVE 'Employee Record Successfully Updated!'
+                   TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Rewrite)!' TO WS-MESSAGE
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Rewriting Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
 
       *-----------------------------------------------------------------
        FILTERS SECTION.
