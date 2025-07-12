@@ -209,3 +209,16 @@
            02  FILLER PICTURE X(3).
            02  HLPPF11C    PICTURE X.
            02  HLPPF11O  PIC X(10).
+       01  EDELMI.
+           02  FILLER PIC X(12).
+           02  DELEMPL    COMP  PIC  S9(4).
+           02  DELEMPF    PICTURE X.
+           02  FILLER REDEFINES DELEMPF.
+             03 DELEMPA    PICTURE X.
+           02  FILLER   PICTURE X(1).
+           02  DELEMPI  PIC X(8).
+       01  EDELMO REDEFINES EDELMI.
+           02  FILLER PIC X(12).
+           02  FILLER PICTURE X(3).
+           02  DELEMPC    PICTURE X.
+           02  DELEMPO  PIC X(8).

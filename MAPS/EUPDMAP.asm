@@ -125,6 +125,36 @@ HLPPF11  DFHMDF POS=(24,55),LENGTH=10,ATTRB=(ASKIP,NORM),              X
          DFHMDF POS=(24,66),LENGTH=10,ATTRB=(ASKIP,NORM),              X
                INITIAL='12 Cancel '
 * ---------------------------------------------------------------------
+*  DELETION DIALOG MAP.
+* ---------------------------------------------------------------------
+EDELM    DFHMDI SIZE=(8,40),LINE=12,COLUMN=20
+*
+*  DIALOG SECTION.
+*
+         DFHMDF POS=(1,1),LENGTH=39,ATTRB=(ASKIP,BRT),                 X
+               INITIAL=' /===================================\ '
+         DFHMDF POS=(2,1),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL=' |'
+         DFHMDF POS=(2,4),LENGTH=28,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='     Confirm Record Deletion'
+         DFHMDF POS=(2,38),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL='| '
+         DFHMDF POS=(3,1),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL=' |'
+         DFHMDF POS=(3,38),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL='| '
+         DFHMDF POS=(4,1),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL=' |'
+         DFHMDF POS=(4,4),LENGTH=13,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='Employee Id: '
+DELEMP   DFHMDF POS=(4,18),LENGTH=8,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(4,38),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL='| '
+         DFHMDF POS=(5,1),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL=' |'
+         DFHMDF POS=(5,38),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL='| '
+         DFHMDF POS=(6,1),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL=' |'
+         DFHMDF POS=(6,4),LENGTH=32,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='PF11 Confirm Delete  PF12 Cancel'
+         DFHMDF POS=(6,38),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL='| '
+         DFHMDF POS=(7,1),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL=' |'
+         DFHMDF POS=(7,38),LENGTH=2,ATTRB=(ASKIP,BRT),INITIAL='| '
+         DFHMDF POS=(8,1),LENGTH=39,ATTRB=(ASKIP,BRT),                 X
+               INITIAL=' \===================================/ '
+* ---------------------------------------------------------------------
 *  ENDING SECTION.
 * ---------------------------------------------------------------------
          DFHMSD TYPE=FINAL
