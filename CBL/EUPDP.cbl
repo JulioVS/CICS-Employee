@@ -559,6 +559,8 @@
                 IF VALIDATION-PASSED THEN
                    PERFORM 2900-UPDATE-EMPLOYEE
                 END-IF
+           WHEN DFHPF6
+                PERFORM 5500-SECRET-MODE-SWITCH
            WHEN DFHPF7
                 PERFORM 2300-PREV-BY-EMPLOYEE-KEY
            WHEN DFHPF8
@@ -1629,9 +1631,14 @@
            PERFORM 2910-READ-FOR-UPDATE UNTIL AVAILABLE-FOR-UPDATE.
 
            IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
-      *       >>> PHYSICAL DELETION <<<
-              PERFORM 5200-DELETE-RECORD
-      *       >>> ----------------- <<<
+      *       >>> DELETION (LOGICAL BY DEFAULT) <<<
+              IF UPD-LOGICAL-MODE THEN
+                   PERFORM 5200-LOGICAL-DELETION
+              END-IF
+              IF UPD-PHYSICAL-MODE THEN
+                   PERFORM 5300-PHYSICAL-DELETION
+              END-IF
+      *       >>> ----------------------------- <<<
            ELSE
               MOVE 'Employee Record Has Changed Since!' TO WS-MESSAGE
               EXIT PARAGRAPH
@@ -1688,9 +1695,58 @@
                 SET CANCEL-DELETION TO TRUE
            END-EVALUATE.
 
-       5200-DELETE-RECORD.
+       5200-LOGICAL-DELETION.
       *    >>> DEBUGGING ONLY <<<
-           MOVE '5200-DELETE-RECORD' TO WS-DEBUG-AID.
+           MOVE '5200-LOGICAL-DELETION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF WE GOT THIS FAR, WE ARE READY TO LOGICALLY DELETE THE 
+      *    RECORD FROM THE VSAM FILE.
+           MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+
+      *    LOGICAL DELETION IS JUST A 'REWRITE' WITH THE 'DELETE FLAG'
+      *    SET TO 'D' (YES) AND THE CURRENT DATE AS THE 'DELETE DATE'.
+           MOVE FUNCTION CURRENT-DATE(1:8) TO EMP-DELETE-DATE.
+           SET EMP-DELETED TO TRUE.
+
+           MOVE EMPLOYEE-MASTER-RECORD TO UPD-EMPLOYEE-RECORD.
+
+           EXEC CICS REWRITE
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                FROM (UPD-EMPLOYEE-RECORD)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Employee Record Logically Deleted!'
+                   TO WS-MESSAGE
+
+      *         WRITE AUDIT TRAIL FOR DELETE ACTION.
+                SET AUD-ACTION-DELETE TO TRUE
+                PERFORM 7000-WRITE-AUDIT-TRAIL                
+
+      *         CLEAN UP EMPLOYEE BUFFERS IN APP CONTAINER. 
+                INITIALIZE UPD-EMPLOYEE-RECORD
+                           UPD-ORIGINAL-RECORD
+                
+           WHEN DFHRESP(DUPREC)
+                MOVE 'Invalid Duplicate Key (Rewrite)!' TO WS-MESSAGE
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Rewrite)!' TO WS-MESSAGE
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Record Found By That Id!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Rewriting Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
+       5300-PHYSICAL-DELETION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5300-PHYSICAL-DELETION' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
@@ -1704,7 +1760,7 @@
 
            EVALUATE WS-CICS-RESPONSE
            WHEN DFHRESP(NORMAL)
-                MOVE 'Employee Record Successfully Deleted!'
+                MOVE 'Employee Record Physically Deleted!'
                    TO WS-MESSAGE
 
       *         CLEAN UP EMPLOYEE BUFFER IN APP CONTAINER.
@@ -1714,8 +1770,9 @@
                 SET AUD-ACTION-DELETE TO TRUE
                 PERFORM 7000-WRITE-AUDIT-TRAIL                
 
-      *         SET THE EMPTY RECORD AS THE NEW 'ORIGINAL VERSION'.
-                MOVE UPD-EMPLOYEE-RECORD TO UPD-ORIGINAL-RECORD
+      *         CLEAN UP EMPLOYEE BUFFERS IN APP CONTAINER. 
+                INITIALIZE UPD-EMPLOYEE-RECORD
+                           UPD-ORIGINAL-RECORD
                 
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalid Request (Delete)!' TO WS-MESSAGE
@@ -1727,6 +1784,21 @@
                 MOVE 'Error Deleting Employee Record!' TO WS-MESSAGE
                 PERFORM 9000-SEND-MAP-AND-RETURN
            END-EVALUATE.
+
+       5500-SECRET-MODE-SWITCH.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5500-SECRET-MODE-SWITCH' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    SECRET <PF6> OPTION -> SWITCH DELETION MODE!
+           IF UPD-LOGICAL-MODE THEN
+              MOVE 'Physical Deletion Mode Set!' TO WS-MESSAGE
+              SET UPD-PHYSICAL-MODE TO TRUE
+           ELSE
+              MOVE 'Logical Deletion Mode Set!' TO WS-MESSAGE
+              SET UPD-LOGICAL-MODE TO TRUE
+           END-IF.
 
       *-----------------------------------------------------------------
        AUDIT-TRAIL SECTION.
@@ -1929,7 +2001,9 @@
            WHEN MESSO(01:8) IS EQUAL TO 'Managers'
            WHEN MESSO(01:8) IS EQUAL TO 'Confirm '
                 MOVE DFHYELLO TO MESSC
-           WHEN MESSO(01:4) IS EQUAL TO 'Hey!'
+           WHEN MESSO(01:4) IS EQUAL TO 'Hey!' 
+           WHEN MESSO(01:8) IS EQUAL TO 'Physical'
+           WHEN MESSO(01:8) IS EQUAL TO 'Logical '   
                 MOVE DFHPINK TO MESSC
            END-EVALUATE.
 

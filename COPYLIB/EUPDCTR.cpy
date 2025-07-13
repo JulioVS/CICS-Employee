@@ -31,4 +31,8 @@
              88 UPD-END-OF-FILE                    VALUE 'E'.
              88 UPD-NOT-SET                        VALUE SPACES.
       *
+          05 UPD-DELETION-MODE          PIC X(1)   VALUE SPACES.
+             88 UPD-LOGICAL-MODE                   VALUE SPACES.
+             88 UPD-PHYSICAL-MODE                  VALUE 'P'.
+      *
           05 UPD-CALLING-PROGRAM        PIC X(8).
