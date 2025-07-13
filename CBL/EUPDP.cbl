@@ -1141,15 +1141,14 @@
       *    >>> -------------- <<<
 
       *    READ EMPLOYEE RECORD AGAIN, THIS TIME FOR UPDATE.
-           INITIALIZE WS-UPDATE-FLAG.
-
            PERFORM 2910-READ-FOR-UPDATE UNTIL AVAILABLE-FOR-UPDATE.
 
       *    IF WE GET EXACTLY THE SAME DATA AS ORIGINALLY READ FIRST 
       *    TIME THROUGH, THEN WE ARE GOOD TO GO!
            IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
-              MOVE 'No Changes Detected!' TO WS-MESSAGE
+      *       >>> ACTUAL UPDATING <<<
               PERFORM 2920-REWRITE-RECORD
+      *       >>> --------------- <<<
            ELSE
               MOVE 'Employee Record Has Changed Since!' TO WS-MESSAGE
               EXIT PARAGRAPH
@@ -1196,7 +1195,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    IF WE GET HERE, THEN WE ARE READY TO REWRITE THE RECORD
+      *    IF WE GOT HERE, THEN WE ARE READY TO REWRITE THE RECORD
       *    FROM THE SCREEN-UPDATED DATA.
            EXEC CICS REWRITE
                 FILE(APP-EMP-MASTER-FILE-NAME)
@@ -1210,12 +1209,15 @@
                    TO WS-MESSAGE
  
       *         WRITE AUDIT TRAIL FOR UPDATE ACTION.
+                SET AUD-ACTION-UPDATE TO TRUE
                 PERFORM 7000-WRITE-AUDIT-TRAIL                
 
       *         SET THE UPDATED VERSION AS THE NEW 'ORIGINAL' FOR
       *         COMPARING AGAINST FUTURE REWRITES.
                 MOVE UPD-EMPLOYEE-RECORD TO UPD-ORIGINAL-RECORD
                 
+           WHEN DFHRESP(DUPREC)
+                MOVE 'Invalid Duplicate Key (Rewrite)!' TO WS-MESSAGE
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalid Request (Rewrite)!' TO WS-MESSAGE
            WHEN DFHRESP(NOTOPEN)
@@ -1622,8 +1624,18 @@
            END-IF.
 
       *    PROCEED WITH DELETION.
-           MOVE '*** RECORD DELETION LOGIC ***' TO WS-MESSAGE.
-           INITIALIZE UPD-EMPLOYEE-RECORD UPD-ORIGINAL-RECORD.
+
+      *    READ EMPLOYEE RECORD AGAIN, ALSO FOR 'UPDATE'.
+           PERFORM 2910-READ-FOR-UPDATE UNTIL AVAILABLE-FOR-UPDATE.
+
+           IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
+      *       >>> PHYSICAL DELETION <<<
+              PERFORM 5200-DELETE-RECORD
+      *       >>> ----------------- <<<
+           ELSE
+              MOVE 'Employee Record Has Changed Since!' TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
 
        5100-ASK-FOR-CONFIRMATION.
       *    >>> DEBUGGING ONLY <<<
@@ -1648,7 +1660,12 @@
       *    <<<<<     PROGRAM EXECUTION HALTS HERE    >>>>>
 
       *    AND WAIT FOR THE USER TO ENTER APPROPIATE KEY.
-      *    (EXECUTION HALTS HERE UNTIL THE USER HITS AN AID KEY)
+
+      *    NOTE: A SIMPLE 'RECEIVE' COMMAND WITH NO 'MAP' CLAUSE COULD
+      *          HAVE BEEN USED HERE, JUST WITH A 'LENGTH OF EIBAID' 
+      *          OPTION, SINCE WE ARE NOT GETTING ANY INPUT DATA FROM
+      *          THE USER, BUT FOR CLARITY I USED THE CLASSIC FORMAT 
+      *          OF 'RECEIVE MAP INTO' INSTEAD.
       
            EXEC CICS RECEIVE
                 MAP(APP-DELETE-MAP-NAME)
@@ -1671,6 +1688,46 @@
                 SET CANCEL-DELETION TO TRUE
            END-EVALUATE.
 
+       5200-DELETE-RECORD.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5200-DELETE-RECORD' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    IF WE GOT THIS FAR, WE ARE READY TO PHYSICALLY DELETE THE 
+      *    RECORD FROM THE VSAM FILE.
+           EXEC CICS DELETE
+                FILE(APP-EMP-MASTER-FILE-NAME)
+                RIDFLD(EMP-EMPLOYEE-ID)
+                RESP(WS-CICS-RESPONSE)
+                END-EXEC.
+
+           EVALUATE WS-CICS-RESPONSE
+           WHEN DFHRESP(NORMAL)
+                MOVE 'Employee Record Successfully Deleted!'
+                   TO WS-MESSAGE
+
+      *         CLEAN UP EMPLOYEE BUFFER IN APP CONTAINER.
+                INITIALIZE UPD-EMPLOYEE-RECORD
+
+      *         WRITE AUDIT TRAIL FOR DELETE ACTION.
+                SET AUD-ACTION-DELETE TO TRUE
+                PERFORM 7000-WRITE-AUDIT-TRAIL                
+
+      *         SET THE EMPTY RECORD AS THE NEW 'ORIGINAL VERSION'.
+                MOVE UPD-EMPLOYEE-RECORD TO UPD-ORIGINAL-RECORD
+                
+           WHEN DFHRESP(INVREQ)
+                MOVE 'Invalid Request (Delete)!' TO WS-MESSAGE
+           WHEN DFHRESP(NOTOPEN)
+                MOVE 'Employee Master File Not Open!' TO WS-MESSAGE
+           WHEN DFHRESP(NOTFND)
+                MOVE 'No Record Found By That Id!' TO WS-MESSAGE
+           WHEN OTHER
+                MOVE 'Error Deleting Employee Record!' TO WS-MESSAGE
+                PERFORM 9000-SEND-MAP-AND-RETURN
+           END-EVALUATE.
+
       *-----------------------------------------------------------------
        AUDIT-TRAIL SECTION.
       *-----------------------------------------------------------------
@@ -1691,7 +1748,6 @@
 
            MOVE FUNCTION CURRENT-DATE TO AUD-TIMESTAMP.
            MOVE UPD-USER-ID TO AUD-USER-ID.
-           SET AUD-ACTION-UPDATE TO TRUE.
 
            MOVE UPD-ORIGINAL-RECORD TO AUD-RECORD-BEFORE.
            MOVE UPD-EMPLOYEE-RECORD TO AUD-RECORD-AFTER.
