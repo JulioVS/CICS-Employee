@@ -87,6 +87,10 @@
        01 WS-UPDATE-FLAG            PIC X(1)  VALUE SPACES.
           88 AVAILABLE-FOR-UPDATE             VALUE 'Y'.
       *
+       01 WS-DELETION-FLAG          PIC X(1)  VALUE SPACES.
+          88 CONFIRM-DELETION                 VALUE 'Y'.
+          88 CANCEL-DELETION                  VALUE 'N'.
+      *
        01 WS-DEBUG-AID              PIC X(45) VALUE SPACES.
       *
        01 WS-DEBUG-MESSAGE.
@@ -1594,7 +1598,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    FILTER UNAUTHORIZED REQUESTS FIRST.
+      *    FILTER OUT UNAUTHORIZED REQUESTS.
            IF UPD-CT-STANDARD THEN
               MOVE 'Standard Users Cannot Delete Employees'
                  TO WS-MESSAGE
@@ -1608,20 +1612,64 @@
               EXIT PARAGRAPH
            END-IF.
 
-      *    FIRST TIME HERE -> ASK FOR USER CONFIRMATION.
-           IF NOT UPD-DELETION-IN-PROGRESS THEN
-              SET UPD-DELETION-IN-PROGRESS TO TRUE
-              MOVE 'Confirm Record Deletion? (Press PF11 for Yes)'
-                 TO WS-MESSAGE
+      *    ASK USER FOR CONFIRMATION.
+           PERFORM 5100-ASK-FOR-CONFIRMATION
+              UNTIL CONFIRM-DELETION OR CANCEL-DELETION.
+
+           IF CANCEL-DELETION THEN
+              MOVE 'Deletion Cancelled!' TO WS-MESSAGE
               EXIT PARAGRAPH
            END-IF.
 
-      *    SECOND TIME HERE -> PROCEED WITH DELETION.
-           MOVE '***RECORD DELETION LOGIC***' TO WS-MESSAGE.
+      *    PROCEED WITH DELETION.
+           MOVE '*** RECORD DELETION LOGIC ***' TO WS-MESSAGE.
            INITIALIZE UPD-EMPLOYEE-RECORD UPD-ORIGINAL-RECORD.
 
-      *    FINALLY, RESET CONFIRMATION FLAG.
-           INITIALIZE UPD-DELETION-FLAG.
+       5100-ASK-FOR-CONFIRMATION.
+      *    >>> DEBUGGING ONLY <<<
+           MOVE '5100-ASK-FOR-CONFIRMATION' TO WS-DEBUG-AID.
+           PERFORM 9300-DEBUG-AID.
+      *    >>> -------------- <<<
+
+      *    MOVE CURRENT EMPLOYEE ID TO MAP FIELD FOR DISPLAY.
+           MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
+           MOVE EMP-EMPLOYEE-ID TO DELEMPO.
+
+      *    SET MODIFIED DATA TAG (MDT) TO AVOID CLASSIC 'AEI9' ABEND.
+           MOVE DFHBMFSE TO DELEMPA.
+
+      *    RENDER THE DELETE CONFIRMATION MAP.
+           EXEC CICS SEND
+                MAP(APP-DELETE-MAP-NAME)
+                MAPSET(APP-DELETE-MAPSET-NAME)
+                FROM (EDELMI)
+                END-EXEC.
+
+      *    <<<<<     PROGRAM EXECUTION HALTS HERE    >>>>>
+
+      *    AND WAIT FOR THE USER TO ENTER APPROPIATE KEY.
+      *    (EXECUTION HALTS HERE UNTIL THE USER HITS AN AID KEY)
+      
+           EXEC CICS RECEIVE
+                MAP(APP-DELETE-MAP-NAME)
+                MAPSET(APP-DELETE-MAPSET-NAME)
+                INTO (EDELMI)
+                END-EXEC.
+
+      *    <<<<<    PROGRAM EXECUTION RESUMES HERE   >>>>>
+
+      *    >>> CALL ACTIVITY MONITOR <<<
+           PERFORM 4000-CHECK-USER-STATUS.
+      *    >>> --------------------- <<<
+
+           EVALUATE EIBAID
+           WHEN DFHPF11
+                SET CONFIRM-DELETION TO TRUE 
+           WHEN DFHPF3
+           WHEN DFHPF12
+           WHEN DFHENTER 
+                SET CANCEL-DELETION TO TRUE
+           END-EVALUATE.
 
       *-----------------------------------------------------------------
        AUDIT-TRAIL SECTION.
@@ -1857,12 +1905,6 @@
       *    SET INITIAL FOCUS ON 'EMPLOYEE ID' FIELD BY DEFAULT.
            IF VALIDATION-PASSED OR NO-CHANGES-MADE THEN
               MOVE -1 TO EMPLIDL
-           END-IF.
-
-      *    RESET THE 'DELETION' FLAG ON ALL CASES EXCEPT ON 'PF11' KEY 
-      *    PRESSES.
-           IF EIBAID IS NOT EQUAL TO DFHPF11 THEN
-              INITIALIZE UPD-DELETION-FLAG
            END-IF.
 
        9130-SET-PROTECTED-FIELDS.

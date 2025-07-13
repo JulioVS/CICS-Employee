@@ -31,7 +31,4 @@
              88 UPD-END-OF-FILE                    VALUE 'E'.
              88 UPD-NOT-SET                        VALUE SPACES.
       *
-          05 UPD-DELETION-FLAG          PIC X(1)   VALUE SPACES.
-             88 UPD-DELETION-IN-PROGRESS           VALUE 'I'.
-      *
           05 UPD-CALLING-PROGRAM        PIC X(8).
