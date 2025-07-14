@@ -1145,7 +1145,7 @@
       *    READ EMPLOYEE RECORD AGAIN, THIS TIME FOR UPDATE.
            PERFORM 2910-READ-FOR-UPDATE UNTIL AVAILABLE-FOR-UPDATE.
 
-      *    IF WE GET EXACTLY THE SAME DATA AS ORIGINALLY READ FIRST 
+      *    IF WE GET EXACTLY THE SAME DATA AS ORIGINALLY READ FIRST
       *    TIME THROUGH, THEN WE ARE GOOD TO GO!
            IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
       *       >>> ACTUAL UPDATING <<<
@@ -1164,7 +1164,7 @@
 
       *    GET THE CURRENTLY EDITED EMPLOYEE ID FROM THE APP CONTAINER.
            MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
-           
+
       *    AND THEN RE-READ THE RECORD FROM THE FILE BUT THIS TIME
       *    FOR UPDATE! (NOTE 'UPDATE' CLAUSE)
            EXEC CICS READ
@@ -1209,15 +1209,15 @@
            WHEN DFHRESP(NORMAL)
                 MOVE 'Employee Record Successfully Updated!'
                    TO WS-MESSAGE
- 
+
       *         WRITE AUDIT TRAIL FOR UPDATE ACTION.
                 SET AUD-ACTION-UPDATE TO TRUE
-                PERFORM 7000-WRITE-AUDIT-TRAIL                
+                PERFORM 7000-WRITE-AUDIT-TRAIL
 
       *         SET THE UPDATED VERSION AS THE NEW 'ORIGINAL' FOR
       *         COMPARING AGAINST FUTURE REWRITES.
                 MOVE UPD-EMPLOYEE-RECORD TO UPD-ORIGINAL-RECORD
-                
+
            WHEN DFHRESP(DUPREC)
                 MOVE 'Invalid Duplicate Key (Rewrite)!' TO WS-MESSAGE
            WHEN DFHRESP(INVREQ)
@@ -1602,11 +1602,11 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    FILTER OUT UNAUTHORIZED REQUESTS.
+      *    STEP 1. FILTER OUT UNAUTHORIZED REQUESTS.
            IF UPD-CT-STANDARD THEN
               MOVE 'Standard Users Cannot Delete Employees'
                  TO WS-MESSAGE
-              EXIT PARAGRAPH 
+              EXIT PARAGRAPH
            END-IF.
 
            IF UPD-CT-MANAGER AND
@@ -1616,7 +1616,19 @@
               EXIT PARAGRAPH
            END-IF.
 
-      *    ASK USER FOR CONFIRMATION.
+           IF EMP-EMPLOYEE-ID IS EQUAL TO UPD-USER-EMP-ID THEN
+              MOVE 'Invalid Action, You Cannot Delete Yourself!'
+                 TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
+
+           IF EMP-DELETED AND UPD-LOGICAL-MODE THEN
+              MOVE 'Employee Record is Already Logically Deleted!'
+                 TO WS-MESSAGE
+              EXIT PARAGRAPH
+           END-IF.
+
+      *    STEP 2. ASK USER FOR CONFIRMATION.
            PERFORM 5100-ASK-FOR-CONFIRMATION
               UNTIL CONFIRM-DELETION OR CANCEL-DELETION.
 
@@ -1625,7 +1637,7 @@
               EXIT PARAGRAPH
            END-IF.
 
-      *    PROCEED WITH DELETION.
+      *    STEP 3. PROCEED WITH DELETION.
 
       *    READ EMPLOYEE RECORD AGAIN, ALSO FOR 'UPDATE'.
            PERFORM 2910-READ-FOR-UPDATE UNTIL AVAILABLE-FOR-UPDATE.
@@ -1633,10 +1645,10 @@
            IF EMPLOYEE-MASTER-RECORD IS EQUAL TO UPD-ORIGINAL-RECORD
       *       >>> DELETION (LOGICAL BY DEFAULT) <<<
               IF UPD-LOGICAL-MODE THEN
-                   PERFORM 5200-LOGICAL-DELETION
+                 PERFORM 5200-LOGICAL-DELETION
               END-IF
               IF UPD-PHYSICAL-MODE THEN
-                   PERFORM 5300-PHYSICAL-DELETION
+                 PERFORM 5300-PHYSICAL-DELETION
               END-IF
       *       >>> ----------------------------- <<<
            ELSE
@@ -1649,6 +1661,16 @@
            MOVE '5100-ASK-FOR-CONFIRMATION' TO WS-DEBUG-AID.
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
+
+      *    THIS IS A 'FULLY CONVERSATIONAL' INVOCATION TO THE 'CONFIRM'
+      *    MAP SCREEN. THE MAP IS DISPLAYED AND THE USER CAN ENTER
+      *    THE APPROPIATE AID-KEY. THE MAP IS THEN SENT BACK TO THIS
+      *    PARAGRAPH (ALTHOUGH WE ONLY CARE ABOUT THE PRESSED KEY).
+      *
+      *    UNLIKE THE PLURALSIGHT EXAMPLE, I CHOSE *NOT* TO DO A
+      *    PSEUDO-CONVERSATIONAL 'CONFIRMATION' LOGIC BECAUSE I THOUGHT
+      *    IT WAS UNNECESSARY AND PERHAPS CONFUSING FOR JUST A SIMPLE
+      *    TASK AT HAND.
 
       *    MOVE CURRENT EMPLOYEE ID TO MAP FIELD FOR DISPLAY.
            MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
@@ -1669,11 +1691,11 @@
       *    AND WAIT FOR THE USER TO ENTER APPROPIATE KEY.
 
       *    NOTE: A SIMPLE 'RECEIVE' COMMAND WITH NO 'MAP' CLAUSE COULD
-      *          HAVE BEEN USED HERE, JUST WITH A 'LENGTH OF EIBAID' 
+      *          HAVE BEEN USED HERE, JUST WITH A 'LENGTH OF EIBAID'
       *          OPTION, SINCE WE ARE NOT GETTING ANY INPUT DATA FROM
-      *          THE USER, BUT FOR CLARITY I USED THE CLASSIC FORMAT 
+      *          THE USER, BUT FOR CLARITY I USED THE CLASSIC FORMAT
       *          OF 'RECEIVE MAP INTO' INSTEAD.
-      
+
            EXEC CICS RECEIVE
                 MAP(APP-DELETE-MAP-NAME)
                 MAPSET(APP-DELETE-MAPSET-NAME)
@@ -1688,10 +1710,10 @@
 
            EVALUATE EIBAID
            WHEN DFHPF11
-                SET CONFIRM-DELETION TO TRUE 
+                SET CONFIRM-DELETION TO TRUE
            WHEN DFHPF3
            WHEN DFHPF12
-           WHEN DFHENTER 
+           WHEN DFHENTER
                 SET CANCEL-DELETION TO TRUE
            END-EVALUATE.
 
@@ -1701,7 +1723,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    IF WE GOT THIS FAR, WE ARE READY TO LOGICALLY DELETE THE 
+      *    IF WE GOT THIS FAR, WE ARE READY TO LOGICALLY DELETE THE
       *    RECORD FROM THE VSAM FILE.
            MOVE UPD-EMPLOYEE-RECORD TO EMPLOYEE-MASTER-RECORD.
 
@@ -1725,12 +1747,12 @@
 
       *         WRITE AUDIT TRAIL FOR DELETE ACTION.
                 SET AUD-ACTION-DELETE TO TRUE
-                PERFORM 7000-WRITE-AUDIT-TRAIL                
+                PERFORM 7000-WRITE-AUDIT-TRAIL
 
-      *         CLEAN UP EMPLOYEE BUFFERS IN APP CONTAINER. 
+      *         CLEAN UP EMPLOYEE BUFFERS IN APP CONTAINER.
                 INITIALIZE UPD-EMPLOYEE-RECORD
                            UPD-ORIGINAL-RECORD
-                
+
            WHEN DFHRESP(DUPREC)
                 MOVE 'Invalid Duplicate Key (Rewrite)!' TO WS-MESSAGE
            WHEN DFHRESP(INVREQ)
@@ -1750,7 +1772,7 @@
            PERFORM 9300-DEBUG-AID.
       *    >>> -------------- <<<
 
-      *    IF WE GOT THIS FAR, WE ARE READY TO PHYSICALLY DELETE THE 
+      *    IF WE GOT THIS FAR, WE ARE READY TO PHYSICALLY DELETE THE
       *    RECORD FROM THE VSAM FILE.
            EXEC CICS DELETE
                 FILE(APP-EMP-MASTER-FILE-NAME)
@@ -1763,17 +1785,16 @@
                 MOVE 'Employee Record Physically Deleted!'
                    TO WS-MESSAGE
 
-      *         CLEAN UP EMPLOYEE BUFFER IN APP CONTAINER.
+      *         CLEAN UP CURRENT BUFFER IN APP CONTAINER.
                 INITIALIZE UPD-EMPLOYEE-RECORD
 
       *         WRITE AUDIT TRAIL FOR DELETE ACTION.
                 SET AUD-ACTION-DELETE TO TRUE
-                PERFORM 7000-WRITE-AUDIT-TRAIL                
+                PERFORM 7000-WRITE-AUDIT-TRAIL
 
-      *         CLEAN UP EMPLOYEE BUFFERS IN APP CONTAINER. 
-                INITIALIZE UPD-EMPLOYEE-RECORD
-                           UPD-ORIGINAL-RECORD
-                
+      *         CLEAN UP ORIGINAL BUFFER IN APP CONTAINER.
+                INITIALIZE UPD-ORIGINAL-RECORD
+
            WHEN DFHRESP(INVREQ)
                 MOVE 'Invalid Request (Delete)!' TO WS-MESSAGE
            WHEN DFHRESP(NOTOPEN)
@@ -1811,7 +1832,7 @@
       *    >>> -------------- <<<
 
       *    LOAD AUDIT TRAIL WITH:
-      *    
+      *
       *      - LOGGED-IN USER'S ID.
       *      - CURRENT DATE AND TIME.
       *      - ACTION INDICATOR.
@@ -1999,11 +2020,11 @@
            WHEN MESSO(01:3) IS EQUAL TO 'No '
            WHEN MESSO(01:8) IS EQUAL TO 'Standard'
            WHEN MESSO(01:8) IS EQUAL TO 'Managers'
-           WHEN MESSO(01:8) IS EQUAL TO 'Confirm '
+           WHEN MESSO(01:8) IS EQUAL TO 'Employee'
                 MOVE DFHYELLO TO MESSC
-           WHEN MESSO(01:4) IS EQUAL TO 'Hey!' 
+           WHEN MESSO(01:4) IS EQUAL TO 'Hey!'
            WHEN MESSO(01:8) IS EQUAL TO 'Physical'
-           WHEN MESSO(01:8) IS EQUAL TO 'Logical '   
+           WHEN MESSO(01:8) IS EQUAL TO 'Logical '
                 MOVE DFHPINK TO MESSC
            END-EVALUATE.
 
